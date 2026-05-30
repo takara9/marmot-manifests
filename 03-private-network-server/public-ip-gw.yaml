@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Gateway
+metadata:
+    name: igw
+spec:
+    bindPublicIpAddress: 192.168.1.31    # パブリック側のIPアドレスでアクセスを許可
+    internalServerName: server-30        # サーバーの名前
+    internalVirtualNetwork: private      # 内部側の仮想ネットワーク
+    remoteCIDR: 192.168.1.0/24           # 接続を許すリモートのIPアドレス
+    serverPorts:                         # リクエストを転送するポート番号のリストを以下に記述する
+        - ssh                            # sshとhttpの通信を許可、それ以外は禁止    
+        - http
