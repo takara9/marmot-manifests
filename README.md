@@ -1,1 +1,5 @@
-# marmot-manifests
+# marmot のマニフェスト集
+
+サンプル構成やテストのための Marmot用マニフェスト集です。
+
+
