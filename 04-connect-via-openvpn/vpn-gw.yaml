@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: VpnGateway
+metadata:
+    name: vpn-gw
+spec:
+    bindPublicIpAddress: 192.168.1.40 # VPN-GWのエンドポイント
+    internalVirtualNetwork: admin     # 内部側の仮想ネットワーク
+    remoteCIDRs:                      # アクセスを受け付けるアドレス
+      - 192.168.1.0/24                  
+
