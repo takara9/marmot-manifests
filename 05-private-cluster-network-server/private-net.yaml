@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: VirtualNetwork
+metadata:
+  name: private
+  comment: ウェブサーバー用の仮想ネットワーク
+spec:
+  iPNetworkAddress: 172.16.10.0/24
+  overlayMode: geneve
