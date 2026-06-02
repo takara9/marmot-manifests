@@ -13,7 +13,7 @@ spec:
         - networkname: private-webs
         - networkname: default
         - networkname: host-bridge
-          address: 192.168.1.60
+          address: 192.168.1.63
           nameservers:
             addresses:
                 - 192.168.1.9

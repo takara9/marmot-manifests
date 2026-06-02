@@ -63,7 +63,7 @@ spec:
               via: 192.168.1.1
 ```
 
-次の
+次の仮想マシンは、private-webs, default の２つのネットに繋がります。
 
 ```yaml
 apiVersion: v1
@@ -80,4 +80,21 @@ spec:
     networkInterface:
         - networkname: private-webs
         - networkname: default
+```
+
+## デプロイ方法
+
+個別に作成する
+
+```console
+mactl create -f private-net.yaml
+mactl create -f server-60.yaml
+mactl create -f server-61.yaml
+mactl create -f server-62.yaml
+```
+
+連結されたYAMLファイルで、一括で作成もできます。
+
+```console
+mactl create -f all.yaml
 ```
