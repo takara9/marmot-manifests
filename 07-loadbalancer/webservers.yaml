@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: webserver-1
+    comment: プライベートネットワークに接続するサーバー
+    labels:
+        app: web
+spec:
+    cpu: 1
+    memory: 1024
+    osVariant: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    networkInterface:
+        - networkname: webservers-net
+        - networkname: default
+        - networkname: host-bridge
+          address: 192.168.1.64
+          nameservers:
+            addresses:
+                - 192.168.1.9
+                - 8.8.8.8
+                - 8.8.4.4
+            search:
+                - labo.local
+          netmasklen: 24
+          routes:
+            - to: default
+              via: 192.168.1.1
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: webserver-2
+    comment: プライベートネットワークに接続するサーバー
+    labels:
+        app: web
+spec:
+    cpu: 1
+    memory: 1024
+    osVariant: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    networkInterface:
+        - networkname: webservers-net
+        - networkname: default
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: webserver-3
+    comment: プライベートネットワークに接続するサーバー
+    labels:
+        app: web
+spec:
+    cpu: 1
+    memory: 1024
+    osVariant: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    networkInterface:
+        - networkname: webservers-net
+        - networkname: default

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: LoadBalancer
+metadata:
+    name: lb-1
+spec:
+    bindPublicIpAddress: 192.168.1.70
+    internalVirtualNetwork: webservers-net
+    listeners:
+        - name: web-http
+          protocol: HTTP
+          vipPort: 80
+          backendPort: 80
+          backendSelector:
+              matchLabels:
+                  app: web
+          loadBalancingAlgorithm: roundrobin
+          healthCheck:
+              enabled: false
+          sessionPersistence:
+              enabled: false
