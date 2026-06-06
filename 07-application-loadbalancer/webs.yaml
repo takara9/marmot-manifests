@@ -1,18 +1,18 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: webserver-1
+    name: web-1
     comment: プライベートネットワークに接続するサーバー
     labels:
         app: web
 spec:
     cpu: 1
     memory: 1024
-    osVariant: ubuntu24.04
+    osVariant: websrv2
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
-        - networkname: webservers-net
+        - networkname: app-net
         - networkname: default
         - networkname: host-bridge
           address: 192.168.1.64
@@ -31,33 +31,33 @@ spec:
 apiVersion: v1
 kind: Server
 metadata:
-    name: webserver-2
+    name: web-2
     comment: プライベートネットワークに接続するサーバー
     labels:
         app: web
 spec:
     cpu: 1
     memory: 1024
-    osVariant: ubuntu24.04
+    osVariant: websrv2
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
-        - networkname: webservers-net
+        - networkname: app-net
         - networkname: default
 ---
 apiVersion: v1
 kind: Server
 metadata:
-    name: webserver-3
+    name: web-3
     comment: プライベートネットワークに接続するサーバー
     labels:
         app: web
 spec:
     cpu: 1
     memory: 1024
-    osVariant: ubuntu24.04
+    osVariant: websrv2
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
-        - networkname: webservers-net
+        - networkname: app-net
         - networkname: default

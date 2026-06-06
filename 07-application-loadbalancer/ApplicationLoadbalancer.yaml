@@ -1,10 +1,10 @@
 apiVersion: v1
-kind: LoadBalancer
+kind: ApplicationLoadBalancer
 metadata:
-    name: lb-1
+    name: alb-web
 spec:
     bindPublicIpAddress: 192.168.1.70
-    internalVirtualNetwork: webservers-net
+    internalVirtualNetwork: app-net
     listeners:
         - name: web-http
           protocol: HTTP
@@ -15,6 +15,6 @@ spec:
                   app: web
           loadBalancingAlgorithm: roundrobin
           healthCheck:
-              enabled: false
+              enabled: true
           sessionPersistence:
               enabled: false
