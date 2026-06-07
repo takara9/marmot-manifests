@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: web-1
+    name: web-n1
     comment: プライベートネットワークに接続するサーバー
     labels:
         app: web
@@ -9,13 +9,14 @@ spec:
     cpu: 1
     memory: 1024
     osVariant: websrv
+    #osVariant: ubuntu24.04
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
-        - networkname: app-net
+        - networkname: nlb-net
         - networkname: default
         - networkname: host-bridge
-          address: 192.168.1.64
+          address: 192.168.1.65
           nameservers:
             addresses:
                 - 192.168.1.9
@@ -31,7 +32,7 @@ spec:
 apiVersion: v1
 kind: Server
 metadata:
-    name: web-2
+    name: web-n2
     comment: プライベートネットワークに接続するサーバー
     labels:
         app: web
@@ -39,16 +40,17 @@ spec:
     cpu: 1
     memory: 1024
     osVariant: websrv
+    #osVariant: ubuntu24.04
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
-        - networkname: app-net
+        - networkname: nlb-net
         - networkname: default
 ---
 apiVersion: v1
 kind: Server
 metadata:
-    name: web-3
+    name: web-n3
     comment: プライベートネットワークに接続するサーバー
     labels:
         app: web
@@ -56,8 +58,9 @@ spec:
     cpu: 1
     memory: 1024
     osVariant: websrv
+    #osVariant: ubuntu24.04
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
-        - networkname: app-net
+        - networkname: nlb-net
         - networkname: default

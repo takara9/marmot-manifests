@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: NetworkLoadBalancer
+metadata:
+    name: nlb1
+spec:
+    bindPublicIpAddress: 192.168.1.72
+    internalVirtualNetwork: nlb-net
+    listeners:
+        - name: http
+          protocol: tcp
+          vipPort: 80
+          backendPort: 80
+          backendSelector:
+              matchLabels:
+                  app: web

@@ -15,6 +15,6 @@ spec:
                   app: web
           loadBalancingAlgorithm: roundrobin
           healthCheck:
-              enabled: true
+              enabled: false
           sessionPersistence:
               enabled: false
