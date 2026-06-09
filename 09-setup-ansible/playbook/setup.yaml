@@ -1,0 +1,16 @@
+- name: Setup the guest OS
+  gather_facts: yes
+  vars:
+  hosts: all
+  become: yes
+  roles:
+  tasks:
+  - debug: msg="{{ ansible_facts }}"
+  - name: パッケージのインストール
+    apt:
+      name: "{{ packages }}"
+      state: present
+    vars:
+      packages:
+        - gcc
+        - make
