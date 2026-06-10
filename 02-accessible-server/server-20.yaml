@@ -12,6 +12,10 @@ spec:
     networkInterface:
         - networkname: host-bridge
           address: 192.168.1.20
+          netmasklen: 24
+          routes:
+            - to: default
+              via: 192.168.1.1
           nameservers:
             addresses:
                 - 192.168.1.9
@@ -19,8 +23,3 @@ spec:
                 - 8.8.4.4
             search:
                 - labo.local
-                - lab.local
-          netmasklen: 24
-          routes:
-            - to: default
-              via: 192.168.1.1
