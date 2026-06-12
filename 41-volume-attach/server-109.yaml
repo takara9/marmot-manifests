@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: server-109
+    comment: 事前定義済のボリュームを名前で指定する例
+spec:
+    cpu: 2
+    memory: 2048
+    osVariant: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    storage:
+        # 事前定義済のボリュームを名前で指定する例
+        - metadata:
+            name: volume2
+    networkInterface:
+        - networkname: host-bridge
+          address: 192.168.1.109
+          netmasklen: 24
+          routes:
+            - to: default
+              via: 192.168.1.1
+          nameservers:
+            addresses:
+                - 192.168.1.9
+            search:
+                - labo.local
