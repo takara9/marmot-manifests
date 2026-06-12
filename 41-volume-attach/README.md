@@ -1,26 +1,58 @@
 # 永続ボリューム
 
+marmot には、２種類のディスク（ブロックストレージ）を利用できます。
+- 仮想サーバーのホストが提供するボリューム（ローカル・ブロックストレージ）
+- ネットワーク上の共有ボリューム（リモート・ブロックストレージ）
+
+これら２つの最大の違いは、パフォーマンスです。
+ネットワーク経由でアクセスするリモート・ブロックストレージを利用すると、
+如何にネットワークが高速でも、ローカル・ブロックストレージと比べると、速度劣化は避けられません。
+しかし、リモート・ブロックストレージは、専用装置化して、可用性を高めることができます。
+
+marmotでは、リモート・ブロックストレージとローカル・ブロックストレージは、どちらも
+仮想マシンをホストするサーバー上で動かしていますから、現在の marmot では、リモート・ブロックストレージを
+利用する利点はあまり無いと思います。
 
 
-ubuntu@ws1:~/marmot-manifests/41-volume-local$ mactl create -f volume-1.yaml 
-リソースの作成要求が受け入れられました。ID: <nil>
-ubuntu@ws1:~/marmot-manifests/41-volume-local$ mactl get vol
-NAME          NODE  KIND  TYPE   iSCSI  SIZE(GB)  STATUS     PATH                  AGE
-----          ----  ----  ----   -----  --------  ------     ----                  ---
-boot-b67cd    marmot3  os    qcow2  -      16        AVAILABLE  .../boot-71da1.qcow2  1d
-boot-b9d66    marmot1  os    qcow2  -      16        AVAILABLE  .../boot-439c1.qcow2  1d
-boot-56b1c    marmot2  os    qcow2  -      16        AVAILABLE  .../boot-eaf24.qcow2  1d
-boot-d1024    marmot1  os    qcow2  -      16        AVAILABLE  .../boot-05e05.qcow2  4h
-boot-2ef8f    marmot2  os    qcow2  -      16        AVAILABLE  .../boot-46a19.qcow2  4h
-boot-f7992    marmot3  os    qcow2  -      16        AVAILABLE  .../boot-9a7ea.qcow2  3h
-volume1       marmot1  data  qcow2  -      2         AVAILABLE  .../data-2e659.qcow2  4s
+## 最小限の Volume 作成用のマニフェスト
 
+以下のYAMLで、ボリュームを作成できます。
+`spec.persistent = true` を設定しないと、仮想サーバーを削除すると、一緒に削除されるので注意してください。
 
-ubuntu@ws1:~/marmot-manifests/41-volume-local$ mactl create -f server-108.yaml 
-リソースの作成要求が受け入れられました。ID: 7a6e1
-ubuntu@ws1:~/marmot-manifests/41-volume-local$ mactl get srv
-NAME             NODE          STATUS        CPU  RAM(MB)  IP-ADDRESS       NETWORK          AGE
-----             ----          ------        ---  -------  ----------       -------          ---
-server-108       marmot1       PROVISIONING  2    2048     192.168.1.108    host-bridge      3s
+```yaml
+apiVersion: v1
+kind: Volume
+metadata:
+    name: volume1
+spec:
+    size: 2   # GB
+    persitent: true # サーバー削除時に、一緒に削除されることを防止するため
+```
 
+仮想サーバーから、作成したボリュームをアタッチするマニフェストです。
 
+```yaml
+apiVersion: v1
+kind: Server
+metadata:
+    name: server-108
+    comment: 事前定義済のボリュームを名前で指定する例
+spec:
+    cpu: 2
+    memory: 2048
+    osVariant: ubuntu24.04
+    storage:
+        # 事前定義済のボリュームを名前で指定する例
+        - metadata:
+            name: volume1
+```
+
+これにより、仮想サーバーの起動時に ボリュームを接続して起動します。
+ストレージは、ファイルシステムが作成されていない状態です。
+
+OSからマウントして利用するには、以下の作業が必要となります。
+- mkfs.ext4 などでファイルシステムを作成
+- blkgid で ボリュームのIDを取得
+- /etc/fstab を編集して、OS起動時にマウントするよう設定
+
+## 

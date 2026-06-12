@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Volume
+metadata:
+    name: volume3
+    nodeName: marmot5
+spec:
+    size: 2
