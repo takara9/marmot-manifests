@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: server-dhcp6
+    comment: DHCPクライアントとして動作する仮想サーバー
+spec:
+    cpu: 1
+    memory: 1024
+    osVariant: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    networkInterface:
+        - networkname: host-bridge
+          dhcp6: true
+          dhcp4: false
