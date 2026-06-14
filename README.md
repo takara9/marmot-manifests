@@ -31,11 +31,15 @@
 
 - [稼働中の仮想サーバーのOSイメージを保存する](20-save-machine-image/README.md)
 - [マシンイメージのエクスポートとインポート](21-image-export-import/README.md)
+- [クラウドイメージのインポート](22-import-cloud-image/README.md)
 
 ## ボリューム管理
 
 - [ブートボリュームの拡大](40-expand-boot-volume/README.md)
 - [永続ボリューム](41-volume-attach/README.md)
+- [サーバーのマニフェストにボリューム作成も含める](42-volume-create-when-creating-server/README.md)
+- [LVMのボリュームをアタッチする](43-lvm-volume/README.md)
+- [iSCSIボリュームを利用する](44-iscsi-vol/README.md)
 
 ## 自動構築 (Ansible)
 
