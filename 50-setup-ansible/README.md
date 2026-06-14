@@ -9,6 +9,8 @@
 - spec.networkInterface.[0].networkname で host-birdge を設定
 - spec.networkInterface.[0].address で sshできる IPアドレスを設定
 
+注意 .ssh ディレクトリに id_rsa と id_ed25519 の２つが存在した場合、id_ed25519 が使用されるため、コマンドが失敗する可能性があります。
+
 ## サンプルマニフェスト
 
 このYAMLで仮想サーバーを自動設定できます。
