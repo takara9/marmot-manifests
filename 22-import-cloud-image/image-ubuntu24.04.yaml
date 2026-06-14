@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Image
+metadata:
+    name: ubuntu24.04
+spec:
+    sourceUrl: https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-amd64.img
+    osName: ubuntu
+    osVersion: "24.04"

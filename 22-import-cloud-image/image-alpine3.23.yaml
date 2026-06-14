@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Image
+metadata:
+    name: alpine3
+spec:
+    sourceUrl:  https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/cloud/generic_alpine-3.23.0-x86_64-bios-cloudinit-metal-r0.qcow2
+    osName: alpine
+    osVersion: "3.23"

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Image
+metadata:
+    name: ubuntu22.04
+spec:
+    sourceUrl: https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-amd64.img
+    osName: ubuntu
+    osVersion: "22.04"
