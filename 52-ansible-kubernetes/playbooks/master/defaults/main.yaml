@@ -1,0 +1,5 @@
+kubernetes_version: "v1.36.2"
+work_dir: "/mnt"
+cluster_admin: "ubuntu"
+cluster_name: "k8s1"
+iface_pri: "enp1s0"

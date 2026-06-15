@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: master
+    comment: K8sコントロールプレーン
+spec:
+    cpu: 4
+    memory: 8192
+    osVariant: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    networkInterface:
+        - networkname: cluster-net
+          address: 172.16.20.220
+          netmasklen: 24
+        - networkname: host-bridge
+          address: 192.168.1.220
+          netmasklen: 24
+          routes:
+            - to: default
+              via: 192.168.1.1
+          nameservers:
+            addresses:
+                - 192.168.1.9
+            search:
+                - labo.local
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: node1
+    comment: K8sワーカーノード
+spec:
+    cpu: 2
+    memory: 4192
+    osVariant: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    networkInterface:
+        - networkname: cluster-net
+          address: 172.16.20.221
+          netmasklen: 24
+        - networkname: host-bridge
+          address: 192.168.1.221
+          netmasklen: 24
+          routes:
+            - to: default
+              via: 192.168.1.1
+          nameservers:
+            addresses:
+                - 192.168.1.9
+            search:
+                - labo.local
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: node2
+    comment: K8sワーカーノード
+spec:
+    cpu: 2
+    memory: 4192
+    osVariant: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    networkInterface:
+        - networkname: cluster-net
+          address: 172.16.20.222
+          netmasklen: 24
+        - networkname: host-bridge
+          address: 192.168.1.222
+          netmasklen: 24
+          routes:
+            - to: default
+              via: 192.168.1.1
+          nameservers:
+            addresses:
+                - 192.168.1.9
+            search:
+                - labo.local

@@ -1,0 +1,10 @@
+master ansible_host=192.168.1.220 ansible_user=ubuntu ansible_become=true
+node1  ansible_host=192.168.1.221 ansible_user=ubuntu ansible_become=true
+node2  ansible_host=192.168.1.222 ansible_user=ubuntu ansible_become=true
+
+[masters]
+master
+
+[nodes]
+node1
+node2

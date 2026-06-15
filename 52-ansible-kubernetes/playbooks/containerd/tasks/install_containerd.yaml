@@ -1,0 +1,103 @@
+- name: "CNIプラグインのディレクトリ作成"
+  file:
+    path: /etc/cni/net.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: "CNIプラグインのディレクトリに、Marmotのネットワーク設定を配置"
+  template:
+    src: 01-marmot.conflist
+    dest: /etc/cni/net.d
+    owner: root
+    group: root
+    mode: '0644'
+
+
+- name: "CNIプラグインのディレクトリ作成"
+  file:
+    path: /opt/cni/bin/
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  
+- name: "CNIプラグインの設定を適用"
+  unarchive:
+    src: "{{ download_dir }}/cni-plugins-linux-amd64-{{ cni_plugins }}.tgz"
+    dest: /opt/cni/bin/
+    remote_src: True
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: "containerdのインストール"
+  unarchive:
+    src: "{{ download_dir }}/containerd-{{ containerd_version }}-linux-amd64.tar.gz"
+    dest: /usr/local
+    remote_src: True
+    owner: root
+    group: root
+    mode: '0755'
+
+
+- name: "crictlのインストール"
+  unarchive:
+    src: "{{ download_dir }}/crictl-{{ crictl_version }}-linux-amd64.tar.gz"
+    dest: /usr/local/bin/
+    remote_src: True
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: "crictlの設定ファイルを配置"  
+  template:
+    src: crictl.yaml
+    dest: /etc/crictl.yaml
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "runcのインストール"
+  copy:
+    src: "{{ download_dir }}/runc.amd64"
+    dest: /usr/local/bin/runc
+    remote_src: True
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: "containerdの設定ディレクトリ作成"
+  file:
+    path: /etc/containerd
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: "containerdの設定ファイルを配置"
+  template:
+    src:  config.toml-oom.j2
+    dest: /etc/containerd/config.toml
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "containerdのサービスファイルを配置"
+  template:
+    src: containerd.service
+    dest: /etc/systemd/system
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "containerdのサービスを起動"
+  systemd:
+    name: containerd  
+    state: started
+    daemon_reload: yes
+    enabled: yes
+
+
+

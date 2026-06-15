@@ -1,0 +1,2 @@
+work_dir: "/mnt"
+cluster_name: "k8s1"

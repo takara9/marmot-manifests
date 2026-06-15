@@ -1,0 +1,19 @@
+#
+# CRICTL
+#
+- name: Downloading crictl
+  stat:
+    path: "{{ download_dir }}/crictl-{{ crictl_version }}-linux-amd64.tar.gz"
+  register: regi_crictl
+
+
+- get_url:
+    url: "https://github.com/kubernetes-sigs/cri-tools/releases/download/{{ crictl_version }}/crictl-{{ crictl_version }}-linux-amd64.tar.gz"
+    dest: "{{ download_dir }}"
+    mode: '0644'
+  when: 
+    - regi_crictl.stat.exists == False
+
+  
+
+

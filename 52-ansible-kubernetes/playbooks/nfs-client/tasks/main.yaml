@@ -1,0 +1,22 @@
+
+- name: "NFSパッケージのインストール"
+  apt:
+    name: nfs-common
+    state: present
+    update_cache: true
+
+- name: "マウントポイントディレクトリの作成"
+  file:
+    path: "{{ nfs_mount_point }}"
+    state: directory
+    mode: '0755'
+
+- name: "NFSディレクトリのマウントと /etc/fstab の設定"
+  mount:
+    src: "{{ nfs_server_ip }}:{{ nfs_server_dir }}"
+    path: "{{ nfs_mount_point }}"
+    fstype: nfs
+    # マウントオプション（defaultsの他に、お好みで `_netdev`（ネットワーク起動を待つ）なども追加可能）
+    opts: defaults,_netdev
+    # state: mounted にすると、今すぐマウントし、さらに /etc/fstab にも書き込みます
+    state: mounted

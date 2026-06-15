@@ -1,0 +1,8 @@
+
+- name: "ノードの接続"
+  command: "./kubeadm_join_{{ cluster_name }}.sh"
+  args:
+    chdir: "{{ work_dir }}"
+
+
+

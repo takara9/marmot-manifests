@@ -1,0 +1,124 @@
+- name: "Ubuntuの自動アップデートを禁止する"
+  replace:
+    path: /etc/apt/apt.conf.d/20auto-upgrades
+    regexp: 'APT::Periodic::Update-Package-Lists "1";'
+    replace: 'APT::Periodic::Update-Package-Lists "0";'
+    backup: no
+
+- name: "systemd-resolvedの停止と無効化"
+  systemd:
+    name: systemd-resolved
+    state: stopped
+    daemon_reload: no
+    enabled: no
+
+- name: "resolv.conf を変更"
+  template:
+    src: resolv.conf.j2
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "スワップ領域の無効化"
+  command: swapoff -a
+
+- name: "fstabのスワップ無効化"
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+
+- name: "スワップファイルの削除"
+  find:
+    paths: /
+    patterns: "swap.img"
+  register: files_to_delete
+
+- name: "スワップファイルの削除 (Ansible)"
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ files_to_delete.files }}"
+
+- name: "apt-getリポジトリの更新とキャッシュの更新"
+  apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+
+- name: "Ubuntuパッケージのインストール"
+  apt:
+    name: "{{ packages }}"
+    state: present
+    update_cache: yes
+  register: apt_res
+  retries: 10
+  delay: 60
+  until: apt_res is success
+  vars:
+    packages:
+    - nfs-common
+    - nfs-client
+    - socat
+
+- name: "カーネルパラメータの設定"
+  include_tasks: kernel-param.yaml
+
+- name: "HOSTS設定"
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "管理ユーザーをrootグループへ追加"
+  user:
+    name: "{{ cluster_admin }}"
+    groups: root
+    append: yes
+
+- name: "管理ユーザーが存在することを確認"
+  group:
+    name:  "{{ cluster_admin }}"
+    state: present
+
+- name: "管理ユーザーにbashシェルを設定"
+  user:
+    name:  "{{ cluster_admin }}"
+    shell: /bin/bash
+    group: "{{ cluster_admin }}"
+
+
+- name: "sudoersの追加"
+  template:
+    src:  sudor.j2
+    dest: "/etc/sudoers.d/{{ cluster_admin }}"
+    owner: root
+    group: root
+    mode: '0440'
+
+
+- name: "QEMU/KVM時のコンテナ用ファイルシステム作成"
+  filesystem:
+    fstype: ext4
+    dev: /dev/vdb
+  when: ansible_facts.devices.vdb is defined
+
+- name: "QEMU/KVM用のマウントポイント作成"
+  file:
+    path: /var/lib/containerd
+    owner: root
+    group: root
+    mode: '0755'
+    state: directory
+  when: ansible_facts.devices.vdb is defined
+
+- name: "QEMU/KVM用のデバイスをマウント"
+  mount:
+    path: /var/lib/containerd
+    src:  /dev/vdb
+    fstype: ext4
+    state: mounted
+  when: ansible_facts.devices.vdb is defined
+
+
+- debug: msg="{{ ansible_facts.virtualization_type }}"

@@ -1,0 +1,16 @@
+#
+# RUNC
+#
+- name: Downloading runc
+  stat:
+    path: "{{ download_dir }}/runc.amd64"
+  register: regi_runc
+
+- get_url:
+    url: "https://github.com/opencontainers/runc/releases/download/{{ runc_version }}/runc.amd64"
+    dest: "{{ download_dir }}"
+    mode: '0644'
+  when:
+    - regi_runc.stat.exists == False
+
+

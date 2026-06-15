@@ -1,0 +1,42 @@
+- name: "Linuxのセットアップとコンテナランタイムのインストール"
+  hosts: all
+  gather_facts: true
+  become: true
+  roles:
+    - setup-linux
+    - containerd
+    - kubeadm
+
+- name: "NFSサーバーの設定"
+  hosts: master
+  become: true
+  vars:
+    nfs_export_dir: "/mnt"
+    nfs_allowed_client: "172.16.20.0/24"
+  roles:
+    - nfs-server
+
+
+- name: "NFSクライアントの設定"
+  hosts: nodes
+  become: true
+  vars:
+    nfs_server_ip: "172.16.20.220"
+    nfs_server_dir: "/mnt"
+    nfs_mount_point: "/mnt"
+  roles:
+    - nfs-client
+
+- name: "コントロールプレーンのインストール"
+  hosts: master
+  gather_facts: true
+  become: true
+  roles:
+    - master
+
+- name: "ワーカーノードの参加"
+  hosts: nodes
+  become: true
+  roles:
+    - worker
+

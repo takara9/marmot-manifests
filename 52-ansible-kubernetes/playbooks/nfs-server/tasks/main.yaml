@@ -1,0 +1,23 @@
+
+
+- name: "NFSサーバーのパッケージをインストール"
+  apt:
+    name: nfs-kernel-server
+    state: present
+    update_cache: true
+
+- name: "共有ディレクトリの作成"
+  file:
+    path: "{{ nfs_export_dir }}"
+    state: directory
+    owner: nobody
+    group: nogroup
+    mode: '0777'  # クライアントからの書き込みを許可するため広めに設定
+
+- name: "設定ファイル /etc/exports の構成"
+  lineinfile:
+    path: /etc/exports
+    line: "{{ nfs_export_dir }} {{ nfs_allowed_client }}(rw,sync,no_subtree_check,no_root_squash)"
+    state: present
+  notify: Reload NFS server
+
