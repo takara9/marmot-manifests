@@ -1,0 +1,76 @@
+## Dashboard UI インストール
+#
+
+# メモ
+#  ダウンロードして編集するのが望ましいが、Ansibleによる編集が難しいため
+#  事前に編集したYAMLでデプロイする
+#
+
+#- name: Download Dashboard Manifest
+#  get_url:
+#    url: "https://raw.githubusercontent.com/kubernetes/dashboard/{{ kubernetes_dashborad_ver }}/aio/deploy/recommended.yaml"
+#    dest: "{{ cadmin_home }}/kubernetes-dashboard.yaml"
+#    mode: '0644'
+#    owner: "{{ cluster_admin }}"
+#    group: "{{ cluster_admin }}"
+#
+#- name: Change Dashboard RBAC
+#  replace:
+#    path: "{{ cadmin_home }}/kubernetes-dashboard.yaml"
+#    after: '  kind: ClusterRole'
+#    regexp: '^  name: kubernetes-dashboard'
+#    replace: '  name: cluster-admin'
+#
+#- name: Insert nodePort
+#  blockinfile:
+#    path: "{{ cadmin_home }}/kubernetes-dashboard.yaml"
+#    insertafter: "      targetPort: 8443"
+#    block: |2
+#            nodePort: 30445
+#        type: LoadBalancer
+
+- name: Download Dashboard Manifest
+  template:
+    src:  kubernetes-dashboard.yaml.j2
+    dest: "{{ cadmin_home }}/kubernetes-dashboard.yaml"
+    mode: '0644'
+    owner: "{{ cluster_admin }}"
+    group: "{{ cluster_admin }}"
+
+
+- name: Deploy Dashboard UI
+  become_user: "{{ cluster_admin }}"
+  command: kubectl apply -f {{ cadmin_home }}/kubernetes-dashboard.yaml
+  args:
+    chdir: "{{ cadmin_home }}"
+
+
+- name: Ingress for Dashboard
+  template:
+    src:  dashboard-ingress.yaml.j2
+    dest: "{{ cadmin_home }}/dashboard-ingress.yaml"
+    mode: '0644'
+    owner: "{{ cluster_admin }}"
+    group: "{{ cluster_admin }}"
+
+
+- name: deploy Ingress for Dashboard
+  become_user: "{{ cluster_admin }}"
+  command: kubectl apply -f {{ cadmin_home }}/dashboard-ingress.yaml
+  register: command_result
+  until: "command_result is not failed"
+  retries: 3
+  delay: 10
+  args:
+    chdir: "{{ cadmin_home }}"
+
+
+- name: setup kubeconfig
+  become_user: "{{ cluster_admin }}"
+  shell: |
+        ##KUBECONFIG=/srv/k8s/kubeconfig/admin.kubeconfig
+        TOKEN=$(kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret |grep kubernetes-dashboard-token-* | awk '{print $1}') |awk '$1=="token:"{print $2}')
+        kubectl config set-credentials kubernetes-admin --token="${TOKEN}"
+  args:
+    chdir: "{{ cadmin_home }}"
+ 

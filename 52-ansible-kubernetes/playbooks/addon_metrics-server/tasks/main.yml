@@ -1,0 +1,49 @@
+#
+# メトリックスサーバーのデプロイ用 (Brigde, Flannelで動作)
+#
+- name: Install Metrics Server for k8s < 1.23
+  get_url:
+    url: "https://github.com/kubernetes-sigs/metrics-server/releases/download/{{ kubernetes_metrics_server }}/components.yaml"
+    dest: "{{ cadmin_home }}/metrics-server.yaml"
+    owner: "{{ cluster_admin }}"
+    group: "{{ cluster_admin }}"
+    mode: '0644'
+  when: kubernetes_version is version('1.23.0', '<')
+
+- name: Install Metrics Server for k8s >= 1.23
+  get_url:
+    url: "https://github.com/kubernetes-sigs/metrics-server/releases/download/{{ kubernetes_metrics_server }}/components.yaml"
+    dest: "{{ cadmin_home }}/metrics-server.yaml"
+    owner: "{{ cluster_admin }}"
+    group: "{{ cluster_admin }}"
+    mode: '0644'
+  when: kubernetes_version is version('1.23.0', '>=')
+
+
+- name: add a new line 0.3.6
+  blockinfile:
+    path: "{{ cadmin_home }}/metrics-server.yaml"
+    insertafter: '        args:'
+    block: |
+           # added lines
+                     - --kubelet-insecure-tls
+                     - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+  when: kubernetes_metrics_server is version('v0.3.6', '==')		     
+
+
+- name: add a new line 0.5.2
+  blockinfile:
+    path: "{{ cadmin_home }}/metrics-server.yaml"
+    insertafter: '        - --metric-resolution=15s'
+    block: |
+           # added lines
+                   - --kubelet-insecure-tls
+  when: kubernetes_metrics_server is version('v0.5.2', '==')		     
+
+
+
+- name: Deploy Metrics Server
+  command: kubectl apply -f {{ cadmin_home }}/metrics-server.yaml
+  become_user: "{{ cluster_admin }}"
+  args:
+    chdir: "{{ cadmin_home }}"

@@ -1,0 +1,15 @@
+- name: Download calico operator yaml
+  get_url:
+    url: "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml"
+    dest: "{{ cadmin_home }}/tigera-operator.yaml"
+    owner: "{{ cluster_admin }}"
+    group: "{{ cluster_admin }}"
+    mode: '0644'
+
+- name: Download calico custom resource yaml
+  get_url:
+    url: "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/custom-resources.yaml"
+    dest: "{{ cadmin_home }}/custom-resources.yaml"
+    owner: "{{ cluster_admin }}"
+    group: "{{ cluster_admin }}"
+    mode: '0644'

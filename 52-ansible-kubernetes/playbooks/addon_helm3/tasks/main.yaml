@@ -1,0 +1,53 @@
+##
+## Install helm3
+##
+- name: Downloading helm3
+  stat:
+    path: "{{ download_dir }}/helm-{{ helm_version }}-linux-amd64.tar.gz"
+  register: regi_helm3
+
+- get_url:
+    url: "https://get.helm.sh/helm-{{ helm_version }}-linux-amd64.tar.gz"
+    dest: "{{ download_dir }}"
+    mode: '0644'
+  when: regi_helm3.stat.exists == False
+
+- stat:
+    path: "{{ download_dir }}/linux-amd64/helm"
+  register: regi_helm3_bin
+
+- unarchive:
+    src:  "{{ download_dir }}/helm-{{ helm_version }}-linux-amd64.tar.gz"
+    dest: "{{ download_dir }}"
+    remote_src: True
+  when: regi_helm3_bin.stat.exists == False
+
+- name: copy helm3 usr/local/bin
+  copy:
+    src: "{{ download_dir }}/linux-amd64/helm"
+    dest: /usr/local/bin
+    owner: root
+    group: root
+    mode: '0755'
+    remote_src: True
+#
+# 旧チャートリポジトリ、現在廃止
+# https://kubernetes-charts.storage.googleapis.com/
+#
+- name: install helm repository
+  shell: |
+    helm repo add stable https://charts.helm.sh/stable
+  args:
+    chdir: "{{ cadmin_home }}"
+  become_user: "{{ cluster_admin }}"
+  become_method: sudo
+
+
+- name: install helm repository
+  shell: |
+    helm repo add incubator https://charts.helm.sh/incubator
+  args:
+    chdir: "{{ cadmin_home }}"  
+  become_user: "{{ cluster_admin }}"
+  become_method: sudo
+

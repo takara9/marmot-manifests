@@ -1,0 +1,6 @@
+- name: Deploy addons
+  hosts: master1
+  gather_facts: yes
+  become: yes
+  roles:
+    - addon_metrics-server

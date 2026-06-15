@@ -22,30 +22,23 @@ node2            hv0           RUNNING       2    4192     172.16.20.222    clus
 
 ```console
 $ ansible -i hosts -m ping all
-master | SUCCESS => {
-    "ansible_facts": {
-        "discovered_interpreter_python": "/usr/bin/python3"
-    },
-    "changed": false,
-    "ping": "pong"
-}
-node1 | SUCCESS => {
-    "ansible_facts": {
-        "discovered_interpreter_python": "/usr/bin/python3"
-    },
-    "changed": false,
-    "ping": "pong"
-}
-node2 | SUCCESS => {
-    "ansible_facts": {
-        "discovered_interpreter_python": "/usr/bin/python3"
-    },
-    "changed": false,
-    "ping": "pong"
-}
 ```
 
 ```console
-$ ansible-playbook -i hosts playbooks/install-node.yaml 
+$ ansible-playbook -i hosts playbooks/install.yaml 
 ```
 
+```console
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo mv kubectl /usr/local/bin
+sudo chmod +x /usr/local/bin/kubectl
+```
+
+
+```console
+ubuntu@hv0:~$ kubectl get node
+NAME     STATUS   ROLES           AGE     VERSION
+master   Ready    control-plane   5m28s   v1.36.2
+node1    Ready    <none>          5m16s   v1.36.2
+node2    Ready    <none>          5m16s   v1.36.2
+```

@@ -40,3 +40,21 @@
   roles:
     - worker
 
+- name: "アドオンのインストール"
+  hosts: master
+  gather_facts: true
+  become: true
+  roles:
+    - addon_helm3
+    -
+
+
+
+- name: "kube設定ディレクトリの回収"
+  hosts: master 
+  tasks:
+    - name: .kube ディレクトリをローカルにコピー
+      ansible.posix.synchronize:
+        mode: pull
+        src: "/home/ubuntu/.kube/"
+        dest: "~/.kube/"  # ローカルの保存先（カレントディレクトリ配下）

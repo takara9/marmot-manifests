@@ -1,0 +1,13 @@
+#
+# Kubernetesのバージョンによりダッシュボードのバージョンを変更する必要がある。
+# 詳しくは https://github.com/kubernetes/dashboard/releases を参照
+#
+
+# K8s 1.18
+#kubernetes_dashborad_ver  : v2.0.3
+
+# K8s 1.19
+#kubernetes_dashborad_ver  : v2.0.5
+
+# K8s 1.20
+#kubernetes_dashborad_ver  : v2.2.0

@@ -1,0 +1,67 @@
+#
+# Calico のインストール
+#　Bootノードで実行する
+#
+
+- name: copy calico-custom.yaml to local
+  template:
+    src: calico-custom.yaml
+    dest: "{{ cadmin_home }}/calico-custom.yaml"
+    owner: "{{ cluster_admin }}"
+    group: "{{ cluster_admin }}"
+    mode: '0644'
+  when: kubernetes_version is version('1.20.0', '<')
+
+
+#
+# カスタムなマニフェストを使用
+#
+- name: copy calico-custom-x.yaml to local
+  template:
+    src: calico-custom-x.yaml
+    dest: "{{ cadmin_home }}/calico-custom.yaml"
+    owner: "{{ cluster_admin }}"
+    group: "{{ cluster_admin }}"
+    mode: '0644'
+  when: kubernetes_version is version('1.20.0', '>=')
+
+#
+# 常に最新バージョンのマニフェストが落ちてくる
+#
+#- name: Download calico yaml
+#  get_url:
+#    url: "https://docs.projectcalico.org/manifests/calico.yaml"
+#    dest: "{{ cadmin_home }}/calico-custom.yaml"	    
+#    owner: "{{ cluster_admin }}"
+#    group: "{{ cluster_admin }}"
+#    mode: '0644'
+#  when: kubernetes_version is version('1.20.0', '>=')
+
+- name: deploy calico by kubectl
+  shell: |
+    kubectl apply -f calico-custom.yaml
+  args:
+    chdir: "{{ cadmin_home }}"
+  become: true
+  become_user: "{{ cluster_admin }}"
+
+
+- name: Download calicoctl command
+  get_url:
+    url: "https://github.com/projectcalico/calicoctl/releases/download/{{ calico_version }}/calicoctl"
+    dest: /usr/local/bin/calicoctl
+    mode: '0755'
+    owner: root
+    group: root
+
+  
+- name: setup ENVIRONMENT VAR in .profile at home dir
+  shell: |
+    cat <<EOF >> /home/{{ cluster_admin }}/.profile
+    # for calicoctl
+    export DATASTORE_TYPE=kubernetes
+    export KUBECONFIG=~/.kube/config
+  args:
+    chdir: "/home/{{ cluster_admin }}"
+
+
