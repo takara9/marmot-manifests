@@ -7,3 +7,26 @@
     - addon_metrics-server
     - addon_prometheus
     - addon_grafana
+
+
+#- name: GrafanaからPrometheusへのアクセスを許可するNetworkPolicyの適用
+#  hosts: master
+#  tasks:
+#    - name: マニフェストのコピー
+#      copy:
+#        src: k8s-manifests/networkl-policy.yaml
+#        dest: /tmp/networkl-policy.yaml
+#    - name: NetworkPolicyをYAMLで適用
+#      command: kubectl apply -f /tmp/networkl-policy.yaml
+#      environment:
+#        KUBECONFIG: /etc/kubernetes/admin.conf
+  
+- name: monitoring NetworkPolicyを全削除
+  hosts: master
+  gather_facts: false
+  tasks:
+    - name: monitoring NetworkPolicyを全削除
+      command: kubectl delete networkpolicy -n monitoring --all
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+      ignore_errors: true
