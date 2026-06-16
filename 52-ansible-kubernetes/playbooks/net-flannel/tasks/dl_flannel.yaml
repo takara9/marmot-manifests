@@ -1,0 +1,22 @@
+#
+# Flannel のダウンロードと展開
+#
+- name: Download Flannel 
+  stat:
+    path: "{{ download_dir }}/flannel-{{ flannel_version }}-linux-amd64.tar.gz"
+  register: regi_flannel
+
+- get_url:
+    url: https://github.com/coreos/flannel/releases/download/{{ flannel_version }}/flannel-{{ flannel_version }}-linux-amd64.tar.gz
+    dest: "{{ download_dir }}"
+    mode: '0644'
+  when: regi_flannel.stat.exists == False
+
+- unarchive:
+    src:  "{{ download_dir }}/flannel-{{ flannel_version }}-linux-amd64.tar.gz"
+    dest: "{{ download_dir }}"
+    remote_src: True
+  when: regi_flannel.stat.exists == False    
+
+
+

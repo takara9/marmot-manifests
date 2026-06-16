@@ -1,28 +1,32 @@
 {
-  "cniVersion": "0.4.0",
+  "cniVersion": "1.0.0",
   "name": "bridge",
   "plugins": [
     {
       "type": "bridge",
-      "bridge": "bridge",
-      "addIf": "true",
-      "isDefaultGateway": true,
-      "forceAddress": false,
+      "bridge": "cni0",
+      "isGateway": true,
       "ipMasq": true,
       "hairpinMode": true,
       "ipam": {
-          "type": "host-local",
-          "subnet": "10.244.0.0/16"
+        "type": "host-local",
+        "ranges": [
+          [
+            {
+              "subnet": "{{ pod_cidr }}"
+            }
+          ]
+        ],
+        "routes": [
+          { "dst": "0.0.0.0/0" }
+        ]
       }
     },
     {
       "type": "portmap",
       "capabilities": {
-          "portMappings": true
+        "portMappings": true
       }
-    },
-    {
-       "type": "firewall"
     }
   ]
 }

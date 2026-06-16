@@ -8,7 +8,7 @@
 #
 - include_tasks: dl_cni_plugin.yaml
 - include_tasks: dl_containerd.yaml
-#- include_tasks: dl_cri_containerd.yaml
+- include_tasks: dl_cri_containerd.yaml
 - include_tasks: dl_crictl.yaml
 - include_tasks: dl_runc.yaml
 

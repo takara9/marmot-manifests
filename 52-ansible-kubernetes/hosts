@@ -8,3 +8,43 @@ master
 [nodes]
 node1
 node2
+
+
+[all:vars]
+
+work_dir            =   "/mnt"
+cadmin_home         =   "/tmp"
+ca_kubeconfig       =   "/tmp"
+download_dir        =   "/tmp"
+
+cluster_name        =   "k8s1"
+
+user_name           =   "ubuntu"
+cluster_admin       =   "ubuntu"
+
+kubernetes_version  =   "v1.36.2"
+k8s_version         =   "v1.36"
+k8s_package_version =   "1.36.2-2.1"
+
+containerd_version  =   "1.7.23"
+runc_version        =   "v1.4.3"
+cni_plugins         =   "v1.6.0"
+crictl_version      =   "v1.36.0"
+
+
+kubernetes_metrics_server =  "v0.8.1"
+
+helm_version        =   "v4.2.1"
+flannel_version     =   "v0.12.0"
+calico_version      =   "v3.29.3"
+iface_pri           =   "enp1s0"
+cpu_arch            =   "amd64"
+
+# CNI         CIDR
+# Calico     192.168.0.0/16
+# Flannel     10.244.0.0/16
+# Cilium      10.0.0.0/8
+# Weave       10.32.0.0/12
+
+#pod_cidr            = "10.0.0.0/8"
+pod_cidr            = "10.244.0.0/16"

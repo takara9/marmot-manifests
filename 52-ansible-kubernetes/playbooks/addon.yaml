@@ -1,6 +1,9 @@
 - name: Deploy addons
-  hosts: master1
+  hosts: master
   gather_facts: yes
   become: yes
   roles:
+    - addon_helm
     - addon_metrics-server
+    - addon_prometheus
+    - addon_grafana

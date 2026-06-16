@@ -1,0 +1,20 @@
+#
+# これらのダウンロードは、bootnodeで実施される。
+# このレベルでbootnodeでしか実行されないことがわかるようにする。
+#
+# 必要なコードのダウンロード
+#- include_tasks: dl_flannel.yaml
+#  when:
+#    - ansible_facts.hostname is match(download_node)
+
+#- include_tasks: install_flannel.yaml
+#  when:
+#    - ansible_facts.hostname is not match(download_node)
+
+
+- name: apply flannel
+  become_user: "{{ cluster_admin }}"
+  shell: |
+      kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+  args:
+    chdir: "{{ cadmin_home }}"

@@ -6,7 +6,7 @@
     group: root
     mode:  '0644'
 
-#     kubeadm init --pod-network-cidr=10.244.0.0/16 --config /etc/kubernetes/kubeadm-config.yaml
+# kubeadm-config.yaml の中で、サブネットの指定があるので、ここで指定した値をテンプレートに渡す必要があります。
 - name: "kubeadmの初期化"
   shell: |
      kubeadm init --config /etc/kubernetes/kubeadm-config.yaml
@@ -21,19 +21,19 @@
 - name: "kubeのコンフィグ取得"
   include_tasks: kubeconfig_setup.yml
 
-- template:
-    src: custom-resources.yaml
-    dest: "{{ work_dir }}/custom-resources.yaml"
-    owner: root
-    group: root
-    mode: '0644'
+#- template:
+#    src: custom-resources.yaml
+#    dest: "{{ work_dir }}/custom-resources.yaml"
+#    owner: root
+#    group: root
+#    mode: '0644'
 
-- template:
-    src: tigera-operator.yaml
-    dest: "{{ work_dir }}/tigera-operator.yaml"
-    owner: root
-    group: root
-    mode: '0644'
+#- template:
+#    src: tigera-operator.yaml
+#    dest: "{{ work_dir }}/tigera-operator.yaml"
+#    owner: root
+#    group: root
+#    mode: '0644'
 
 - name: Delete kubeadm_join.sh
   file:

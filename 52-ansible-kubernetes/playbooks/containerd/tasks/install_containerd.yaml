@@ -1,18 +1,18 @@
-- name: "CNIプラグインのディレクトリ作成"
-  file:
-    path: /etc/cni/net.d
-    state: directory
-    owner: root
-    group: root
-    mode: '0755'
+#- name: "CNIプラグインのディレクトリ作成"
+#  file:
+#    path: /etc/cni/net.d
+#    state: directory
+#    owner: root
+#    group: root
+#    mode: '0755'
 
-- name: "CNIプラグインのディレクトリに、Marmotのネットワーク設定を配置"
-  template:
-    src: 01-marmot.conflist
-    dest: /etc/cni/net.d
-    owner: root
-    group: root
-    mode: '0644'
+#- name: "CNIプラグインのディレクトリに、Marmotのネットワーク設定を配置"
+#  template:
+#    src: 01-marmot.conflist
+#    dest: /etc/cni/net.d
+#    owner: root
+#    group: root
+#    mode: '0644'
 
 
 - name: "CNIプラグインのディレクトリ作成"

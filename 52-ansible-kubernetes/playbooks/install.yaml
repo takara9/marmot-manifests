@@ -7,12 +7,13 @@
     - containerd
     - kubeadm
 
+
 - name: "NFSサーバーの設定"
   hosts: master
   become: true
   vars:
     nfs_export_dir: "/mnt"
-    nfs_allowed_client: "172.16.20.0/24"
+    nfs_allowed_client: "192.168.1.0/24"
   roles:
     - nfs-server
 
@@ -21,7 +22,7 @@
   hosts: nodes
   become: true
   vars:
-    nfs_server_ip: "172.16.20.220"
+    nfs_server_ip: "192.168.1.220"
     nfs_server_dir: "/mnt"
     nfs_mount_point: "/mnt"
   roles:
@@ -40,16 +41,13 @@
   roles:
     - worker
 
-- name: "アドオンのインストール"
+- name: "ネットワークプラグインのインストール"
   hosts: master
   gather_facts: true
   become: true
   roles:
-    - addon_helm3
-    -
-
-
-
+    # net-cilium
+    - net-flannel
 - name: "kube設定ディレクトリの回収"
   hosts: master 
   tasks:

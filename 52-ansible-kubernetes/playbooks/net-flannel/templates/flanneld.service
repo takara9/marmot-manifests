@@ -1,0 +1,23 @@
+[Unit]
+Description=Flannel Network overlay
+Documentation=https://github.com/coreos/flannel
+
+[Service]
+Environment=NODE_NAME={{ ansible_facts.hostname }}
+Environment=FLANNEL_SUBNET=10.244.0.0/16
+
+ExecStart=/opt/bin/flanneld \
+   --ip-masq=true \
+   --kube-subnet-mgr \
+   --net-config-path /etc/kube-flannel/net-conf.json \
+   --kubeconfig-file /etc/kubernetes/node.conf \
+   --iface={{ iface_pri }}
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+#    --kubeconfig-file /var/lib/kubernetes/kubeconfig \
+

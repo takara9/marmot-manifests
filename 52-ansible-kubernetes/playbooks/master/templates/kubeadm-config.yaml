@@ -1,10 +1,16 @@
 # kubeadm-config.yaml
+kind: InitConfiguration
+apiVersion: kubeadm.k8s.io/v1beta4
+localAPIEndpoint:
+  advertiseAddress: "192.168.1.220"
+  bindPort: 6443
+---
 kind: ClusterConfiguration
 apiVersion: kubeadm.k8s.io/v1beta4
 kubernetesVersion: "{{ kubernetes_version }}"
 networking:
   serviceSubnet: "10.96.0.0/16"
-  podSubnet: "10.244.0.0/24"
+  podSubnet: "{{ pod_cidr }}"
   dnsDomain: "cluster.local"
 ---
 kind: KubeletConfiguration
