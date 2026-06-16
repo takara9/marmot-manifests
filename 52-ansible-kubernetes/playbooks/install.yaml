@@ -13,7 +13,7 @@
   become: true
   vars:
     nfs_export_dir: "/mnt"
-    nfs_allowed_client: "192.168.1.0/24"
+    nfs_allowed_client: "172.16.20.0/24"
   roles:
     - nfs-server
 
@@ -22,7 +22,7 @@
   hosts: nodes
   become: true
   vars:
-    nfs_server_ip: "192.168.1.220"
+    nfs_server_ip: "172.16.20.220"
     nfs_server_dir: "/mnt"
     nfs_mount_point: "/mnt"
   roles:
@@ -46,8 +46,9 @@
   gather_facts: true
   become: true
   roles:
-    # net-cilium
-    - net-flannel
+    - net-cilium
+    #- net-flannel
+
 - name: "kube設定ディレクトリの回収"
   hosts: master 
   tasks:
@@ -56,3 +57,21 @@
         mode: pull
         src: "/home/ubuntu/.kube/"
         dest: "~/.kube/"  # ローカルの保存先（カレントディレクトリ配下）
+
+- name: "ノードのネットワークアドレスの統一"
+  hosts: all
+  gather_facts: true
+  become: true
+  tasks:
+    - name: KUBELET_EXTRA_ARGSを設定
+      lineinfile:
+        path: /etc/default/kubelet
+        regexp: '^KUBELET_EXTRA_ARGS'
+        line: "KUBELET_EXTRA_ARGS=--node-ip={{ ansible_facts['enp2s0']['ipv4']['address'] }}"
+        create: true
+
+    - name: kubelet再起動
+      systemd:
+        name: kubelet
+        state: restarted
+        daemon_reload: true

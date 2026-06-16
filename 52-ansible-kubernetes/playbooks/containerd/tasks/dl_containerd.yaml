@@ -1,12 +1,12 @@
 - name: "containerdのダウンロード確認"
   stat:
-    path: "{{ download_dir }}/containerd-{{ containerd_version }}-linux-amd64.tar.gz"
+    path: "{{ temp_dir }}/containerd-{{ containerd_version }}-linux-amd64.tar.gz"
   register: regi_containerd
 
 - name: "containerdのダウンロード"
   get_url:
     url: "https://github.com/containerd/containerd/releases/download/v{{ containerd_version }}/containerd-{{ containerd_version }}-linux-amd64.tar.gz"
-    dest: "{{ download_dir }}"
+    dest: "{{ temp_dir }}"
     mode: '0644'
   when:
     - regi_containerd.stat.exists == False

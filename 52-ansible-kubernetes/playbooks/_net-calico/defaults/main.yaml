@@ -1,3 +1,3 @@
 #cluster_admin:   ubuntu
-#cadmin_home:     /tmp
+#temp_dir:     /tmp
 #calico_version:  v3.29.3

@@ -9,7 +9,7 @@
     sudo tar xzvfC cilium-linux-${CLI_ARCH}.tar.gz /usr/local/bin
     #rm cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
   args:
-    chdir: "{{ cadmin_home }}"
+    chdir: "{{ temp_dir }}"
 
 
 - name: download hubble
@@ -23,7 +23,7 @@
     sudo tar xzvfC hubble-linux-${HUBBLE_ARCH}.tar.gz /usr/local/bin
     #rm hubble-linux-${HUBBLE_ARCH}.tar.gz{,.sha256sum}
   args:
-    chdir: "{{ cadmin_home }}"
+    chdir: "{{ temp_dir }}"
 
 
 - name: install cilium
@@ -31,4 +31,4 @@
   shell: |
     cilium install
   args:
-    chdir: "{{ cadmin_home }}"
+    chdir: "{{ temp_dir }}"

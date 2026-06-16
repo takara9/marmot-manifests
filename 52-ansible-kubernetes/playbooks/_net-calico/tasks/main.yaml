@@ -1,13 +1,13 @@
 - name: Download calico operator yaml
   get_url:
     url: "https://raw.githubusercontent.com/projectcalico/calico/{{ calico_version }}/manifests/tigera-operator.yaml"
-    dest: "{{ cadmin_home }}/tigera-operator.yaml"
+    dest: "{{ temp_dir }}/tigera-operator.yaml"
     owner: "{{ cluster_admin }}"
     group: "{{ cluster_admin }}"
     mode: '0644'
 
 - name: "オペレーターのインストール"
-  command: kubectl create -f "{{ cadmin_home }}/tigera-operator.yaml"
+  command: kubectl create -f "{{ temp_dir }}/tigera-operator.yaml"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   ignore_errors: true  # 既に存在する場合のエラーを無視
@@ -15,9 +15,9 @@
 - name: custom-resources.yamlを/tmpにコピー
   copy:
     src: templates/custom-resources.yaml
-    dest: "{{ cadmin_home }}/custom-resources.yaml"
+    dest: "{{ temp_dir }}/custom-resources.yaml"
 
 - name: kubectl apply
-  command: kubectl apply -f "{{ cadmin_home }}/custom-resources.yaml"
+  command: kubectl apply -f "{{ temp_dir }}/custom-resources.yaml"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf

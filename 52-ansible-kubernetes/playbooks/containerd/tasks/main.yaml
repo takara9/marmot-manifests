@@ -2,23 +2,11 @@
 # Containerd のダウンロードとインストール
 #
 - debug: msg="{{ ansible_facts.hostname }}"
-
-#
-# これらのダウンロードはbootnodeで実施される。
-#
 - include_tasks: dl_cni_plugin.yaml
 - include_tasks: dl_containerd.yaml
-- include_tasks: dl_cri_containerd.yaml
 - include_tasks: dl_crictl.yaml
 - include_tasks: dl_runc.yaml
 
-
-#- name: mount cgroup
-#  shell: |
-#    mkdir /sys/fs/cgroup/systemd
-#    mount -t cgroup -o none,name=systemd cgroup /sys/fs/cgroup/systemd
-
-#
 # インストールとセットアップ
 - include_tasks: install_containerd.yaml
 

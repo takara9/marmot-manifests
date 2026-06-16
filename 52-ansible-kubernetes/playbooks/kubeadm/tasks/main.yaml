@@ -14,14 +14,14 @@
     state: directory
     mode: '0755'
 
-- name: "Kubernetes GPGキーのダウンロード"
+- name: "Kubernetes キーのダウンロード"
   get_url:
-    url: "https://pkgs.k8s.io/core:/stable:/{{ k8s_version }}/deb/Release.key"
+    url: "https://pkgs.k8s.io/core:/stable:/v{{ k8s_version }}/deb/Release.key"
     dest: "/tmp/kubernetes-release.key"
     mode: '0644'
     http_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 
-- name: "Kubernetes GPGキーのデアーマーとkeyringsへの保存"
+- name: "Kubernetes キーのデアーマーとkeyringsへの保存"
   # 以前のansible.builtin.apt_keyは非推奨のため、gpgコマンドで変換して配置します
   command: >
     gpg --yes --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg /tmp/kubernetes-release.key
@@ -30,7 +30,7 @@
 
 - name: "Kubernetes APTリポジトリの追加"
   apt_repository:
-    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/{{ k8s_version }}/deb/ /"
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v{{ k8s_version }}/deb/ /"
     filename: kubernetes
     state: present
     update_cache: true
@@ -40,7 +40,7 @@
     path: /tmp/kubernetes-release.key
     state: absent
 
-- name: "Kubernetesパッケージのインストール"
+- name: "Kubernetesパッケージのインストール {{ k8s_package_version }}"
   apt:
     name: "{{ packages }}"
     state: present

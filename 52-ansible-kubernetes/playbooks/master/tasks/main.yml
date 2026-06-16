@@ -11,7 +11,7 @@
   shell: |
      kubeadm init --config /etc/kubernetes/kubeadm-config.yaml
   args:
-    chdir: "{{ work_dir }}"
+    chdir: "{{ nfs_share_dir }}"
   register: kubeadm_shell_output
 
 - debug: msg="{{ kubeadm_shell_output.stdout_lines}}"
@@ -21,28 +21,14 @@
 - name: "kubeのコンフィグ取得"
   include_tasks: kubeconfig_setup.yml
 
-#- template:
-#    src: custom-resources.yaml
-#    dest: "{{ work_dir }}/custom-resources.yaml"
-#    owner: root
-#    group: root
-#    mode: '0644'
-
-#- template:
-#    src: tigera-operator.yaml
-#    dest: "{{ work_dir }}/tigera-operator.yaml"
-#    owner: root
-#    group: root
-#    mode: '0644'
-
 - name: Delete kubeadm_join.sh
   file:
-    path: "{{ work_dir }}/kubeadm_join_{{ cluster_name }}.sh"
+    path: "{{ nfs_share_dir }}/kubeadm_join_{{ cluster_name }}.sh"
     state: absent
 
 - template:
     src: join.sh.j2
-    dest: "{{ work_dir }}/kubeadm_join_{{ cluster_name }}.sh"
+    dest: "{{ nfs_share_dir }}/kubeadm_join_{{ cluster_name }}.sh"
     owner: root
     group: root
     mode: '0755'

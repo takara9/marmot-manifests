@@ -1,4 +1,4 @@
 #helm_version:  v4.2.1
-#download_dir:  /tmp
-#cadmin_home:   /mnt
+#temp_dir:  /tmp
+#temp_dir:   /mnt
 #cluster_admin: ubuntu

@@ -1,4 +1,4 @@
-#download_dir :         "/tmp"
+#temp_dir :         "/tmp"
 #cni_plugins :          "v1.6.0"
 #containerd_version :   "1.7.23"
 #crictl_version :       "v1.36.0"

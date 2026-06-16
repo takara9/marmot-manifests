@@ -1,21 +1,21 @@
 - name: Install Metrics Server
   get_url:
-    url: "https://github.com/kubernetes-sigs/metrics-server/releases/download/{{ kubernetes_metrics_server }}/components.yaml"
-    dest: "{{ cadmin_home }}/metrics-server.yaml"
+    url: "https://github.com/kubernetes-sigs/metrics-server/releases/download/{{ k8s_metrics_server }}/components.yaml"
+    dest: "{{ temp_dir }}/metrics-server.yaml"
     owner: "{{ cluster_admin }}"
     group: "{{ cluster_admin }}"
     mode: '0644'
 
 - name: add --kubelet-insecure-tls to metrics-server
   blockinfile:
-    path: "{{ cadmin_home }}/metrics-server.yaml"
+    path: "{{ temp_dir }}/metrics-server.yaml"
     insertafter: '        - --metric-resolution=15s'
     block: |
            # added lines
                    - --kubelet-insecure-tls
 
 - name: Deploy Metrics Server
-  command: kubectl apply -f {{ cadmin_home }}/metrics-server.yaml
+  command: kubectl apply -f {{ temp_dir }}/metrics-server.yaml
   become_user: "{{ cluster_admin }}"
   args:
-    chdir: "{{ cadmin_home }}"
+    chdir: "{{ temp_dir }}"

@@ -1,2 +1,2 @@
-#work_dir: "/mnt"
+#nfs_share_dir: "/mnt"
 #cluster_name: "k8s1"
