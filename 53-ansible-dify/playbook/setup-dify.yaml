@@ -1,0 +1,40 @@
+- name: Dify をデプロイする
+  hosts: all
+  become: true
+
+  tasks:
+    - name: 必要パッケージをインストールする (jq, git)
+      ansible.builtin.package:
+        name:
+          - git
+          - jq
+        state: present
+
+    - name: Dify の最新タグを取得する
+      ansible.builtin.uri:
+        url: https://api.github.com/repos/langgenius/dify/releases/latest
+        return_content: true
+      register: dify_release
+
+    - name: タグ名を変数に格納する
+      ansible.builtin.set_fact:
+        dify_version: "{{ dify_release.json.tag_name }}"
+
+    - name: Dify リポジトリをクローンする
+      ansible.builtin.git:
+        repo: https://github.com/langgenius/dify.git
+        dest: "{{ dify_install_dir }}"
+        version: "{{ dify_version }}"
+        force: false
+
+    - name: .env ファイルを作成する (.env.example からコピー)
+      ansible.builtin.copy:
+        src: "{{ dify_install_dir }}/docker/.env.example"
+        dest: "{{ dify_install_dir }}/docker/.env"
+        remote_src: true
+        force: false   # すでに .env が存在する場合は上書きしない
+
+    - name: docker compose up -d を実行する
+      community.docker.docker_compose_v2:
+        project_src: "{{ dify_install_dir }}/docker"
+        state: present

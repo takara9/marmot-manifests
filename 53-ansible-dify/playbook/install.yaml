@@ -1,0 +1,33 @@
+- name: ディレクトリの作成
+  hosts: all
+  become: true
+  gather_facts: yes
+  tasks:
+    - name: ext4ファイルシステムを作成する
+      community.general.filesystem:
+        fstype: ext4
+        dev: /dev/vdb
+    - name: マウントポイントを作成する
+      ansible.builtin.file:
+        path: /var/lib/containerd
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+    - name: /dev/vdb を /var/lib/containerd にマウントして /etc/fstab に登録する
+      ansible.builtin.mount:
+        path: /var/lib/containerd
+        src: /dev/vdb
+        fstype: ext4
+        opts: defaults
+        state: mounted
+
+- name: Dockerのインストール
+  hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+    docker_user: ubuntu
+  roles:
+    - docker
+

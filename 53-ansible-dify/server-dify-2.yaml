@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: dify-server-2
+    comment: Ansibleで、dockerコマンドをインストールするサーバー
+    lables:
+      app: dify
+spec:
+    cpu: 4
+    memory: 8192
+    osVariant: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+        users:
+         - root
+         - ubuntu
+    ansible-playbook: playbook/install.yaml
+    networkInterface:
+        - networkname: host-bridge
+          address: 192.168.1.112
+          netmasklen: 24
+          nameservers:
+            addresses:
+                - 192.168.1.9
+            search:
+                - labo.local
+          routes:
+            - to: default
+              via: 192.168.1.1
+    storage:
+        - metadata:
+            name: /var/container2
+            comment: 作業エリアとして利用
+          spec:
+            size: 100
