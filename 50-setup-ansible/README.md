@@ -4,8 +4,10 @@
 自動設定することができます。ただし、そのためにいくつかの条件があります。
 
 - spec.auth.url で公開鍵を指定
-- spec.auth.user で root を指定
-- spec.ansible-playbook で プレイブックのパスを設定
+- spec.ansible をセット
+- spec.ansible.playbook: にAnsibleプレイブックのパスを設定
+- spec.ansible.inventory: にAnsible インベントリホストファイルを設定
+- spec.ansible.extra-args: ansible-playbookコマンドに渡す引数をセット
 - spec.networkInterface.[0].networkname で host-birdge を設定
 - spec.networkInterface.[0].address で sshできる IPアドレスを設定
 
@@ -28,10 +30,14 @@ spec:
     # VMホストからAnsible を実行するために、rootユーザーに公開鍵をセット
     auth:
         url: https://github.com/takara9.keys
-        user: root
-    # Ansible プレイブックのパスをセット
-    ansible-playbook:  playbook/setup.yaml
-    # VMホストからssh可能なように、host-bridgeを使用して、IPアドレスをセット
+    # Ansible プレイブック等のパスをセット
+    ansible:
+        playbook: playbook/setup.yaml
+        inventory: hosts.yaml
+        extra-args:
+            - flush-cache
+            - tags "nginx,mysql"
+# VMホストからssh可能なように、host-bridgeを使用して、IPアドレスをセット
     networkInterface:
         - networkname: host-bridge
           address: 192.168.1.41
