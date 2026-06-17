@@ -11,10 +11,9 @@ spec:
     osVariant: ubuntu24.04
     auth:
         url: https://github.com/takara9.keys
-        users:
-         - root
-         - ubuntu
-    ansible-playbook: playbook/install.yaml
+    ansible:
+        playbook: playbook/install.yaml
+        inventory: hosts.yaml
     networkInterface:
         - networkname: host-bridge
           address: 192.168.1.112
