@@ -46,6 +46,11 @@
 - [仮想マシン起動後に自動的に Ansible プレイブックを適用する](50-setup-ansible/README.md)
 - [仮想マシンにdockerをインストール](51-ansible-docker/README.md)
 
+## Kubernetes / アプリ構築
+
+- [AnsibleでKubernetesクラスタを構築する](52-ansible-kubernetes/README.md)
+- [Ansibleでdifyサーバーを構築する](53-ansible-dify/README.md)
+
 ## ドキュメント
 
 - [mactl コマンドリファレンス](COMMAND_REFERENCE.md)
