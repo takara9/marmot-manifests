@@ -14,7 +14,7 @@ spec:
         inventory: hosts.yaml
         extra-args:
             - flush-cache
-            - tags "nginx,mysql"
+            #- tags "nginx,mysql"
     networkInterface:
         - networkname: host-bridge
           address: 192.168.1.41
