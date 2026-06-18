@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: server-1
+    comment: 仮想サーバーのメモリの増減テスト用
+spec:
+    cpu: 1
+    memory: 2048
+    osVariant: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    networkInterface:
+        - networkname: host-bridge
+          address: 192.168.1.20
+          netmasklen: 24
+          routes:
+            - to: default
+              via: 192.168.1.1
+          nameservers:
+            addresses:
+                - 192.168.1.9
+            search:
+                - labo.local
