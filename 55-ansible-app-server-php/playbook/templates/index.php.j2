@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>PHP Test Page</title>
+</head>
+<body>
+    <p>PHP Version: <?php echo phpversion(); ?></p>
+    <p>Server Time: <?php echo date('Y-m-d H:i:s'); ?></p>
+    <p>Hostname (gethostname): <?php echo gethostname(); ?></p>
+    <p>Hostname (\$_SERVER): <?php echo $_SERVER['SERVER_NAME']; ?></p>
+    <p>Hostname (php_uname): <?php echo php_uname('n'); ?></p>
+    <p>Server IP Address: <?php echo $_SERVER['SERVER_ADDR']; ?></p>
+    <p>Client IP Address: <?php echo $_SERVER['REMOTE_ADDR']; ?></p>
+</body>
+</html>

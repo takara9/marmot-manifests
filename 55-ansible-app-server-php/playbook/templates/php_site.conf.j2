@@ -1,0 +1,19 @@
+server {
+    listen 80 default_server;
+    server_name _;
+    root {{ nginx_doc_root }};
+    index index.php index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:{{ php_fpm_socket }};
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+}

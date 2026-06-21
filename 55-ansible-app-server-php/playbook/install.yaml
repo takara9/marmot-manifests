@@ -1,0 +1,94 @@
+---
+- name: Install and configure Nginx + PHP-FPM
+  hosts: webphp
+  become: true
+  vars:
+    php_version: "8.3"
+    nginx_doc_root: /var/www/html
+    php_fpm_socket: "/run/php/php{{ php_version }}-fpm.sock"
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+
+    - name: Install PHP-FPM and common extensions
+      ansible.builtin.apt:
+        name:
+          - "php{{ php_version }}-fpm"
+          - "php{{ php_version }}-cli"
+          - "php{{ php_version }}-mysql"
+          - "php{{ php_version }}-curl"
+          - "php{{ php_version }}-xml"
+          - "php{{ php_version }}-mbstring"
+          - "php{{ php_version }}-zip"
+        state: present
+
+    - name: Ensure PHP-FPM is enabled and running
+      ansible.builtin.service:
+        name: "php{{ php_version }}-fpm"
+        state: started
+        enabled: true
+
+    - name: Remove default nginx site
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Reload nginx
+
+    - name: Deploy nginx vhost config for PHP
+      ansible.builtin.template:
+        src: php_site.conf.j2
+        dest: /etc/nginx/sites-available/php_site.conf
+        mode: '0644'
+      notify: Reload nginx
+
+    - name: Enable PHP site
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/php_site.conf
+        dest: /etc/nginx/sites-enabled/php_site.conf
+        state: link
+      notify: Reload nginx
+
+    - name: Ensure document root exists
+      ansible.builtin.file:
+        path: "{{ nginx_doc_root }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    - name: Deploy PHP info/test page
+      ansible.builtin.template:
+        src: index.php.j2
+        dest: "{{ nginx_doc_root }}/index.php"
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    - name: Ensure nginx is enabled and running
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Verify PHP page is responding
+      ansible.builtin.uri:
+        url: "http://localhost/index.php"
+        status_code: 200
+      register: result
+      retries: 3
+      delay: 2
+      until: result.status == 200
+
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded

@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: server-90
+    comment: Ansibleで、Webserverをインストールする
+    labels:
+        app: webserver
+spec:
+    cpu: 2
+    memory: 2048
+    osVariant: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    ansible:
+        playbook: playbook/install.yaml
+        inventory: hosts.yaml
+    networkInterface:
+        - networkname: host-bridge
+          address: 192.168.1.90
+          netmasklen: 24
+          nameservers:
+            addresses:
+                - 192.168.1.9
+            search:
+                - labo.local
+          routes:
+            - to: default
+              via: 192.168.1.1
