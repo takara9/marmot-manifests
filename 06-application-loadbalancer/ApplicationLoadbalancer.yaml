@@ -12,9 +12,9 @@ spec:
           backendPort: 80
           backendSelector:
               matchLabels:
-                  app: web
+                  app: web3
           loadBalancingAlgorithm: roundrobin
           healthCheck:
               enabled: false
           sessionPersistence:
-              enabled: false
+              enabled: true

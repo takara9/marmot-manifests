@@ -4,5 +4,5 @@ metadata:
   name: app-net
   comment: Webサーバー専用仮想ネットワーク
 spec:
-  iPNetworkAddress: 172.16.8.0/24
+  iPNetworkAddress: 172.16.9.0/24
   overlayMode: geneve
