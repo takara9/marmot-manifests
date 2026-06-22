@@ -72,6 +72,14 @@
         group: www-data
         mode: '0644'
 
+    - name: Deploy PHP session/test page
+      ansible.builtin.template:
+        src: session.php.j2
+        dest: "{{ nginx_doc_root }}/session.php"
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
     - name: Ensure nginx is enabled and running
       ansible.builtin.service:
         name: nginx

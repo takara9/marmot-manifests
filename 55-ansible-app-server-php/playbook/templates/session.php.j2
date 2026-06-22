@@ -1,0 +1,67 @@
+<?php
+session_start();
+
+// ログイン処理
+if (isset($_POST['action']) && $_POST['action'] === 'login') {
+    $_SESSION['logged_in'] = true;
+    $_SESSION['counter'] = 0;
+}
+
+// ログアウト処理
+if (isset($_POST['action']) && $_POST['action'] === 'logout') {
+    session_destroy();
+    $_SESSION = [];
+}
+
+// カウントアップ処理
+if (isset($_POST['action']) && $_POST['action'] === 'count') {
+    if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
+        $_SESSION['counter'] = ($_SESSION['counter'] ?? 0) + 1;
+    }
+}
+
+$is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
+$counter = $_SESSION['counter'] ?? 0;
+?>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Session Counter Page</title>
+    <style>
+        body { font-family: sans-serif; max-width: 500px; margin: 50px auto; text-align: center; }
+        button { font-size: 1.2em; padding: 10px 20px; margin: 10px; cursor: pointer; }
+        .info { color: #555; font-size: 0.9em; margin-top: 30px; }
+        .counter { font-size: 2em; font-weight: bold; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>Hostname: <?php echo gethostname(); ?></h1>
+
+    <?php if (!$is_logged_in): ?>
+        <p>ログインしていません</p>
+        <form method="post">
+            <input type="hidden" name="action" value="login">
+            <button type="submit">ログイン</button>
+        </form>
+    <?php else: ?>
+        <p>ログイン中です</p>
+        <div class="counter">カウント: <?php echo $counter; ?></div>
+        <form method="post">
+            <input type="hidden" name="action" value="count">
+            <button type="submit">カウントアップ</button>
+        </form>
+        <form method="post">
+            <input type="hidden" name="action" value="logout">
+            <button type="submit">ログアウト</button>
+        </form>
+    <?php endif; ?>
+
+    <div class="info">
+        <p>Session ID: <?php echo session_id(); ?></p>
+        <p>Server Time: <?php echo date('Y-m-d H:i:s'); ?></p>
+        <p>Server IP: <?php echo $_SERVER['SERVER_ADDR'] ?? 'N/A'; ?></p>
+        <p>Client IP: <?php echo $_SERVER['REMOTE_ADDR'] ?? 'N/A'; ?></p>
+    </div>
+</body>
+</html>

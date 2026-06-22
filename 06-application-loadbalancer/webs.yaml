@@ -4,11 +4,11 @@ metadata:
     name: web-1
     comment: プライベートネットワークに接続するサーバー
     labels:
-        app: web
+        app: web3
 spec:
     cpu: 1
     memory: 1024
-    osVariant: websrv
+    osVariant: webserver3
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
@@ -34,11 +34,11 @@ metadata:
     name: web-2
     comment: プライベートネットワークに接続するサーバー
     labels:
-        app: web
+        app: web3
 spec:
     cpu: 1
     memory: 1024
-    osVariant: websrv
+    osVariant: webserver3
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
@@ -51,11 +51,11 @@ metadata:
     name: web-3
     comment: プライベートネットワークに接続するサーバー
     labels:
-        app: web
+        app: web3
 spec:
     cpu: 1
     memory: 1024
-    osVariant: websrv
+    osVariant: webserver3
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
