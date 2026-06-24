@@ -8,7 +8,7 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    osVariant: webserver5
+    osVariant: webserver1
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
@@ -16,17 +16,16 @@ spec:
         - networkname: default
         - networkname: host-bridge
           address: 10.10.0.64
-          nameservers:
-            addresses:
-                - 8.8.8.8
-                - 8.8.8.8
-                - 8.8.4.4
-            search:
-                - labo.local
           netmasklen: 24
           routes:
             - to: default
               via: 10.10.0.1
+          nameservers:
+            addresses:
+                - 8.8.8.8
+                - 8.8.4.4
+            search:
+                - labo.local
 ---
 apiVersion: v1
 kind: Server
@@ -38,7 +37,7 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    osVariant: webserver5
+    osVariant: webserver1
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
@@ -55,7 +54,7 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    osVariant: webserver5
+    osVariant: webserver1
     auth:
         url: https://github.com/takara9.keys
     networkInterface:

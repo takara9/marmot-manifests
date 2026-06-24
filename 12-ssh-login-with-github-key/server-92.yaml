@@ -13,14 +13,13 @@ spec:
             - ubuntu
     networkInterface:
         - networkname: host-bridge
-          address: 8.8.8.82
+          address: 10.10.0.82
           netmasklen: 24
           routes:
             - to: default
               via: 10.10.0.1
           nameservers:
             addresses:
-                - 8.8.8.8
                 - 8.8.8.8
                 - 8.8.4.4
             search:

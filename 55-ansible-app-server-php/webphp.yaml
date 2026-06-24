@@ -5,6 +5,7 @@ metadata:
     comment: Ansibleで、Web-php-serverをインストールする
     labels:
         app: webphp
+        num: 55
 spec:
     cpu: 2
     memory: 2048
@@ -16,7 +17,7 @@ spec:
         inventory: playbook/hosts.yaml
     networkInterface:
         - networkname: host-bridge
-          address: 8.8.8.81
+          address: 10.10.0.81
           netmasklen: 24
           nameservers:
             addresses:

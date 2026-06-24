@@ -8,19 +8,18 @@ spec:
     memory: 1024
     osVariant: ubuntu24.04
     auth:
-        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKOUi0EVH6ukZnChGaiLEiwa3UCedkZetomCJjeTo4r/ ubuntu@ws1"
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFOSkHRgel695I/R+TEyfCr98IcoBJtTyFLrNpb7V331 For marmot VMs"
         users:
          - ubuntu
     networkInterface:
         - networkname: host-bridge
-          address: 8.8.8.82
+          address: 10.10.0.91
           netmasklen: 24
           routes:
             - to: default
               via: 10.10.0.1
           nameservers:
             addresses:
-                - 8.8.8.8
                 - 8.8.8.8
                 - 8.8.4.4
             search:

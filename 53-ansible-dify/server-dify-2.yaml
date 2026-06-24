@@ -3,7 +3,7 @@ kind: Server
 metadata:
     name: dify-server-2
     comment: Ansibleで、dockerコマンドをインストールするサーバー
-    lables:
+    labels:
       app: dify
 spec:
     cpu: 4

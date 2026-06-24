@@ -16,7 +16,7 @@ spec:
         inventory: hosts.yaml
     networkInterface:
         - networkname: host-bridge
-          address: 8.8.8.80
+          address: 10.10.0.90
           netmasklen: 24
           nameservers:
             addresses:
