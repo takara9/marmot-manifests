@@ -5,8 +5,8 @@
 ゴールデンイメージを利用することで、サーバーのセットアップ時間を短縮できます。
 
 ## 手順
-- ID が必要なため、`mactl server list` で IDを取得します。
-- `mactl server createimage 1d91a srv110` で イメージを登録します。
+- ID が必要なため、`mactl server list` または `mactl get srv server-80 -o json |jq .[].metadata.id` で IDを取得します。
+- `mactl server createimage ID IMAGE-NAME` で イメージを登録します。
 - `mactl get img` で作成できたいことを確認します。
 
 

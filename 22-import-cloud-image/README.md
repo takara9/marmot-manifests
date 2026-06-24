@@ -82,6 +82,5 @@ default via 192.168.1.1 dev eth0 metric 1 onlink
 alpine51:~$ cat /etc/resolv.conf 
 search labo.local
 nameserver 192.168.1.9
-nameserver 8.8.8.8
 nameserver 8.8.4.4
 ```
