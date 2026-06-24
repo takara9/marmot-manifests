@@ -23,8 +23,6 @@ spec:
           nameservers:
             addresses:
                 - 8.8.8.8
-                - 8.8.8.8
                 - 8.8.4.4
             search:
                 - labo.local
-                - lab.local
