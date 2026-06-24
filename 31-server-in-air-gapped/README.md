@@ -1,7 +1,11 @@
-# プライベートネットワークに繋がった エアギャップのサーバー
+# 外部ネットワークに繋がらない Air-Gapサーバー
 
-外部からアクセスできないサーバーで、外部へも繋げないサーバーの構築です。
-プライベートネットワークに繋がるサーバー間では、アクセスが可能えす。
+このサーバーへのアクセスは、シリアル回線端末経由で接続します。
+`mactl console SERVER-NAME` は、仮想マシンの模擬シリアル回線に接続して、ログインすることができます。
+
+外部からアクセスできないサーバーで、外部へも繋げないサーバーの構築ですが、
+同一のプライベートネットワークに繋がるサーバー間では、アクセスが可能です。
+これによって、Air-Gapのクラスタ構成を取ることができます。
 
 
 ```console
@@ -22,6 +26,13 @@ server0 login: root
 Password: 
 Welcome to Ubuntu 24.04.4 LTS (GNU/Linux 6.8.0-117-generic x86_64)
 
+root@server0:~# tty
+/dev/ttyS0
+
+root@server0:~# w
+ 07:51:05 up 4 min,  1 user,  load average: 0.01, 0.10, 0.06
+USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU  WHAT
+root     ttyS0    -                07:46    0.00s  0.07s   ?    w
 ```
 
 
