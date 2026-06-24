@@ -17,11 +17,11 @@ spec:
             #- tags "nginx,mysql"
     networkInterface:
         - networkname: host-bridge
-          address: 192.168.1.41
+          address: 10.10.0.41
           netmasklen: 24
           nameservers:
             addresses:
-                - 192.168.1.9
+                - 8.8.8.8
                 - 8.8.8.8
                 - 8.8.4.4
             search:
@@ -29,4 +29,4 @@ spec:
                 - lab.local
           routes:
             - to: default
-              via: 192.168.1.1
+              via: 10.10.0.1

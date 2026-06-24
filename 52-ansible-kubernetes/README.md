@@ -98,7 +98,7 @@ master                     : ok=20   changed=15   unreachable=0    failed=0    s
 
 手元のPCに、kubectlのクライアント証明書をコピーして、 Kubernetesクラスタにアクセスできることを確認します。
 ```
-$ scp -r 192.168.1.220:~/.kube .
+$ scp -r 10.10.0.220:~/.kube .
 $ kubectl get node
 NAME     STATUS   ROLES           AGE     VERSION
 master   Ready    control-plane   7m31s   v1.36.2

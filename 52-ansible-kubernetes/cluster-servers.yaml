@@ -13,14 +13,14 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: host-bridge
-          address: 192.168.1.220
+          address: 10.10.0.220
           netmasklen: 24
           routes:
             - to: default
-              via: 192.168.1.1
+              via: 10.10.0.1
           nameservers:
             addresses:
-                - 192.168.1.9
+                - 8.8.8.8
             search:
                 - labo.local
         - networkname: cluster-net
@@ -42,14 +42,14 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: host-bridge
-          address: 192.168.1.221
+          address: 10.10.0.221
           netmasklen: 24
           routes:
             - to: default
-              via: 192.168.1.1
+              via: 10.10.0.1
           nameservers:
             addresses:
-                - 192.168.1.9
+                - 8.8.8.8
             search:
                 - labo.local
         - networkname: cluster-net
@@ -71,14 +71,14 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: host-bridge
-          address: 192.168.1.222
+          address: 10.10.0.222
           netmasklen: 24
           routes:
             - to: default
-              via: 192.168.1.1
+              via: 10.10.0.1
           nameservers:
             addresses:
-                - 192.168.1.9
+                - 8.8.8.8
             search:
                 - labo.local
         - networkname: cluster-net
@@ -100,14 +100,14 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: host-bridge
-          address: 192.168.1.223
+          address: 10.10.0.223
           netmasklen: 24
           routes:
             - to: default
-              via: 192.168.1.1
+              via: 10.10.0.1
           nameservers:
             addresses:
-                - 192.168.1.9
+                - 8.8.8.8
             search:
                 - labo.local
         - networkname: cluster-net

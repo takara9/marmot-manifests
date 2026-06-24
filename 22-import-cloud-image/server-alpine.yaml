@@ -11,14 +11,14 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: host-bridge
-          address: 192.168.1.51
+          address: 10.10.0.51
           netmasklen: 24
           routes:
             - to: default
-              via: 192.168.1.1
+              via: 10.10.0.1
           nameservers:
             addresses:
-                - 192.168.1.9
+                - 8.8.8.8
                 - 8.8.8.8
                 - 8.8.4.4
             search:

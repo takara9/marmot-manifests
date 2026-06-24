@@ -3,8 +3,8 @@ kind: NetworkLoadBalancer
 metadata:
     name: nlb1
 spec:
-    bindPublicIpAddress: 192.168.1.72
-    remoteCIDR: 192.168.1.0/24
+    bindPublicIpAddress: 10.10.0.72
+    remoteCIDR: 10.10.0.0/24
     internalVirtualNetwork: nlb-net
     listeners:
         - name: http

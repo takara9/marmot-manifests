@@ -16,13 +16,13 @@ spec:
         inventory: playbook/hosts.yaml
     networkInterface:
         - networkname: host-bridge
-          address: 192.168.1.91
+          address: 8.8.8.81
           netmasklen: 24
           nameservers:
             addresses:
-                - 192.168.1.9
+                - 8.8.8.8
             search:
                 - labo.local
           routes:
             - to: default
-              via: 192.168.1.1
+              via: 10.10.0.1
