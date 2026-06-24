@@ -42,7 +42,7 @@ spec:
 
 #### 外部ネットワークからアクセス可能なIPアドレス（パブリックIP）をアサインする
 
-server-30 の IPアドレスに、ホストネットワークのIPアドレスをアサインします。もちろん、重複割当に注意してください。マニフェストを適用する前に、`ping 192.168.1.31` を実行して、応答があれば、別のIPアドレスを割り当てる必要があります。
+server-30 の IPアドレスに、ホストネットワークのIPアドレスをアサインします。もちろん、重複割当に注意してください。マニフェストを適用する前に、`ping 10.10.0.31` を実行して、応答があれば、別のIPアドレスを割り当てる必要があります。
 
 public-ip-gw.yaml
 ```yaml
@@ -51,10 +51,10 @@ kind: Gateway
 metadata:
     name: igw
 spec:
-    bindPublicIpAddress: 192.168.1.31    # パブリック側のIPアドレスでアクセスを許可
+    bindPublicIpAddress: 10.10.0.31      # パブリック側のIPアドレスでアクセスを許可
     internalServerName: server-30        # サーバーの名前
     internalVirtualNetwork: net-webs     # 内部側の仮想ネットワーク
-    remoteCIDR: 192.168.1.0/24           # 接続を許すリモートのIPアドレス
+    remoteCIDR: 10.10.0.0/24             # 接続を許すリモートのIPアドレス
     serverPorts:                         # リクエストを転送するポート番号のリストを以下に記述する
         - ssh                            # sshとhttpの通信を許可、それ以外は禁止    
         - http

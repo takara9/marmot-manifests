@@ -3,10 +3,10 @@ kind: Gateway
 metadata:
     name: igw
 spec:
-    bindPublicIpAddress: 10.10.0.31    # パブリック側のIPアドレスでアクセスを許可
-    internalServerName: server-30        # サーバーの名前
-    internalVirtualNetwork: private      # 内部側の仮想ネットワーク
-    remoteCIDR: 10.10.0.0/24           # 接続を許すリモートのIPアドレス
+    bindPublicIpAddress: 10.10.0.31      # パブリック側のIPアドレスでアクセスを許可
+    internalServerName: server-32        # サーバーの名前
+    internalVirtualNetwork: private-10   # 内部側の仮想ネットワーク
+    remoteCIDR: 10.10.0.0/24             # 接続を許すリモートのIPアドレス
     serverPorts:                         # リクエストを転送するポート番号のリストを以下に記述する
         - ssh                            # sshとhttpの通信を許可、それ以外は禁止    
         - http
