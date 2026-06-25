@@ -4,7 +4,10 @@ metadata:
     name: vpn-gw
 spec:
     bindPublicIpAddress: 10.10.0.40 # VPN-GWのエンドポイント
+    routes:
+    - to: default
+      via: 10.10.0.1 
     internalVirtualNetwork: admin     # 内部側の仮想ネットワーク
     remoteCIDRs:                      # アクセスを受け付けるアドレス
-      - 10.10.0.0/24                  
+      - 0.0.0.0/0                 
 

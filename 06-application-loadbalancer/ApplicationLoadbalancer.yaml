@@ -4,6 +4,9 @@ metadata:
     name: alb-web
 spec:
     bindPublicIpAddress: 10.10.0.70
+    routes:
+    - to: default
+      via: 10.10.0.1
     internalVirtualNetwork: app-net
     listeners:
         - name: web-http

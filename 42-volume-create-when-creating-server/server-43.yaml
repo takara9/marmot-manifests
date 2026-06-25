@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: server-42
+    name: server-43
     comment: サーバー作成時にボリューム作成するサーバー
 spec:
     cpu: 1
@@ -11,7 +11,7 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: host-bridge
-          address: 10.10.0.42
+          address: 10.10.0.43
           netmasklen: 24
           routes:
             - to: default
@@ -23,17 +23,17 @@ spec:
                 - labo.local
     storage:
         - metadata:
-            name: var-01
+            name: var-02
             comment: runnerの作業エリアとして利用
           spec:
             size: 2
         - metadata:
-            name: for-vg1-01
+            name: for-vg1-02
             comment: OSディスク用のボリュームグループ用のボリューム
           spec:
             size: 1
         - metadata:
-            name: for-vg2-01
+            name: for-vg2-02
             comment: DATAディスク用のボリュームグループ用のボリューム
           spec:
             size: 1
