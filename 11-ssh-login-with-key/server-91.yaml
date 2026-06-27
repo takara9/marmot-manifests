@@ -6,7 +6,7 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    osVariant: ubuntu24.04
+    mmImage: ubuntu24.04
     auth:
         publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFOSkHRgel695I/R+TEyfCr98IcoBJtTyFLrNpb7V331 For marmot VMs"
         users:

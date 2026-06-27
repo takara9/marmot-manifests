@@ -8,7 +8,7 @@ metadata:
 spec:
     cpu: 4
     memory: 8192
-    osVariant: ubuntu24.04
+    mmImage: ubuntu24.04
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
@@ -37,7 +37,7 @@ metadata:
 spec:
     cpu: 2
     memory: 4192
-    osVariant: ubuntu24.04
+    mmImage: ubuntu24.04
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
@@ -66,7 +66,7 @@ metadata:
 spec:
     cpu: 2
     memory: 4192
-    osVariant: ubuntu24.04
+    mmImage: ubuntu24.04
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
@@ -95,7 +95,7 @@ metadata:
 spec:
     cpu: 2
     memory: 4192
-    osVariant: ubuntu24.04
+    mmImage: ubuntu24.04
     auth:
         url: https://github.com/takara9.keys
     networkInterface:

@@ -6,7 +6,7 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    osVariant: alpine3
+    mmImage: alpine3
     auth:
         url: https://github.com/takara9.keys
     networkInterface:

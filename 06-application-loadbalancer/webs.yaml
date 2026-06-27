@@ -8,7 +8,7 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    osVariant: webserver1
+    mmImage: webserver1
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
@@ -37,7 +37,7 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    osVariant: webserver1
+    mmImage: webserver1
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
@@ -54,7 +54,7 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    osVariant: webserver1
+    mmImage: webserver1
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
