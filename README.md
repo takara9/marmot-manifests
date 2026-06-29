@@ -2,6 +2,8 @@
 
 サンプル構成やテストのための Marmot用マニフェスト集です。
 
+- [Marmot ハンズオンチュートリアル](TUTORIAL.md)
+
 ## サーバーとネットワークの基本
 
 - [defaultネットワークに繋がるサーバー](01-simple-server/README.md)
