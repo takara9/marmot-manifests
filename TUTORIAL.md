@@ -76,14 +76,19 @@
 - `mactl` が利用できること
 - Marmot クラスタまたは単一ノードが起動済みであること
 - 本リポジトリを手元に配置済みであること
+- 先に `mactl login <user-id>` でログインしていること（RBAC 有効環境では必須）
 
 最初に状態確認:
 
 ```console
+mactl login <user-id>
 mactl marmot cluster
 mactl get net
 mactl get srv
 ```
+
+補足:
+- `mactl login` 後のコマンド実行時は、認証トークンが自動で読み込まれます。
 
 
 ## 1. `mactl` の基本操作を覚える

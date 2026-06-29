@@ -10,12 +10,44 @@
 
 ## よく使う操作フロー
 
-1. マニフェスト作成: `mactl create -f <manifest.yaml>`
-2. 状態確認: `mactl get <resource>` または `mactl get -f <manifest.yaml>`
-3. サーバー接続: `mactl console <server-name>`
-4. 削除: `mactl del <resource> <name>` または `mactl del -f <manifest.yaml>`
+1. ログイン: `mactl login <user-id>`
+2. マニフェスト作成: `mactl create -f <manifest.yaml>`
+3. 状態確認: `mactl get <resource>` または `mactl get -f <manifest.yaml>`
+4. サーバー接続: `mactl console <server-name>`
+5. 削除: `mactl del <resource> <name>` または `mactl del -f <manifest.yaml>`
 
 ## コマンド一覧
+
+### login
+
+- 目的: ユーザー認証（アクセストークン取得）
+- 構文: `mactl login <user-id>`
+- 例:
+  - `mactl login admin`
+
+### whoami
+
+- 目的: 現在ログイン中ユーザーと付与ロールの確認
+- 構文: `mactl whoami`
+- 例:
+  - `mactl whoami`
+
+### role
+
+- 目的: ロール情報の参照
+- 構文:
+  - `mactl role`
+  - `mactl role list`
+- 例:
+  - `mactl role`
+  - `mactl role list`
+
+### logout
+
+- 目的: 現在のセッションをログアウト
+- 構文: `mactl logout`
+- 例:
+  - `mactl logout`
 
 ### create
 
@@ -110,6 +142,22 @@
 - 例:
   - `mactl marmot cluster`
 
+### user
+
+- 目的: ユーザー管理（作成・一覧・削除・パスワード・ロック・APIキー）
+- 構文:
+  - `mactl user add <user-id> --passwd <password> --role <role-name>`
+  - `mactl user list`
+  - `mactl user delete <user-id>`
+  - `mactl user set-passwd <user-id> --passwd <password>`
+  - `mactl user lock <user-id>`
+  - `mactl user unlock <user-id>`
+  - `mactl user generate-apikey --comment <text>`
+- 例:
+  - `mactl user add alice --passwd lemon123 --role Compute-Operator`
+  - `mactl user list`
+  - `mactl user delete alice`
+
 ## リソース短縮名
 
 `get` / `del` で使われる主な短縮名です。
@@ -135,3 +183,6 @@
 
 - 一部サンプルでは `create` と `apply` の両方が使われています。運用ポリシーに合わせて統一してください。
 - `mactl get srv -o json | jq ...` のような JSON パイプ処理は、詳細確認や自動化に有効です。
+- 2026-06 の RBAC 反映以降、`mactl login` 後の各コマンド実行時に、認証トークンはクライアント設定読込時に自動ロードされます。
+- `mactl user add` の `--passwd` は、英数字のみ・8文字以上のポリシーを満たす必要があります。
+- `mactl user add` で指定したパスワードは平文保存されず、bcrypt ハッシュ化されて保存されます。
