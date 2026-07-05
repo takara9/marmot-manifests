@@ -1,3 +1,4 @@
+- debug: msg="{{ ansible_facts }}"
 - name: "kubeadm-config.yamlの作成"
   template:
     src: "kubeadm-config.yaml"

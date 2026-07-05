@@ -2,7 +2,7 @@
 kind: InitConfiguration
 apiVersion: kubeadm.k8s.io/v1beta4
 localAPIEndpoint:
-  advertiseAddress: "{{ k8s_apiserver }}"
+  advertiseAddress: "{{ ansible_facts.enp1s0.ipv4.address }}"
   bindPort: 6443
 ---
 kind: ClusterConfiguration

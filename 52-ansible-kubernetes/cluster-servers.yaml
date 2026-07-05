@@ -13,16 +13,6 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: host-bridge
-          address: 10.10.0.220
-          netmasklen: 24
-          routes:
-            - to: default
-              via: 10.10.0.1
-          nameservers:
-            addresses:
-                - 8.8.8.8
-            search:
-                - labo.local
         - networkname: cluster-net
           address: 172.16.20.220
           netmasklen: 24
@@ -42,16 +32,6 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: host-bridge
-          address: 10.10.0.221
-          netmasklen: 24
-          routes:
-            - to: default
-              via: 10.10.0.1
-          nameservers:
-            addresses:
-                - 8.8.8.8
-            search:
-                - labo.local
         - networkname: cluster-net
           address: 172.16.20.221
           netmasklen: 24
@@ -71,16 +51,6 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: host-bridge
-          address: 10.10.0.222
-          netmasklen: 24
-          routes:
-            - to: default
-              via: 10.10.0.1
-          nameservers:
-            addresses:
-                - 8.8.8.8
-            search:
-                - labo.local
         - networkname: cluster-net
           address: 172.16.20.222
           netmasklen: 24
@@ -100,16 +70,6 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: host-bridge
-          address: 10.10.0.223
-          netmasklen: 24
-          routes:
-            - to: default
-              via: 10.10.0.1
-          nameservers:
-            addresses:
-                - 8.8.8.8
-            search:
-                - labo.local
         - networkname: cluster-net
           address: 172.16.20.223
           netmasklen: 24

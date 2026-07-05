@@ -1,7 +1,7 @@
-master ansible_host=10.10.0.220 ansible_user=ubuntu ansible_become=true
-node1  ansible_host=10.10.0.221 ansible_user=ubuntu ansible_become=true
-node2  ansible_host=10.10.0.222 ansible_user=ubuntu ansible_become=true
-node3  ansible_host=10.10.0.223 ansible_user=ubuntu ansible_become=true
+master ansible_host=master ansible_user=ubuntu ansible_become=true
+node1  ansible_host=node1  ansible_user=ubuntu ansible_become=true
+node2  ansible_host=node2  ansible_user=ubuntu ansible_become=true
+node3  ansible_host=node3  ansible_user=ubuntu ansible_become=true
 
 [masters]
 master
@@ -22,7 +22,7 @@ temp_dir            =   "/tmp"
 k8s_version         =   "1.36"
 k8s_version_patch   =   "{{ k8s_version }}.2"
 k8s_package_version =   "{{ k8s_version_patch }}-2.1"
-k8s_apiserver       =   "10.10.0.220"
+#k8s_apiserver       =   "{{ hostvars['master'].ansible_host }}"
 k8s_metrics_server  =   "v0.8.1"
 
 containerd_version  =   "2.3.1"
@@ -43,5 +43,5 @@ cpu_arch            =   "amd64"
 # Cilium      10.0.0.0/8
 # Weave       10.32.0.0/12
 
-pod_cidr            = "10.0.0.0/8"
+pod_cidr            = "10.12.0.0/16"
 #pod_cidr            = "10.244.0.0/16"
