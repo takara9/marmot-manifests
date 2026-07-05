@@ -11,14 +11,3 @@ spec:
         rootPassword: password123
     networkInterface:
         - networkname: host-bridge
-          address: 10.10.0.80
-          netmasklen: 24
-          routes:
-            - to: default
-              via: 10.10.0.1
-          nameservers:
-            addresses:
-                - 8.8.8.8
-                - 8.8.4.4
-            search:
-                - labo.local

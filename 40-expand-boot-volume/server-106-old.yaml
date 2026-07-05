@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: server-106
+    name: server-106x
     comment: ブートボリュームを拡張するサーバー
 spec:
     cpu: 1

@@ -16,13 +16,3 @@ spec:
             name: volume1
     networkInterface:
         - networkname: host-bridge
-          address: 10.10.0.108
-          netmasklen: 24
-          routes:
-            - to: default
-              via: 10.10.0.1
-          nameservers:
-            addresses:
-                - 8.8.8.8
-            search:
-                - labo.local

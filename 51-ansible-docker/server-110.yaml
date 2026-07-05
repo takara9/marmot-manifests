@@ -14,13 +14,3 @@ spec:
         inventory: hosts.yaml
     networkInterface:
         - networkname: host-bridge
-          address: 10.10.0.110
-          netmasklen: 24
-          routes:
-            - to: default
-              via: 10.10.0.1
-          nameservers:
-            addresses:
-                - 8.8.8.8
-            search:
-                - labo.local

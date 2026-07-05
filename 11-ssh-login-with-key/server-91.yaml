@@ -13,14 +13,3 @@ spec:
          - ubuntu
     networkInterface:
         - networkname: host-bridge
-          address: 10.10.0.91
-          netmasklen: 24
-          routes:
-            - to: default
-              via: 10.10.0.1
-          nameservers:
-            addresses:
-                - 8.8.8.8
-                - 8.8.4.4
-            search:
-                - labo.local

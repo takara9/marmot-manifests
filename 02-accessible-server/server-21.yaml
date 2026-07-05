@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: server-none
+    name: server-21
     comment: marmotホストが繋がるネットワークに接続する仮想サーバー
 spec:
     cpu: 1

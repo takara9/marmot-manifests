@@ -15,17 +15,6 @@ spec:
         - networkname: app-net
         - networkname: default
         - networkname: host-bridge
-          address: 10.10.0.64
-          netmasklen: 24
-          routes:
-            - to: default
-              via: 10.10.0.1
-          nameservers:
-            addresses:
-                - 8.8.8.8
-                - 8.8.4.4
-            search:
-                - labo.local
 ---
 apiVersion: v1
 kind: Server

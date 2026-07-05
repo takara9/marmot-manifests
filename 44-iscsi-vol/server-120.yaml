@@ -15,13 +15,3 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: host-bridge
-          address: 10.10.0.120
-          netmasklen: 24
-          nameservers:
-            addresses:
-                - 8.8.8.8
-            search:
-                - labo.local
-          routes:
-            - to: default
-              via: 10.10.0.1
