@@ -5,6 +5,7 @@ marmot 上に Kubernetesクラスタを構築することができます。
 
 ![K8s Dashboard](./k8s-dashboard.png)
 
+
 ## Kuberntest クラスタの起動
 
 Kubernetesクラスタのノード間用クラスタ（ポッド）ネットワークを作成します。
