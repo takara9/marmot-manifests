@@ -25,7 +25,7 @@ $ mactl get server -l app=webserver
 `curl`コマンドを実行することで、作成したWebページを見ることができます。
 
 ```
-$ curl http://192.168.1.90/
+$ curl http://SERVER-IP-ADDRESS/
 ```
 
 ## 削除
