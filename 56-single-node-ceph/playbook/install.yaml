@@ -1,0 +1,10 @@
+- name: setup servers
+  hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+    docker_user: ubuntu
+  tasks:
+    - debug: msg="{{ ansible_facts.hostname }}"
+  roles:
+    - docker

@@ -1,7 +1,7 @@
 all:
   hosts:
     dify-server-2:
-      ansible_host: 10.10.0.112
+      ansible_host: dify-server-2
       ansible_user: ubuntu
   vars:
     ansible_ssh_private_key_file: ~/.ssh/id_rsa

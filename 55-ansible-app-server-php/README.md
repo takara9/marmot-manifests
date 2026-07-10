@@ -25,9 +25,15 @@ $ mactl get server -l app=webphp
 `session.php`は、セッションとカウンターで、負荷分散の維持性を確認するアプリです。
 
 ```
-$ curl http://192.168.1.91/
-$ curl http://192.168.1.91/session.php
+$ curl http://SERVER-IP-ADDRESS/
+$ curl http://SERVER-IP-ADDRESS/session.php
 ```
+
+DNSサーバーを marmotサーバーに向けてあれば、DNS名でアクセスできます。
+
+- [http://webphp.host-bridge/](http://webphp.host-bridge/)
+- [http://webphp.host-bridge/session.php](http://webphp.host-bridge/session.php)
+
 
 ## 削除
 

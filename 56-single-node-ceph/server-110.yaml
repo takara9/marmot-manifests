@@ -1,13 +1,11 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: dify-server-2
+    name: server-110
     comment: Ansibleで、dockerコマンドをインストールするサーバー
-    labels:
-      app: dify
 spec:
-    cpu: 4
-    memory: 8192
+    cpu: 2
+    memory: 2048
     mmImage: ubuntu24.04
     auth:
         url: https://github.com/takara9.keys
@@ -16,9 +14,3 @@ spec:
         inventory: hosts.yaml
     networkInterface:
         - networkname: host-bridge
-    storage:
-        - metadata:
-            name: /var/container2
-            comment: 作業エリアとして利用
-          spec:
-            size: 100

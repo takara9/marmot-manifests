@@ -28,6 +28,11 @@ $ mactl get server -l app=webserver
 $ curl http://SERVER-IP-ADDRESS/
 ```
 
+DNSが、marmotサーバーに向いていれば、以下のURLアドレスでアクセスできます。
+
+- [http://server-90.host-bridge/](http://server-90.host-bridge/)
+
+
 ## 削除
 
 構成に使用したファイルを指定して削除、または、サーバー名を指定して削除ができます。
