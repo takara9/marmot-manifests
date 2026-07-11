@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: ceph-single
+    comment: シングル最小構成のCephストレージのサーバー
+spec:
+    cpu: 4
+    memory: 12208
+    mmImage: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    ansible:
+        playbook: playbook/install.yaml
+        inventory: hosts.yaml
+    networkInterface:
+        - networkname: host-bridge
+    storage:
+        - metadata:
+            name: osd1
+            comment: Ceph OSD
+          spec:
+            size: 100
+            #persistent: true
+            type: lvm
+        - metadata:
+            name: osd2
+            comment: Ceph OSD
+          spec:
+            size: 100
+            #persistent: true
+            type: lvm
+        - metadata:
+            name: osd3
+            comment: Ceph OSD
+          spec:
+            size: 100
+            #persistent: true
+            type: lvm

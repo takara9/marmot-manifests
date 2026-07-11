@@ -1,0 +1,39 @@
+- name: Ceph single-node lab setup
+  hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+    docker_user: ubuntu
+    ceph_mon_iface: "{{ ansible_default_ipv4.interface }}"
+    ceph_release: "debian-tentacle"
+    ceph_osd_devices:
+      - /dev/vdb
+      - /dev/vdc
+      - /dev/vdd
+    ceph_crush_rule: "single-node-rule"
+    ceph_pool_name: "mypool"
+    ceph_pool_pg_num: 32
+    ceph_pool_pgp_num: 32
+    ceph_fs_name: "cephfs"
+    ceph_client_name: "client.vmuser"
+    ceph_client_caps_path: "/root/{{ ceph_client_name }}.caps.txt"
+  tasks:
+    - name: Read Ceph monitor IP from selected interface
+      ansible.builtin.command:
+        cmd: ip -o -4 addr show dev {{ ceph_mon_iface }} scope global
+      register: ceph_mon_ip_lookup
+      changed_when: false
+
+    - name: Fail when selected interface has no IPv4 address
+      ansible.builtin.fail:
+        msg: "Interface {{ ceph_mon_iface }} has no IPv4 address"
+      when: ceph_mon_ip_lookup.stdout_lines | length == 0
+
+    - name: Set Ceph monitor IP from selected interface
+      ansible.builtin.set_fact:
+        ceph_mon_ip: "{{ ceph_mon_ip_lookup.stdout_lines[0].split()[3].split('/')[0] }}"
+
+    - debug: msg="{{ ansible_facts.hostname }}"
+  roles:
+    - docker
+    - ceph

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: ceph-client2
+    comment: シングル最小構成のCeph client
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    networkInterface:
+        - networkname: host-bridge

@@ -1,0 +1,249 @@
+- name: Install prereqs
+  ansible.builtin.apt:
+    name:
+      - chrony
+      - lvm2
+      - curl
+      - gnupg
+      - lsb-release
+      - ca-certificates
+    state: present
+    update_cache: true
+
+- name: Enable chrony
+  ansible.builtin.systemd:
+    name: chrony
+    enabled: true
+    state: started
+
+- name: Ensure keyring dir exists
+  ansible.builtin.file:
+    path: /etc/apt/trusted.gpg.d
+    state: directory
+    mode: "0755"
+
+- name: Add Ceph repo key
+  ansible.builtin.get_url:
+    url: https://download.ceph.com/keys/release.asc
+    dest: /etc/apt/trusted.gpg.d/ceph.asc
+    mode: "0644"
+
+- name: Add Ceph apt repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/ceph.list
+    mode: "0644"
+    content: |
+      deb https://download.ceph.com/{{ ceph_release }}/ {{ ansible_distribution_release }} main
+
+- name: Install cephadm and ceph-common
+  ansible.builtin.apt:
+    name:
+      - cephadm
+      - ceph-common
+    state: present
+    update_cache: true
+
+- name: Ensure ceph config dir exists
+  ansible.builtin.file:
+    path: /etc/ceph
+    state: directory
+    mode: "0755"
+
+- name: Check if Ceph already bootstrapped
+  ansible.builtin.stat:
+    path: /etc/ceph/ceph.conf
+  register: ceph_conf_stat
+
+- name: Resolve Ceph monitor IP from interface when undefined
+  ansible.builtin.command:
+    cmd: ip -o -4 addr show dev {{ ceph_mon_iface | default(ansible_default_ipv4.interface) }} scope global
+  register: ceph_mon_ip_lookup_role
+  changed_when: false
+  when: ceph_mon_ip is not defined
+
+- name: Fail when monitor interface has no IPv4 address
+  ansible.builtin.fail:
+    msg: "Interface {{ ceph_mon_iface | default(ansible_default_ipv4.interface) }} has no IPv4 address"
+  when:
+    - ceph_mon_ip is not defined
+    - ceph_mon_ip_lookup_role.stdout_lines | length == 0
+
+- name: Set Ceph monitor IP for bootstrap
+  ansible.builtin.set_fact:
+    ceph_mon_ip: "{{ ceph_mon_ip_lookup_role.stdout_lines[0].split()[3].split('/')[0] }}"
+  when:
+    - ceph_mon_ip is not defined
+    - ceph_mon_ip_lookup_role.stdout_lines | length > 0
+
+- name: Bootstrap Ceph (first time only)
+  ansible.builtin.command:
+    cmd: cephadm bootstrap --mon-ip {{ ceph_mon_ip }}
+  register: ceph_bootstrap_result
+  when: not ceph_conf_stat.stat.exists
+
+- name: Show cephadm bootstrap response
+  ansible.builtin.debug:
+    msg:
+      - "cephadm bootstrap rc={{ ceph_bootstrap_result.rc | default('N/A') }}"
+      - "stdout_lines: {{ ceph_bootstrap_result.stdout_lines | default([]) }}"
+      - "stderr_lines: {{ ceph_bootstrap_result.stderr_lines | default([]) }}"
+  when: not ceph_conf_stat.stat.exists
+
+- name: Wait for ceph command readiness
+  ansible.builtin.command:
+    cmd: ceph -s
+  register: ceph_status_wait
+  retries: 20
+  delay: 15
+  until: ceph_status_wait.rc == 0
+  changed_when: false
+
+- name: List orchestrator devices (info)
+  ansible.builtin.command:
+    cmd: ceph orch device ls
+  register: ceph_devices
+  changed_when: false
+
+- name: Add OSD daemons
+  ansible.builtin.command:
+    cmd: ceph orch daemon add osd {{ ansible_hostname }}:{{ item }}
+  loop: "{{ ceph_osd_devices }}"
+  register: osd_add_result
+  changed_when: "'Created osd' in osd_add_result.stdout or 'Scheduled' in osd_add_result.stdout"
+  failed_when: false
+
+- name: Ensure single-node crush rule exists
+  ansible.builtin.command:
+    cmd: ceph osd crush rule create-replicated {{ ceph_crush_rule }} default osd
+  register: crush_rule_create
+  failed_when: false
+  changed_when: "'created rule' in crush_rule_create.stdout.lower()"
+
+- name: Allow pool size 1 for single-node
+  ansible.builtin.command:
+    cmd: ceph config set global mon_allow_pool_size_one true
+
+- name: Disable pool no-redundancy warning for lab
+  ansible.builtin.command:
+    cmd: ceph config set global mon_warn_on_pool_no_redundancy false
+
+- name: Set default pool size to 1 for lab
+  ansible.builtin.command:
+    cmd: ceph config set global osd_pool_default_size 1
+
+- name: Set default pool min_size to 1 for lab
+  ansible.builtin.command:
+    cmd: ceph config set global osd_pool_default_min_size 1
+
+- name: List pools
+  ansible.builtin.command:
+    cmd: ceph osd pool ls
+  register: ceph_pool_list
+  changed_when: false
+
+- name: Set .mgr pool size to 1
+  ansible.builtin.command:
+    cmd: ceph osd pool set .mgr size 1 --yes-i-really-mean-it
+  when: "'.mgr' in ceph_pool_list.stdout_lines"
+
+- name: Set .mgr pool min_size to 1
+  ansible.builtin.command:
+    cmd: ceph osd pool set .mgr min_size 1
+  when: "'.mgr' in ceph_pool_list.stdout_lines"
+
+- name: Create mypool
+  ansible.builtin.command:
+    cmd: ceph osd pool create {{ ceph_pool_name }} {{ ceph_pool_pg_num }} {{ ceph_pool_pgp_num }} {{ ceph_crush_rule }}
+  register: mypool_create
+  failed_when: false
+  changed_when: "'pool' in mypool_create.stdout.lower() and 'created' in mypool_create.stdout.lower()"
+
+- name: Set mypool size 1
+  ansible.builtin.command:
+    cmd: ceph osd pool set {{ ceph_pool_name }} size 1 --yes-i-really-mean-it
+
+- name: Set mypool min_size 1
+  ansible.builtin.command:
+    cmd: ceph osd pool set {{ ceph_pool_name }} min_size 1
+
+- name: Enable rbd app on mypool
+  ansible.builtin.command:
+    cmd: ceph osd pool application enable {{ ceph_pool_name }} rbd
+  register: mypool_app_enable
+  failed_when: false
+  changed_when: "'enabled application' in mypool_app_enable.stdout.lower()"
+
+- name: Apply one MDS daemon
+  ansible.builtin.command:
+    cmd: ceph orch apply mds {{ ceph_fs_name }} --placement=1
+  register: mds_apply
+  failed_when: false
+  changed_when: "'scheduled' in mds_apply.stdout.lower() or 'applied' in mds_apply.stdout.lower()"
+
+- name: Create CephFS volume
+  ansible.builtin.command:
+    cmd: ceph fs volume create {{ ceph_fs_name }}
+  register: fs_create
+  failed_when: false
+  changed_when: "'created' in fs_create.stdout.lower()"
+
+- name: Authorize CephFS client user
+  ansible.builtin.command:
+    cmd: ceph fs authorize {{ ceph_fs_name }} {{ ceph_client_name }} / rw
+  register: fs_auth
+  changed_when: true
+
+- name: Save client caps output
+  ansible.builtin.copy:
+    dest: "{{ ceph_client_caps_path }}"
+    mode: "0600"
+    content: |
+      {{ fs_auth.stdout | default('') }}
+
+- name: Export keyring file
+  ansible.builtin.command:
+    cmd: ceph auth get {{ ceph_client_name }} -o /etc/ceph/ceph.{{ ceph_client_name }}.keyring
+
+- name: Set CephFS metadata pool crush rule
+  ansible.builtin.command:
+    cmd: ceph osd pool set {{ ceph_fs_name }}.{{ ceph_fs_name }}.meta crush_rule {{ ceph_crush_rule }}
+
+- name: Set CephFS metadata pool size 1
+  ansible.builtin.command:
+    cmd: ceph osd pool set {{ ceph_fs_name }}.{{ ceph_fs_name }}.meta size 1 --yes-i-really-mean-it
+
+- name: Set CephFS metadata pool min_size 1
+  ansible.builtin.command:
+    cmd: ceph osd pool set {{ ceph_fs_name }}.{{ ceph_fs_name }}.meta min_size 1
+
+- name: Set CephFS data pool crush rule
+  ansible.builtin.command:
+    cmd: ceph osd pool set {{ ceph_fs_name }}.{{ ceph_fs_name }}.data crush_rule {{ ceph_crush_rule }}
+
+- name: Set CephFS data pool size 1
+  ansible.builtin.command:
+    cmd: ceph osd pool set {{ ceph_fs_name }}.{{ ceph_fs_name }}.data size 1 --yes-i-really-mean-it
+
+- name: Set CephFS data pool min_size 1
+  ansible.builtin.command:
+    cmd: ceph osd pool set {{ ceph_fs_name }}.{{ ceph_fs_name }}.data min_size 1
+
+- name: Final status check
+  ansible.builtin.command:
+    cmd: ceph status
+  changed_when: false
+
+- name: Final fs status check
+  ansible.builtin.command:
+    cmd: ceph fs status
+  changed_when: false
+
+- name: Final mds stat check
+  ansible.builtin.command:
+    cmd: ceph mds stat
+  changed_when: false
+
+- name: Final health detail check
+  ansible.builtin.command:
+    cmd: ceph health detail
+  changed_when: false
