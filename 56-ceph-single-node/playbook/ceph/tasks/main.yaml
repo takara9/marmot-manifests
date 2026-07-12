@@ -106,7 +106,7 @@
 
 - name: Add OSD daemons
   ansible.builtin.command:
-    cmd: ceph orch daemon add osd {{ ansible_hostname }}:{{ item }}
+    cmd: ceph orch daemon add osd {{ ansible_hostname }}:{{ item }} --crush-device-class=ssd
   loop: "{{ ceph_osd_devices }}"
   register: osd_add_result
   changed_when: "'Created osd' in osd_add_result.stdout or 'Scheduled' in osd_add_result.stdout"
@@ -151,27 +151,35 @@
     cmd: ceph osd pool set .mgr min_size 1
   when: "'.mgr' in ceph_pool_list.stdout_lines"
 
-- name: Create mypool
+- name: Create rbdpool
   ansible.builtin.command:
     cmd: ceph osd pool create {{ ceph_pool_name }} {{ ceph_pool_pg_num }} {{ ceph_pool_pgp_num }} {{ ceph_crush_rule }}
-  register: mypool_create
+  register: rbdpool_create
   failed_when: false
-  changed_when: "'pool' in mypool_create.stdout.lower() and 'created' in mypool_create.stdout.lower()"
+  changed_when: "'pool' in rbdpool_create.stdout.lower() and 'created' in rbdpool_create.stdout.lower()"
 
-- name: Set mypool size 1
+- name: Set rbdpool size 1
   ansible.builtin.command:
     cmd: ceph osd pool set {{ ceph_pool_name }} size 1 --yes-i-really-mean-it
 
-- name: Set mypool min_size 1
+- name: Set rbdpool min_size 1
   ansible.builtin.command:
     cmd: ceph osd pool set {{ ceph_pool_name }} min_size 1
 
-- name: Enable rbd app on mypool
+- name: Enable rbd app on rbdpool
   ansible.builtin.command:
     cmd: ceph osd pool application enable {{ ceph_pool_name }} rbd
-  register: mypool_app_enable
+  register: rbdpool_app_enable
   failed_when: false
-  changed_when: "'enabled application' in mypool_app_enable.stdout.lower()"
+  changed_when: "'enabled application' in rbdpool_app_enable.stdout.lower()"
+
+- name: Initialize rbdpool
+  ansible.builtin.command:
+    cmd: rbd pool init {{ ceph_pool_name }}
+
+- name: Create disk image in rbdpool
+  ansible.builtin.command:
+    cmd: rbd create {{ ceph_pool_name }}/{{ ceph_disk_image_name }} --size {{ ceph_disk_image_size }}
 
 - name: Apply one MDS daemon
   ansible.builtin.command:
