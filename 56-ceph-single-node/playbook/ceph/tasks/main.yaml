@@ -106,11 +106,27 @@
 
 - name: Add OSD daemons
   ansible.builtin.command:
-    cmd: ceph orch daemon add osd {{ ansible_hostname }}:{{ item }} --crush-device-class=ssd
+    cmd: ceph orch daemon add osd {{ ansible_hostname }}:{{ item }}
   loop: "{{ ceph_osd_devices }}"
   register: osd_add_result
   changed_when: "'Created osd' in osd_add_result.stdout or 'Scheduled' in osd_add_result.stdout"
   failed_when: false
+
+- name: List OSD ID
+  ansible.builtin.command:
+    cmd: ceph osd crush class ls-osd hdd
+  register: osd_id_list_result
+  changed_when: false
+
+- name: Remove existing device class from OSDs
+  ansible.builtin.command:
+    cmd: ceph osd crush rm-device-class {{ item }}
+  loop: "{{ osd_id_list_result.stdout_lines | map('trim') | reject('equalto', '') | list }}"
+
+- name: Set SSD device class for OSDs
+  ansible.builtin.command:
+    cmd: ceph osd crush set-device-class ssd {{ item }}
+  loop: "{{ osd_id_list_result.stdout_lines | map('trim') | reject('equalto', '') | list }}"
 
 - name: Ensure single-node crush rule exists
   ansible.builtin.command:
