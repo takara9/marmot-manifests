@@ -3,6 +3,5 @@ kind: Volume
 metadata:
     name: vol-iscsi-1
 spec:
-    type: lvm
+    type: iscsi
     size: 2
-    iscsi: true
