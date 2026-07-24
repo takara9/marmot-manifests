@@ -988,3 +988,5 @@ ii  libgcc-s1:amd64                 14.2.0-4ubuntu2~24.04.1                 amd6
 root@server-41:~# 
 ```
 
+## cloud-init から ansible でインストールする方法
+

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: server-110-b
+    comment: Ansibleで、dockerコマンドをインストールするサーバー
+spec:
+    cpu: 2
+    memory: 2048
+    mmImage: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    ansible:
+        onBoot: true
+        pull: 
+          url: "https://github.com/takara9/marmot-ansible"
+          playbook_yaml: "02-docker-ce/playbook/install.yaml"
+    networkInterface:
+        - networkname: default

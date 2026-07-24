@@ -57,3 +57,28 @@ Share images, automate workflows, and more with a free Docker ID:
 For more examples and ideas, visit:
  https://docs.docker.com/get-started/
 ```
+
+
+## cloud-init から ansible で docker-ce をセットアップする
+
+仮想サーバーの初回起動時に、cloud-init から Ansible を起動して、インストールします。
+これにより、host-bridge に繋がっていないプライベートワークのサーバーのセットアップも
+自動化できます。
+
+ただし、RUNNING 状態となっても、ログインできるようになるまでの時間が長くなります。
+
+```console
+$ mactl create -f server-110-onboot.yaml 
+リソースの作成要求が受け入れられました。ID: 7892a
+```
+
+仮想サーバーの起動過程で、ansibleが適用される様子は、以下のコマンドで見ることができます。
+
+```cosnole
+# ホスト名を確認
+$ mactl get -f server-110-onboot.yaml
+
+# 起動時のコンソール出力を画面に出す
+$ mactl console server-110-b
+```
+
