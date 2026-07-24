@@ -990,3 +990,32 @@ root@server-41:~#
 
 ## cloud-init から ansible でインストールする方法
 
+こちらのマニフェストを利用することで、 host-bridge に繋がっていない private ネットワーク上の仮想サーバーにもAnsibleを適用するとができます。
+この方法を利用すると、起動時間が長くなり、ログインできるまでの時間が長くなります。
+さらに、Ansible 設定の失敗など、mactl コマンドには帰りません。代替手段として、mactl console で適用過程を参照することができます。
+
+```console
+$ mactl create -f server-41-onboot.yaml 
+リソースの作成要求が受け入れられました。ID: 9817e
+
+$ mactl console server-41-b
+[    0.473510] ACPI: PCI: Interrupt link LNKC configured for IRQ 11
+[    0.474516] ACPI: PCI: Interrupt link LNKD configured for IRQ 11
+[    0.475514] ACPI: PCI: Interrupt link LNKE configured for IRQ 10
+[    0.476505] ACPI: PCI: Interrupt link LNKF configured for IRQ 10
+[    0.477505] ACPI: PCI: Interrupt link LNKG configured for IRQ 11
+[    0.478513] ACPI: PCI: Interrupt link LNKH configured for IRQ 11
+[    0.479432] ACPI: PCI: Interrupt link GSIA configured for IRQ 16
+[    0.480385] ACPI: PCI: Interrupt link GSIB configured for IRQ 17
+[    0.481389] ACPI: PCI: Interrupt link GSIC configured for IRQ 18
+[    0.482390] ACPI: PCI: Interrupt link GSID configured for IRQ 19
+[    0.483390] ACPI: PCI: Interrupt link GSIE configured for IRQ 20
+[    0.484385] ACPI: PCI: Interrupt link GSIF configured for IRQ 21
+[    0.485384] ACPI: PCI: Interrupt link GSIG configured for IRQ 22
+[    0.486389] ACPI: PCI: Interrupt link GSIH configured for IRQ 23
+[    0.487631] iommu: Default domain type: Translated
+[    0.488354] iommu: DMA domain TLB invalidation policy: lazy mode
+[    0.489562] SCSI subsystem initialized
+[    0.490392] ACPI: bus type USB registered
+...
+
