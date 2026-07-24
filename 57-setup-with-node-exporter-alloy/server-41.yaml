@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: server-41
+    comment: Ansibleプレイブックを自動実行するサーバー
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    ansible:
+        playbook: playbook/setup.yaml
+        inventory: hosts.yaml
+        extra-args:
+            - flush-cache
+            #- tags "nginx,mysql"
+    networkInterface:
+        - networkname: host-bridge

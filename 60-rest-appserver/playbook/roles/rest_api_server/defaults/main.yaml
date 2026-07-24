@@ -1,0 +1,19 @@
+rest_api_service_name: rest-api-server
+rest_api_service_user: restapi
+rest_api_service_group: restapi
+rest_api_app_dir: /opt/rest-api-server
+rest_api_venv_dir: "{{ rest_api_app_dir }}/venv"
+rest_api_listen_host: 0.0.0.0
+rest_api_listen_port: 5000
+
+rest_api_mysql_host: "{{ lookup('env', 'REST_API_MYSQL_HOST') | default('10.1.1.10', true) }}"
+rest_api_mysql_port: "{{ lookup('env', 'REST_API_MYSQL_PORT') | default('3306', true) }}"
+rest_api_mysql_user: "{{ lookup('env', 'REST_API_MYSQL_USER') | default('mysqladmin', true) }}"
+rest_api_mysql_password: "{{ lookup('env', 'REST_API_MYSQL_PASSWORD') | default('komekomekome', true) }}"
+rest_api_mysql_database: "{{ lookup('env', 'REST_API_MYSQL_DATABASE') | default('bomdb', true) }}"
+rest_api_mysql_connect_timeout: 5
+
+rest_api_python_packages:
+  - flask
+  - gunicorn
+  - mysql-connector-python

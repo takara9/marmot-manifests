@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Volume
+metadata:
+    name: data-vol-1
+spec:
+    type: lvm
+    size: 10
+    persistent: true
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: mysql-58
+    comment: LVMボリュームを使用するMySQLサーバー
+spec:
+    cpu: 4
+    memory: 4096
+    mmImage: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    ansible:
+        playbook: playbook/setup.yaml
+        inventory: playbook/hosts.yaml
+    networkInterface:
+        - networkname: host-bridge
+    storage:
+        - metadata:
+            name: data-vol-1

@@ -1,0 +1,17 @@
+mysql_data_device: /dev/vdb
+mysql_data_mount_point: /var/lib/mysql
+mysql_data_fstype: ext4
+mysql_data_force_format: false
+
+mysql_package_name: mysql-server
+mysql_service_name: mysql
+mysql_major_version: "8.0"
+
+mysql_bind_address: 0.0.0.0
+mysql_remote_allowed_hosts:
+  - 192.168.1.%
+  - 10.1.%.%
+  - localhost
+
+mysql_remote_admin_user: mysqladmin
+mysql_remote_admin_password: "{{ lookup('env', 'MYSQL_REMOTE_ADMIN_PASSWORD') | default('', true) }}"

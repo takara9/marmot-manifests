@@ -1,0 +1,6 @@
+- name: Setup the guest OS
+  gather_facts: yes
+  hosts: all
+  become: yes
+  roles:
+    - role: mysql_client

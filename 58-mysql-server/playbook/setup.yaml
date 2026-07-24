@@ -1,0 +1,8 @@
+- name: Setup the guest OS
+  gather_facts: yes
+  hosts: all
+  become: yes
+  vars:
+    mysql_remote_admin_password: "{{ lookup('env', 'MYSQL_REMOTE_ADMIN_PASSWORD') | default('', true) }}"
+  roles:
+    - role: mysql_server

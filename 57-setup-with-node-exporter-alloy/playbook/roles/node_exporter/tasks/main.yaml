@@ -1,0 +1,11 @@
+- name: Install node-exporter package
+  ansible.builtin.apt:
+    name: "{{ node_exporter_package_name }}"
+    state: present
+    update_cache: yes
+
+- name: Enable and start node-exporter service
+  ansible.builtin.service:
+    name: "{{ node_exporter_service_name }}"
+    enabled: true
+    state: started

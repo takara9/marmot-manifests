@@ -1,0 +1,16 @@
+- name: Install mysql client package
+  ansible.builtin.apt:
+    name: "{{ mysql_client_package_name }}"
+    state: present
+    update_cache: yes
+
+- name: Check mysql client version
+  ansible.builtin.command: mysql --version
+  register: mysql_version_result
+  changed_when: false
+
+- name: Ensure mysql major version is 8.0
+  ansible.builtin.assert:
+    that:
+      - mysql_version_result.stdout is search(mysql_major_version)
+    fail_msg: "Expected mysql {{ mysql_major_version }} but got: {{ mysql_version_result.stdout }}"

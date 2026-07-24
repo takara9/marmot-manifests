@@ -1,0 +1,8 @@
+alloy_apt_repo_url: https://apt.grafana.com
+alloy_apt_repo_dist: stable
+alloy_apt_repo_component: main
+alloy_keyring_dir: /etc/apt/keyrings
+alloy_keyring_path: /etc/apt/keyrings/grafana.asc
+alloy_gpg_key_url: https://apt.grafana.com/gpg.key
+alloy_package_name: alloy
+alloy_service_name: alloy

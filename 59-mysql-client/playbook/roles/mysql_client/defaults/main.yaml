@@ -1,0 +1,2 @@
+mysql_client_package_name: mysql-client
+mysql_major_version: "8.0"

@@ -1,0 +1,33 @@
+- name: Ensure keyring directory exists
+  ansible.builtin.file:
+    path: "{{ alloy_keyring_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download Grafana apt signing key
+  ansible.builtin.get_url:
+    url: "{{ alloy_gpg_key_url }}"
+    dest: "{{ alloy_keyring_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Add Grafana apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by={{ alloy_keyring_path }}] {{ alloy_apt_repo_url }} {{ alloy_apt_repo_dist }} {{ alloy_apt_repo_component }}"
+    filename: grafana
+    state: present
+
+- name: Install alloy package
+  ansible.builtin.apt:
+    name: "{{ alloy_package_name }}"
+    state: present
+    update_cache: yes
+
+- name: Enable and start alloy service
+  ansible.builtin.service:
+    name: "{{ alloy_service_name }}"
+    enabled: true
+    state: started

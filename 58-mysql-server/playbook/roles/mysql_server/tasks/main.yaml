@@ -1,0 +1,105 @@
+- name: Ensure required packages exist
+  ansible.builtin.apt:
+    name:
+      - e2fsprogs
+    state: present
+    update_cache: yes
+
+- name: Detect existing filesystem on mysql data device
+  ansible.builtin.command: blkid -o value -s TYPE {{ mysql_data_device }}
+  register: mysql_data_disk_fstype
+  failed_when: false
+  changed_when: false
+
+- name: Fail when data device has non-ext4 filesystem and force format is disabled
+  ansible.builtin.fail:
+    msg: >-
+      {{ mysql_data_device }} already has filesystem '{{ mysql_data_disk_fstype.stdout }}'.
+      Set mysql_data_force_format=true to reformat as {{ mysql_data_fstype }}.
+  when:
+    - mysql_data_disk_fstype.rc == 0
+    - mysql_data_disk_fstype.stdout != mysql_data_fstype
+    - not mysql_data_force_format
+
+- name: Create ext4 filesystem on mysql data device
+  ansible.builtin.command: mkfs.ext4 -F {{ mysql_data_device }}
+  when:
+    - mysql_data_disk_fstype.rc != 0 or mysql_data_disk_fstype.stdout != mysql_data_fstype
+    - mysql_data_disk_fstype.rc != 0 or mysql_data_force_format
+
+- name: Ensure mysql data mount point exists
+  ansible.builtin.file:
+    path: "{{ mysql_data_mount_point }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Mount mysql data device
+  ansible.builtin.mount:
+    path: "{{ mysql_data_mount_point }}"
+    src: "{{ mysql_data_device }}"
+    fstype: "{{ mysql_data_fstype }}"
+    opts: defaults
+    state: mounted
+
+- name: Install mysql server package
+  ansible.builtin.apt:
+    name: "{{ mysql_package_name }}"
+    state: present
+    update_cache: yes
+
+- name: Configure mysqld bind-address
+  ansible.builtin.lineinfile:
+    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+    regexp: '^\s*bind-address\s*='
+    line: "bind-address = {{ mysql_bind_address }}"
+  register: mysql_bind_address_config
+
+- name: Ensure skip-networking is disabled
+  ansible.builtin.lineinfile:
+    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+    regexp: '^\s*skip-networking\b'
+    state: absent
+  register: mysql_skip_networking_config
+
+- name: Enable and start mysql service
+  ansible.builtin.service:
+    name: "{{ mysql_service_name }}"
+    enabled: true
+    state: started
+
+- name: Restart mysql service when network config changed
+  ansible.builtin.service:
+    name: "{{ mysql_service_name }}"
+    state: restarted
+  when:
+    - mysql_bind_address_config.changed or mysql_skip_networking_config.changed
+
+- name: Fail when remote admin password is not provided
+  ansible.builtin.assert:
+    that:
+      - mysql_remote_admin_password | length >= 12
+    fail_msg: >-
+      Set MYSQL_REMOTE_ADMIN_PASSWORD environment variable with a strong password (12+ chars)
+      before running ansible-playbook.
+
+- name: Create remote mysql admin user for allowed networks
+  ansible.builtin.command: >-
+    mysql -e
+    "CREATE USER IF NOT EXISTS '{{ mysql_remote_admin_user }}'@'{{ item }}' IDENTIFIED BY '{{ mysql_remote_admin_password }}';
+    GRANT ALL PRIVILEGES ON *.* TO '{{ mysql_remote_admin_user }}'@'{{ item }}' WITH GRANT OPTION;
+    FLUSH PRIVILEGES;"
+  loop: "{{ mysql_remote_allowed_hosts }}"
+  no_log: true
+
+- name: Check mysql server version
+  ansible.builtin.command: mysql --version
+  register: mysql_version_result
+  changed_when: false
+
+- name: Ensure mysql major version is 8.0
+  ansible.builtin.assert:
+    that:
+      - mysql_version_result.stdout is search(mysql_major_version)
+    fail_msg: "Expected mysql {{ mysql_major_version }} but got: {{ mysql_version_result.stdout }}"
