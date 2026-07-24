@@ -15,3 +15,11 @@ mysql_remote_allowed_hosts:
 
 mysql_remote_admin_user: mysqladmin
 mysql_remote_admin_password: "{{ lookup('env', 'MYSQL_REMOTE_ADMIN_PASSWORD') | default('', true) }}"
+
+mysql_bom_tools_dir: /opt/bom-tools
+mysql_bom_tools_scripts:
+  - generate_bom_mock_data.py
+  - stress_bomdb_transactions.py
+mysql_bom_tools_venv_dir: "{{ mysql_bom_tools_dir }}/.venv"
+mysql_bom_tools_python_packages:
+  - mysql-connector-python

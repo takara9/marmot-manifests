@@ -1,0 +1,17 @@
+[Unit]
+Description=Python REST API server with MySQL access
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ rest_api_service_user }}
+Group={{ rest_api_service_group }}
+WorkingDirectory={{ rest_api_app_dir }}
+EnvironmentFile=/etc/default/{{ rest_api_service_name }}
+ExecStart={{ rest_api_venv_dir }}/bin/gunicorn --bind {{ rest_api_listen_host }}:{{ rest_api_listen_port }} app:app
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

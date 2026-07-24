@@ -1,0 +1,13 @@
+rest_api_service_name: rest-api-server
+rest_api_service_user: restapi
+rest_api_service_group: restapi
+rest_api_app_dir: /opt/rest-api-server
+rest_api_venv_dir: "{{ rest_api_app_dir }}/venv"
+rest_api_listen_host: 0.0.0.0
+rest_api_listen_port: 5000
+
+rest_api_response_delay_seconds: "{{ lookup('env', 'REST_API_RESPONSE_DELAY_SECONDS') | default('0', true) }}"
+
+rest_api_python_packages:
+  - flask
+  - gunicorn

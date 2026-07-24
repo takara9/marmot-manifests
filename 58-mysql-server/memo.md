@@ -61,7 +61,7 @@ ORDER BY lvl, child_part_no;
 
 cd /home/ubuntu/marmot-manifests/58-mysql-server
 . .venv/bin/activate
-python stress_bomdb_transactions.py \
+python playbook/roles/mysql_server/files/stress_bomdb_transactions.py \
   --host 10.1.1.10 \
   --user mysqladmin \
   --password komekomekome \
