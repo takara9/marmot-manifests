@@ -13,6 +13,6 @@ spec:
         url: https://github.com/takara9.keys
     ansible:
         playbook: playbook/install.yaml
-        inventory: hosts.yaml
+        inventory: playbook/hosts.yaml
     networkInterface:
         - networkname: host-bridge

@@ -26,8 +26,51 @@
     state: present
     update_cache: yes
 
+- name: Configure alloy to forward logs to Loki
+  ansible.builtin.copy:
+    dest: /etc/alloy/config.alloy
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      loki.write "default" {
+        endpoint {
+          url = "{{ alloy_loki_write_endpoint }}"
+        }
+      }
+
+      loki.source.journal "systemd" {
+        forward_to = [loki.write.default.receiver]
+        labels = {
+          job = "systemd-journal",
+          host = constants.hostname,
+        }
+      }
+
+      prometheus.remote_write "default" {
+        endpoint {
+          url = "{{ alloy_prometheus_remote_write_endpoint }}"
+        }
+      }
+
+      prometheus.scrape "node_exporter" {
+        targets = [
+          {
+            "__address__" = "127.0.0.1:9100",
+            "job"         = "node-exporter",
+            "instance"    = constants.hostname,
+          },
+        ]
+        forward_to = [prometheus.remote_write.default.receiver]
+      }
+  notify: Restart alloy service
+
 - name: Enable and start alloy service
   ansible.builtin.service:
     name: "{{ alloy_service_name }}"
     enabled: true
     state: started
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+

@@ -6,3 +6,5 @@ alloy_keyring_path: /etc/apt/keyrings/grafana.asc
 alloy_gpg_key_url: https://apt.grafana.com/gpg.key
 alloy_package_name: alloy
 alloy_service_name: alloy
+alloy_loki_write_endpoint: http://192.168.1.9:3100/loki/api/v1/push
+alloy_prometheus_remote_write_endpoint: http://192.168.1.9:9090/api/v1/write
