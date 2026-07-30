@@ -1,0 +1,21 @@
+{
+  "app": {
+    "host": "{{ rest_api_listen_host }}",
+    "port": {{ rest_api_listen_port }},
+    "log_level": "{{ rest_api_log_level }}"
+  },
+  "mysql": {
+    "host": "{{ rest_api_mysql_host }}",
+    "port": {{ rest_api_mysql_port }},
+    "user": "{{ rest_api_mysql_user }}",
+    "password": "{{ rest_api_mysql_password }}",
+    "database": "{{ rest_api_mysql_database }}",
+    "timeout": {{ rest_api_mysql_connect_timeout }}
+  },
+  "upstream": {
+    "random_digits_api_url": "{{ rest_api_random_digits_api_url }}",
+    "bom_tree_api_url": "{{ rest_api_bom_tree_api_url }}",
+    "timeout": {{ rest_api_upstream_timeout }},
+    "retry_limit": {{ rest_api_bom_tree_retry_limit }}
+  }
+}

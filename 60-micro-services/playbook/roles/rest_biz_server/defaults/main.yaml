@@ -1,0 +1,25 @@
+rest_api_service_name: rest-api-server
+rest_api_service_user: restapi
+rest_api_service_group: restapi
+rest_api_app_dir: /opt/rest-api-server
+rest_api_venv_dir: "{{ rest_api_app_dir }}/venv"
+rest_api_listen_host: 0.0.0.0
+rest_api_listen_port: 5000
+rest_api_log_level: INFO
+rest_api_mysql_host: 127.0.0.1
+rest_api_mysql_port: 3306
+rest_api_mysql_user: appuser
+rest_api_mysql_password: ""
+rest_api_mysql_database: appdb
+rest_api_mysql_connect_timeout: 5
+rest_api_random_digits_api_url: http://10.1.1.15:5000/random-5digits
+rest_api_bom_tree_api_url: http://10.1.1.13:5000/bom-tree
+rest_api_upstream_timeout: 5
+rest_api_bom_tree_retry_limit: 20
+
+
+rest_api_python_packages:
+  - flask
+  - gunicorn
+  - mysql-connector-python
+  - requests

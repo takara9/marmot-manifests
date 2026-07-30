@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: rest-svc-2
+    comment: Python REST APIサーバー2
+spec:
+    cpu: 1
+    memory: 2048
+    mmImage: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    ansible:
+        playbook: playbook/rest-svc-2-setup.yaml
+        inventory: playbook/hosts.yaml
+    networkInterface:
+        - networkname: host-bridge
+        - networkname: db-net
+        - networkname: rest-net
+
+ 

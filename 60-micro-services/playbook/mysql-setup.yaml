@@ -1,0 +1,9 @@
+- name: Setup the guest OS
+  gather_facts: yes
+  hosts: mysql-64
+  become: yes
+  vars:
+    mysql_remote_admin_password: "komekomekome"
+    mysql_exporter_password: "komekomekome"
+  roles:
+    - role: mysql_server

@@ -1,0 +1,60 @@
+all:
+  hosts:
+    biz-server:
+      ansible_host: biz-server
+      ansible_user: ubuntu
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
+      ansible_python_interpreter: /usr/bin/python3
+      marmotd_server_ip: 10.1.0.11
+
+      rest_api_mysql_host: "mysql-64.db-net"
+      rest_api_mysql_port: 3306
+      rest_api_mysql_user: "mysqladmin"
+      rest_api_mysql_password: "komekomekome"
+      rest_api_mysql_database: "bomdb"
+      rest_api_mysql_connect_timeout: 15
+
+      rest_api_random_digits_api_url: "http://rest-svc-3.rest-net:5000/random-5digits" 
+      rest_api_bom_tree_api_url: "http://rest-svc-2.rest-net:5000/bom-tree"
+      rest_api_upstream_timeout: 15
+      rest_api_bom_tree_retry_limit: 20
+  
+    mysql-64:
+      ansible_host: mysql-64
+      ansible_user: ubuntu
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
+      ansible_python_interpreter: /usr/bin/python3
+      marmotd_server_ip: 10.1.0.11
+
+    rest-svc-1:
+      ansible_host: rest-svc-1
+      ansible_user: ubuntu
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
+      ansible_python_interpreter: /usr/bin/python3
+      marmotd_server_ip: 10.1.0.11
+      rest_api_mysql_host: "mysql-64.db-net"
+      rest_api_mysql_port: 3306
+      rest_api_mysql_user: "mysqladmin"
+      rest_api_mysql_password: "komekomekome"
+      rest_api_mysql_database: "bomdb"
+      rest_api_mysql_connect_timeout: 15
+
+    rest-svc-2:
+      ansible_host: rest-svc-2
+      ansible_user: ubuntu
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
+      ansible_python_interpreter: /usr/bin/python3
+      marmotd_server_ip: 10.1.0.11
+      rest_api_mysql_host: "mysql-64.db-net"
+      rest_api_mysql_port: 3306
+      rest_api_mysql_user: "mysqladmin"
+      rest_api_mysql_password: "komekomekome"
+      rest_api_mysql_database: "bomdb"
+      rest_api_mysql_connect_timeout: 15
+
+    rest-svc-3:
+      ansible_host: rest-svc-3
+      ansible_user: ubuntu
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
+      ansible_python_interpreter: /usr/bin/python3
+      marmotd_server_ip: 10.1.0.11
