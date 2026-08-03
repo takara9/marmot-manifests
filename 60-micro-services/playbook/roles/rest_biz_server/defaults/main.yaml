@@ -14,6 +14,8 @@ rest_api_mysql_database: appdb
 rest_api_mysql_connect_timeout: 5
 rest_api_random_digits_api_url: http://10.1.1.15:5000/random-5digits
 rest_api_bom_tree_api_url: http://10.1.1.13:5000/bom-tree
+rest_api_bom_tree_api_urls:
+  - "{{ rest_api_bom_tree_api_url }}"
 rest_api_upstream_timeout: 5
 rest_api_bom_tree_retry_limit: 20
 

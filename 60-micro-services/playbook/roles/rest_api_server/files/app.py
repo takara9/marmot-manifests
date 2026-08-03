@@ -1,24 +1,69 @@
 #!/usr/bin/env python3
 
-import os
+import json
+import logging
+import time
+from pathlib import Path
+from datetime import datetime, timezone
 from decimal import Decimal
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, g
 import mysql.connector
 from mysql.connector import Error
 
 
 app = Flask(__name__)
 
+CONFIG_PATH = Path(__file__).with_name("config.json")
+
+
+def load_app_config(path):
+    with path.open("r", encoding="utf-8") as config_file:
+        return json.load(config_file)
+
+
+APP_CONFIG = load_app_config(CONFIG_PATH)
+
+logging.basicConfig(
+    level=getattr(logging, APP_CONFIG.get("app", {}).get("log_level", "INFO").upper(), logging.INFO),
+    format="%(message)s",
+)
+
+
+@app.before_request
+def start_request_timer():
+    g.request_start_time = time.perf_counter()
+
+
+@app.after_request
+def log_access(response):
+    started = getattr(g, "request_start_time", None)
+    duration_ms = (time.perf_counter() - started) * 1000 if started is not None else -1
+
+    access_log = {
+        "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "level": "INFO",
+        "event": "http_access",
+        "method": request.method,
+        "path": request.path,
+        "status": response.status_code,
+        "duration_ms": round(duration_ms, 2),
+        "remote_addr": request.headers.get("X-Forwarded-For", request.remote_addr),
+        "user_agent": request.user_agent.string,
+    }
+    app.logger.info(json.dumps(access_log, separators=(",", ":")))
+    return response
+
 
 def mysql_config():
+    mysql = APP_CONFIG.get("mysql", {})
     return {
-        "host": os.environ.get("MYSQL_HOST", "127.0.0.1"),
-        "port": int(os.environ.get("MYSQL_PORT", "3306")),
-        "user": os.environ.get("MYSQL_USER", "appuser"),
-        "password": os.environ.get("MYSQL_PASSWORD", ""),
-        "database": os.environ.get("MYSQL_DATABASE", "appdb"),
-        "timeout": int(os.environ.get("MYSQL_TIMEOUT", "5")),
+        "host": mysql.get("host", "127.0.0.1"),
+        "port": int(mysql.get("port", 3306)),
+        "user": mysql.get("user", "appuser"),
+        "password": mysql.get("password", ""),
+        "database": mysql.get("database", "appdb"),
+        "timeout": int(mysql.get("timeout", 5)),
     }
 
 
@@ -202,7 +247,8 @@ def bom_tree():
 
 
 if __name__ == "__main__":
+    app_config = APP_CONFIG.get("app", {})
     app.run(
-        host=os.environ.get("APP_HOST", "0.0.0.0"),
-        port=int(os.environ.get("APP_PORT", "5000")),
+        host=app_config.get("host", "0.0.0.0"),
+        port=int(app_config.get("port", 5000)),
     )

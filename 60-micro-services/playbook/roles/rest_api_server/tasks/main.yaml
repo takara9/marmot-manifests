@@ -57,13 +57,13 @@
     group: "{{ rest_api_service_group }}"
     mode: "0644"
 
-- name: Install MySQL environment file
+- name: Install REST API config file
   ansible.builtin.template:
-    src: rest-api.env.j2
-    dest: "/etc/default/{{ rest_api_service_name }}"
-    owner: root
-    group: root
-    mode: "0644"
+    src: rest-api.config.json.j2
+    dest: "{{ rest_api_app_dir }}/config.json"
+    owner: "{{ rest_api_service_user }}"
+    group: "{{ rest_api_service_group }}"
+    mode: "0640"
 
 - name: Install systemd unit file
   ansible.builtin.template:

@@ -1,0 +1,51 @@
+package com.example.restbiz;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+@Component
+public class RequestTimingFilter extends OncePerRequestFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(RequestTimingFilter.class);
+
+    private final ObjectMapper objectMapper;
+
+    public RequestTimingFilter(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        long started = System.nanoTime();
+
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            Map<String, Object> accessLog = new LinkedHashMap<>();
+            accessLog.put("ts", Instant.now().toString());
+            accessLog.put("level", "INFO");
+            accessLog.put("event", "http_access");
+            accessLog.put("method", request.getMethod());
+            accessLog.put("path", request.getRequestURI());
+            accessLog.put("status", response.getStatus());
+            accessLog.put("duration_ms", Math.round(((System.nanoTime() - started) / 1_000_000.0) * 100.0) / 100.0);
+            accessLog.put("remote_addr", Optional.ofNullable(request.getHeader("X-Forwarded-For")).orElse(request.getRemoteAddr()));
+            accessLog.put("user_agent", Optional.ofNullable(request.getHeader("User-Agent")).orElse(""));
+            logger.info(objectMapper.writeValueAsString(accessLog));
+        }
+    }
+}

@@ -1,60 +1,46 @@
 all:
-  hosts:
-    biz-server:
-      ansible_host: biz-server
+  vars:
+    common_connection: &common_connection
       ansible_user: ubuntu
       ansible_ssh_private_key_file: ~/.ssh/id_rsa
       ansible_python_interpreter: /usr/bin/python3
       marmotd_server_ip: 10.1.0.11
 
-      rest_api_mysql_host: "mysql-64.db-net"
+    common_rest_api_mysql: &common_rest_api_mysql
+      rest_api_mysql_host: "db.db-net"
       rest_api_mysql_port: 3306
       rest_api_mysql_user: "mysqladmin"
       rest_api_mysql_password: "komekomekome"
       rest_api_mysql_database: "bomdb"
       rest_api_mysql_connect_timeout: 15
 
-      rest_api_random_digits_api_url: "http://rest-svc-3.rest-net:5000/random-5digits" 
-      rest_api_bom_tree_api_url: "http://rest-svc-2.rest-net:5000/bom-tree"
+    common_rest_api_upstream: &common_rest_api_upstream
+      rest_api_random_digits_api_url: "http://rest3.rest-net:5000/random-5digits"
+      rest_api_bom_tree_api_url: "http://rest2.rest-net:5000/bom-tree"
+      rest_api_bom_tree_api_urls:
+        - "http://rest1.rest-net:5000/bom-tree"
+        - "http://rest2.rest-net:5000/bom-tree"
       rest_api_upstream_timeout: 15
       rest_api_bom_tree_retry_limit: 20
-  
-    mysql-64:
-      ansible_host: mysql-64
-      ansible_user: ubuntu
-      ansible_ssh_private_key_file: ~/.ssh/id_rsa
-      ansible_python_interpreter: /usr/bin/python3
-      marmotd_server_ip: 10.1.0.11
 
-    rest-svc-1:
-      ansible_host: rest-svc-1
-      ansible_user: ubuntu
-      ansible_ssh_private_key_file: ~/.ssh/id_rsa
-      ansible_python_interpreter: /usr/bin/python3
-      marmotd_server_ip: 10.1.0.11
-      rest_api_mysql_host: "mysql-64.db-net"
-      rest_api_mysql_port: 3306
-      rest_api_mysql_user: "mysqladmin"
-      rest_api_mysql_password: "komekomekome"
-      rest_api_mysql_database: "bomdb"
-      rest_api_mysql_connect_timeout: 15
+  hosts:
+    biz:
+      <<: [*common_connection, *common_rest_api_mysql, *common_rest_api_upstream]
+      ansible_host: biz
 
-    rest-svc-2:
-      ansible_host: rest-svc-2
-      ansible_user: ubuntu
-      ansible_ssh_private_key_file: ~/.ssh/id_rsa
-      ansible_python_interpreter: /usr/bin/python3
-      marmotd_server_ip: 10.1.0.11
-      rest_api_mysql_host: "mysql-64.db-net"
-      rest_api_mysql_port: 3306
-      rest_api_mysql_user: "mysqladmin"
-      rest_api_mysql_password: "komekomekome"
-      rest_api_mysql_database: "bomdb"
-      rest_api_mysql_connect_timeout: 15
+    db:
+      <<: *common_connection
+      ansible_host: db
 
-    rest-svc-3:
-      ansible_host: rest-svc-3
-      ansible_user: ubuntu
-      ansible_ssh_private_key_file: ~/.ssh/id_rsa
-      ansible_python_interpreter: /usr/bin/python3
-      marmotd_server_ip: 10.1.0.11
+    rest1:
+      <<: [*common_connection, *common_rest_api_mysql]
+      ansible_host: rest1
+
+    rest2:
+      <<: [*common_connection, *common_rest_api_mysql]
+      ansible_host: rest2
+      rest_api_response_delay_seconds: 0
+
+    rest3:
+      <<: *common_connection
+      ansible_host: rest3

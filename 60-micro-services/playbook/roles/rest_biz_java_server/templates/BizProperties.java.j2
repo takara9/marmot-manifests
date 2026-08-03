@@ -1,0 +1,49 @@
+package com.example.restbiz;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+@Component
+@ConfigurationProperties(prefix = "biz")
+public class BizProperties {
+
+    private String randomDigitsApiUrl = "{{ rest_api_random_digits_api_url }}";
+    private List<String> bomTreeApiUrls = new ArrayList<>(List.of({% for url in rest_api_bom_tree_api_urls %}"{{ url }}"{% if not loop.last %}, {% endif %}{% endfor %}));
+    private int upstreamTimeoutSeconds = {{ rest_api_upstream_timeout }};
+    private int bomTreeRetryLimit = {{ rest_api_bom_tree_retry_limit }};
+
+    public String getRandomDigitsApiUrl() {
+        return randomDigitsApiUrl;
+    }
+
+    public void setRandomDigitsApiUrl(String randomDigitsApiUrl) {
+        this.randomDigitsApiUrl = randomDigitsApiUrl;
+    }
+
+    public List<String> getBomTreeApiUrls() {
+        return bomTreeApiUrls;
+    }
+
+    public void setBomTreeApiUrls(List<String> bomTreeApiUrls) {
+        this.bomTreeApiUrls = bomTreeApiUrls;
+    }
+
+    public int getUpstreamTimeoutSeconds() {
+        return upstreamTimeoutSeconds;
+    }
+
+    public void setUpstreamTimeoutSeconds(int upstreamTimeoutSeconds) {
+        this.upstreamTimeoutSeconds = upstreamTimeoutSeconds;
+    }
+
+    public int getBomTreeRetryLimit() {
+        return bomTreeRetryLimit;
+    }
+
+    public void setBomTreeRetryLimit(int bomTreeRetryLimit) {
+        this.bomTreeRetryLimit = bomTreeRetryLimit;
+    }
+}

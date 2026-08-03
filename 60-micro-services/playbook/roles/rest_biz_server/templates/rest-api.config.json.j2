@@ -15,6 +15,7 @@
   "upstream": {
     "random_digits_api_url": "{{ rest_api_random_digits_api_url }}",
     "bom_tree_api_url": "{{ rest_api_bom_tree_api_url }}",
+    "bom_tree_api_urls": {{ rest_api_bom_tree_api_urls | to_json }},
     "timeout": {{ rest_api_upstream_timeout }},
     "retry_limit": {{ rest_api_bom_tree_retry_limit }}
   }

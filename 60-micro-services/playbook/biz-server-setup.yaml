@@ -1,7 +1,8 @@
 - name: Setup the guest OS
   gather_facts: yes
-  hosts: biz-server
+  hosts: biz
   become: yes
   roles:
     - role: setup-linux
-    - role: rest_biz_server
+    - role: rest_biz_java_server
+    #- role: rest_biz_server

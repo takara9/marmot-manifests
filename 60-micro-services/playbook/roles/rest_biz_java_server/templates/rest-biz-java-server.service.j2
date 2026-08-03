@@ -1,0 +1,17 @@
+[Unit]
+Description=Java REST API server with MySQL access
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ rest_biz_java_service_user }}
+Group={{ rest_biz_java_service_group }}
+WorkingDirectory={{ rest_biz_java_app_dir }}
+EnvironmentFile=/etc/default/{{ rest_biz_java_service_name }}
+ExecStart=/usr/bin/java -jar {{ rest_biz_java_app_dir }}/target/{{ rest_biz_java_service_name }}.jar
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

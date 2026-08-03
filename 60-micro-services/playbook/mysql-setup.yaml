@@ -1,6 +1,6 @@
 - name: Setup the guest OS
   gather_facts: yes
-  hosts: mysql-64
+  hosts: db
   become: yes
   vars:
     mysql_remote_admin_password: "komekomekome"

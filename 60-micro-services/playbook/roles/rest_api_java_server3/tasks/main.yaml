@@ -1,0 +1,89 @@
+- name: Install Java build runtime packages
+  ansible.builtin.apt:
+    name:
+      - openjdk-21-jdk-headless
+      - maven
+    state: present
+    update_cache: yes
+
+- name: Ensure service group exists
+  ansible.builtin.group:
+    name: "{{ rest_api_java_service_group }}"
+    state: present
+
+- name: Ensure service user exists
+  ansible.builtin.user:
+    name: "{{ rest_api_java_service_user }}"
+    group: "{{ rest_api_java_service_group }}"
+    shell: /usr/sbin/nologin
+    create_home: false
+    system: yes
+    state: present
+
+- name: Create application directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ rest_api_java_service_user }}"
+    group: "{{ rest_api_java_service_group }}"
+    mode: "0755"
+  loop:
+    - "{{ rest_api_java_app_dir }}"
+    - "{{ rest_api_java_app_dir }}/src/main/java/com/example/restapi"
+    - "{{ rest_api_java_app_dir }}/src/main/resources"
+
+- name: Install Maven project descriptor
+  ansible.builtin.template:
+    src: pom.xml.j2
+    dest: "{{ rest_api_java_app_dir }}/pom.xml"
+    owner: "{{ rest_api_java_service_user }}"
+    group: "{{ rest_api_java_service_group }}"
+    mode: "0644"
+
+- name: Install Spring Boot application source
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ rest_api_java_service_user }}"
+    group: "{{ rest_api_java_service_group }}"
+    mode: "0644"
+  loop:
+    - src: RestApiJavaServer3Application.java.j2
+      dest: "{{ rest_api_java_app_dir }}/src/main/java/com/example/restapi/RestApiJavaServer3Application.java"
+    - src: RandomDigitsController.java.j2
+      dest: "{{ rest_api_java_app_dir }}/src/main/java/com/example/restapi/RandomDigitsController.java"
+    - src: RequestTimingFilter.java.j2
+      dest: "{{ rest_api_java_app_dir }}/src/main/java/com/example/restapi/RequestTimingFilter.java"
+    - src: application.properties.j2
+      dest: "{{ rest_api_java_app_dir }}/src/main/resources/application.properties"
+
+- name: Install environment file
+  ansible.builtin.template:
+    src: rest-api-java-server3.env.j2
+    dest: "/etc/default/{{ rest_api_java_service_name }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Build Java application
+  ansible.builtin.command:
+    cmd: mvn -q -DskipTests package
+    chdir: "{{ rest_api_java_app_dir }}"
+
+- name: Install systemd unit file
+  ansible.builtin.template:
+    src: rest-api-java-server3.service.j2
+    dest: "/etc/systemd/system/{{ rest_api_java_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Reload systemd configuration
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start Java REST API service
+  ansible.builtin.service:
+    name: "{{ rest_api_java_service_name }}"
+    enabled: true
+    state: started

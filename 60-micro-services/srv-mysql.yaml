@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: mysql-64
+    name: db
     comment: LVMボリュームを使用するMySQLサーバー
 spec:
     cpu: 4

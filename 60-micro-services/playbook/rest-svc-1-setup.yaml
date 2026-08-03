@@ -1,7 +1,8 @@
 - name: RESTサーバー1 のセットアップ
   gather_facts: yes
-  hosts: rest-svc-1
+  hosts: rest1
   become: yes
   roles:
     - role: setup-linux
-    - role: rest_api_server
+    #- role: rest_api_server
+    - role: rest_api_java_server

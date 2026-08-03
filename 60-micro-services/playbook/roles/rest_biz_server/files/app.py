@@ -71,9 +71,14 @@ def mysql_config():
 
 def upstream_config():
     upstream = APP_CONFIG.get("upstream", {})
+    bom_tree_api_urls = upstream.get("bom_tree_api_urls")
+    if not isinstance(bom_tree_api_urls, list) or len(bom_tree_api_urls) == 0:
+        bom_tree_api_urls = [upstream.get("bom_tree_api_url", "http://10.1.1.13:5000/bom-tree")]
+
     return {
         "random_digits_api_url": upstream.get("random_digits_api_url", "http://10.1.1.15:5000/random-5digits"),
         "bom_tree_api_url": upstream.get("bom_tree_api_url", "http://10.1.1.13:5000/bom-tree"),
+        "bom_tree_api_urls": bom_tree_api_urls,
         "timeout": int(upstream.get("timeout", 5)),
         "retry_limit": int(upstream.get("retry_limit", 20)),
     }
@@ -197,9 +202,9 @@ def fetch_random_5digits_from_api(config):
     return random_digits
 
 
-def fetch_bom_tree_from_api(config, part_name):
+def fetch_bom_tree_from_api(config, part_name, bom_tree_api_url):
     response = requests.get(
-        config["bom_tree_api_url"],
+        bom_tree_api_url,
         params={"part_name": part_name},
         timeout=config["timeout"],
     )
@@ -305,15 +310,17 @@ def bom_tree():
 def mock_bom():
     config = upstream_config()
     retry_limit = config["retry_limit"]
+    bom_tree_api_urls = config["bom_tree_api_urls"]
 
     if retry_limit < 1:
         return jsonify(status="error", message="BOM_TREE_RETRY_LIMIT must be >= 1"), 400
 
     try:
         for attempt in range(1, retry_limit + 1):
+            selected_bom_tree_api_url = bom_tree_api_urls[(attempt - 1) % len(bom_tree_api_urls)]
             random_digits = fetch_random_5digits_from_api(config)
             selected_part_name = f"Product-{random_digits}"
-            bom_items = fetch_bom_tree_from_api(config, selected_part_name)
+            bom_items = fetch_bom_tree_from_api(config, selected_part_name, selected_bom_tree_api_url)
 
             if bom_items is None:
                 continue
@@ -321,7 +328,8 @@ def mock_bom():
             return jsonify(
                 status="ok",
                 random_digits_api_url=config["random_digits_api_url"],
-                bom_tree_api_url=config["bom_tree_api_url"],
+                bom_tree_api_url=selected_bom_tree_api_url,
+                bom_tree_api_urls=bom_tree_api_urls,
                 selected_random_digits=random_digits,
                 requested_bom_part_name=selected_part_name,
                 attempt=attempt,
@@ -333,7 +341,7 @@ def mock_bom():
             status="error",
             message="bom-tree not found within retry limit",
             random_digits_api_url=config["random_digits_api_url"],
-            bom_tree_api_url=config["bom_tree_api_url"],
+            bom_tree_api_urls=bom_tree_api_urls,
             retry_limit=retry_limit,
         ), 404
     except (RequestException, ValueError) as exc:

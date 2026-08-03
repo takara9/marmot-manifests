@@ -1,0 +1,14 @@
+server.address={{ rest_biz_java_listen_host }}
+server.port={{ rest_biz_java_listen_port }}
+
+logging.level.root=${APP_LOG_LEVEL:{{ rest_biz_java_log_level }}}
+
+spring.datasource.url=jdbc:mysql://${MYSQL_HOST:{{ rest_api_mysql_host }}}:${MYSQL_PORT:{{ rest_api_mysql_port }}}/${MYSQL_DATABASE:{{ rest_api_mysql_database }}}?connectTimeout=${MYSQL_CONNECT_TIMEOUT_MS:5000}&socketTimeout=${MYSQL_SOCKET_TIMEOUT_MS:5000}&useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
+spring.datasource.username=${MYSQL_USER:{{ rest_api_mysql_user }}}
+spring.datasource.password=${MYSQL_PASSWORD:{{ rest_api_mysql_password }}}
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+biz.random-digits-api-url=${RANDOM_DIGITS_API_URL:{{ rest_api_random_digits_api_url }}}
+biz.bom-tree-api-urls=${BOM_TREE_API_URLS:{{ rest_api_bom_tree_api_urls | join(',') }}}
+biz.upstream-timeout-seconds=${UPSTREAM_TIMEOUT_SECONDS:{{ rest_api_upstream_timeout }}}
+biz.bom-tree-retry-limit=${BOM_TREE_RETRY_LIMIT:{{ rest_api_bom_tree_retry_limit }}}

@@ -1,0 +1,9 @@
+server.address={{ rest_api_java_listen_host }}
+server.port={{ rest_api_java_listen_port }}
+
+logging.level.root=${APP_LOG_LEVEL:{{ rest_api_java_log_level }}}
+
+spring.datasource.url=jdbc:mysql://${MYSQL_HOST:{{ rest_api_java_mysql_host }}}:${MYSQL_PORT:{{ rest_api_java_mysql_port }}}/${MYSQL_DATABASE:{{ rest_api_java_mysql_database }}}?connectTimeout=${MYSQL_CONNECT_TIMEOUT_MS:{{ rest_api_java_mysql_connect_timeout * 1000 }}}&socketTimeout=${MYSQL_SOCKET_TIMEOUT_MS:{{ rest_api_java_mysql_connect_timeout * 1000 }}}&useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
+spring.datasource.username=${MYSQL_USER:{{ rest_api_java_mysql_user }}}
+spring.datasource.password=${MYSQL_PASSWORD:{{ rest_api_java_mysql_password }}}
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver

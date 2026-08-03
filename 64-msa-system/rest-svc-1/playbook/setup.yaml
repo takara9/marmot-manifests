@@ -1,0 +1,7 @@
+- name: RESTサーバー1 のセットアップ
+  gather_facts: yes
+  hosts: all
+  become: yes
+  roles:
+    - role: setup-linux
+    - role: rest_api_server

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: biz-server
+    name: biz
     comment: プロダクト選択BOM取得の模擬アプリ
 spec:
     cpu: 1

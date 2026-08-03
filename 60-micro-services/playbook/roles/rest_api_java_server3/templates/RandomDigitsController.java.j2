@@ -1,0 +1,67 @@
+package com.example.restapi;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class RandomDigitsController {
+
+    @GetMapping("/health")
+    public Map<String, Object> health() {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", "ok");
+        return response;
+    }
+
+    @GetMapping("/random-5digits")
+    public ResponseEntity<Map<String, Object>> random5digits() {
+        try {
+            double delaySeconds = parseResponseDelaySeconds();
+            if (delaySeconds > 0) {
+                Thread.sleep((long) (delaySeconds * 1000));
+            }
+
+            String randomDigits = String.format("%05d", ThreadLocalRandom.current().nextInt(100000));
+
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("status", "ok");
+            response.put("random_digits", randomDigits);
+            response.put("response_delay_seconds", delaySeconds);
+            return ResponseEntity.ok(response);
+        } catch (InterruptedException exc) {
+            Thread.currentThread().interrupt();
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("status", "error");
+            response.put("message", "request interrupted");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        } catch (IllegalArgumentException exc) {
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("status", "error");
+            response.put("message", exc.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    private double parseResponseDelaySeconds() {
+        String rawValue = System.getenv().getOrDefault("RESPONSE_DELAY_SECONDS", "0");
+        double delaySeconds;
+
+        try {
+            delaySeconds = Double.parseDouble(rawValue);
+        } catch (NumberFormatException exc) {
+            throw new IllegalArgumentException("RESPONSE_DELAY_SECONDS must be a number between 0 and 10");
+        }
+
+        if (delaySeconds < 0 || delaySeconds > 10) {
+            throw new IllegalArgumentException("RESPONSE_DELAY_SECONDS must be between 0 and 10");
+        }
+
+        return delaySeconds;
+    }
+}

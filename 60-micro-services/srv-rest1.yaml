@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: rest-svc-1 
+    name: rest1
     comment: Python REST APIサーバー
 spec:
     cpu: 1

@@ -1,7 +1,8 @@
 - name: Setup the guest OS
   gather_facts: yes
-  hosts: rest-svc-2
+  hosts: rest2
   become: yes
   roles:
     - role: setup-linux
-    - role: rest_api_server
+    #- role: rest_api_server
+    - role: rest_api_java_server

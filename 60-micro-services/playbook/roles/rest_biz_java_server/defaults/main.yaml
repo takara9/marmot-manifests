@@ -1,0 +1,7 @@
+rest_biz_java_service_name: rest-biz-java-server
+rest_biz_java_service_user: restbizjava
+rest_biz_java_service_group: restbizjava
+rest_biz_java_app_dir: /opt/rest-biz-java-server
+rest_biz_java_listen_host: 0.0.0.0
+rest_biz_java_listen_port: 5000
+rest_biz_java_log_level: INFO

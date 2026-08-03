@@ -1,0 +1,14 @@
+{
+  "app": {
+    "host": "{{ rest_api_listen_host }}",
+    "port": {{ rest_api_listen_port }}
+  },
+  "mysql": {
+    "host": "{{ rest_api_mysql_host }}",
+    "port": {{ rest_api_mysql_port }},
+    "user": "{{ rest_api_mysql_user }}",
+    "password": "{{ rest_api_mysql_password }}",
+    "database": "{{ rest_api_mysql_database }}",
+    "timeout": {{ rest_api_mysql_connect_timeout }}
+  }
+}

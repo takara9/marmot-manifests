@@ -3,11 +3,19 @@
 import os
 import random
 import time
+import json
+import logging
+from datetime import datetime, timezone
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request, g
 
 
 app = Flask(__name__)
+
+logging.basicConfig(
+    level=getattr(logging, os.environ.get("APP_LOG_LEVEL", "INFO").upper(), logging.INFO),
+    format="%(message)s",
+)
 
 
 def parse_response_delay_seconds():
@@ -22,6 +30,31 @@ def parse_response_delay_seconds():
         raise ValueError("RESPONSE_DELAY_SECONDS must be between 0 and 10")
 
     return delay_seconds
+
+
+@app.before_request
+def start_request_timer():
+    g.request_start_time = time.perf_counter()
+
+
+@app.after_request
+def log_access(response):
+    started = getattr(g, "request_start_time", None)
+    duration_ms = (time.perf_counter() - started) * 1000 if started is not None else -1
+
+    access_log = {
+        "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "level": "INFO",
+        "event": "http_access",
+        "method": request.method,
+        "path": request.path,
+        "status": response.status_code,
+        "duration_ms": round(duration_ms, 2),
+        "remote_addr": request.headers.get("X-Forwarded-For", request.remote_addr),
+        "user_agent": request.user_agent.string,
+    }
+    app.logger.info(json.dumps(access_log, separators=(",", ":")))
+    return response
 
 
 @app.get("/health")
