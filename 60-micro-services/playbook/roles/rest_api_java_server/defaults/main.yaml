@@ -6,6 +6,7 @@ rest_api_java_listen_host: 0.0.0.0
 rest_api_java_listen_port: 5000
 rest_api_java_log_level: INFO
 rest_api_java_response_delay_seconds: "{{ rest_api_response_delay_seconds | default(0) }}"
+rest_api_java_internal_server_error_every_n_requests: "{{ rest_api_internal_server_error_every_n_requests | default(0) }}"
 
 rest_api_java_mysql_host: "{{ rest_api_mysql_host | default('127.0.0.1') }}"
 rest_api_java_mysql_port: "{{ rest_api_mysql_port | default(3306) | int }}"

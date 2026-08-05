@@ -5,6 +5,7 @@ import java.math.BigInteger;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -34,6 +35,9 @@ public class RestApiController {
     public ResponseEntity<Map<String, Object>> db() {
         try {
             applyResponseDelay();
+            if (shouldInjectInternalServerError()) {
+                return syntheticInternalServerErrorResponse();
+            }
             Integer selectOne = jdbcTemplate.queryForObject("SELECT 1", Integer.class);
 
             Map<String, Object> mysql = new LinkedHashMap<>();
@@ -62,6 +66,9 @@ public class RestApiController {
     public ResponseEntity<Map<String, Object>> products() {
         try {
             applyResponseDelay();
+            if (shouldInjectInternalServerError()) {
+                return syntheticInternalServerErrorResponse();
+            }
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                     """
                     SELECT DISTINCT
@@ -98,6 +105,9 @@ public class RestApiController {
 
         try {
             applyResponseDelay();
+            if (shouldInjectInternalServerError()) {
+                return syntheticInternalServerErrorResponse(trimmedPartName);
+            }
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                     """
                     WITH RECURSIVE bom_tree AS (
@@ -179,5 +189,40 @@ public class RestApiController {
                 throw new IllegalStateException("request interrupted", exc);
             }
         }
+    }
+
+    private boolean shouldInjectInternalServerError() {
+        String rawValue = System.getenv().getOrDefault("INTERNAL_SERVER_ERROR_EVERY_N_REQUESTS", "0");
+        int everyNRequests;
+
+        try {
+            everyNRequests = Integer.parseInt(rawValue);
+        } catch (NumberFormatException exc) {
+            throw new IllegalArgumentException("INTERNAL_SERVER_ERROR_EVERY_N_REQUESTS must be an integer");
+        }
+
+        if (everyNRequests < 0) {
+            throw new IllegalArgumentException("INTERNAL_SERVER_ERROR_EVERY_N_REQUESTS must be >= 0");
+        }
+
+        if (everyNRequests == 0) {
+            return false;
+        }
+
+        return ThreadLocalRandom.current().nextInt(everyNRequests) == 0;
+    }
+
+    private ResponseEntity<Map<String, Object>> syntheticInternalServerErrorResponse() {
+        return syntheticInternalServerErrorResponse(null);
+    }
+
+    private ResponseEntity<Map<String, Object>> syntheticInternalServerErrorResponse(String partName) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", "error");
+        if (partName != null) {
+            response.put("part_name", partName);
+        }
+        response.put("message", "synthetic internal server error");
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }
