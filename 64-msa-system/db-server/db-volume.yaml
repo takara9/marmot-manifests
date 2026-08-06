@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Volume
-metadata:
-    name: data-1
-spec:
-    type: lvm
-    size: 10
-    persistent: true

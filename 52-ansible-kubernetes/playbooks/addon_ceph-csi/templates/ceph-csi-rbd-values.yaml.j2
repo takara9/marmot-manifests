@@ -1,0 +1,21 @@
+csiConfig:
+  - clusterID: "{{ ceph_cluster_id }}"
+    monitors:
+{% for mon in ceph_monitors %}
+      - "{{ mon }}"
+{% endfor %}
+
+secret:
+  create: true
+  name: csi-rbd-secret
+  userID: "{{ ceph_rbd_user_id }}"
+  userKey: "{{ ceph_rbd_user_key }}"
+
+storageClass:
+  create: true
+  name: "{{ ceph_csi_storageclass_rbd_name }}"
+  clusterID: "{{ ceph_cluster_id }}"
+  pool: "{{ ceph_rbd_pool }}"
+  provisionerSecret: csi-rbd-secret
+  controllerExpandSecret: csi-rbd-secret
+  nodeStageSecret: csi-rbd-secret

@@ -1,0 +1,4 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Ansible role の tasks/handlers/defaults/vars ファイルはキーが自由なため、汎用YAML schemaのfalse検知を避けるために何も制約しないスキーマ"
+}

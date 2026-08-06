@@ -140,3 +140,10 @@ sudo mv kubectl /usr/local/bin
 sudo chmod +x /usr/local/bin/kubectl
 ```
 
+
+## Ceph CSI（ブロック/ファイルストレージ）の追加
+
+[56-ceph-single-node](../56-ceph-single-node/README.md) で構築したCephクラスタを、
+CSI経由でKubernetesの永続ボリューム（RBD/CephFS）として利用できるようにするアドオンです。
+設定手順は [playbooks/addon_ceph-csi/README.md](playbooks/addon_ceph-csi/README.md) を参照してください。
+

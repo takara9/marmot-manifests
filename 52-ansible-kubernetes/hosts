@@ -45,3 +45,16 @@ cpu_arch            =   "amd64"
 
 pod_cidr            = "10.12.0.0/16"
 #pod_cidr            = "10.244.0.0/16"
+
+# Ceph CSI (56-ceph-single-node で構築したCephクラスタの情報に置き換えること)
+# 取得方法・作成手順は playbooks/addon_ceph-csi/README.md を参照
+ceph_cluster_id     = "<ceph fsid>"
+ceph_monitors       = ["192.168.1.230:6789"]
+
+ceph_rbd_pool       = "k8s-rbd-pool"
+ceph_rbd_user_id    = "k8s"
+ceph_rbd_user_key   = "<ceph auth print-key client.k8s>"
+
+ceph_fs_name        = "cephfs"
+ceph_fs_user_id     = "k8s"
+ceph_fs_user_key    = "<ceph auth print-key client.k8s>"

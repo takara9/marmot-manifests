@@ -1,0 +1,48 @@
+##
+## Ceph CSI ドライバ (RBD / CephFS) の導入
+##
+- name: install ceph-csi helm repository
+  become_user: "{{ cluster_admin }}"
+  shell: |
+    helm repo add ceph-csi https://ceph.github.io/csi-charts
+    helm repo update ceph-csi
+  args:
+    chdir: "{{ temp_dir }}"
+
+- name: render ceph-csi-rbd values file
+  template:
+    src: ceph-csi-rbd-values.yaml.j2
+    dest: "{{ temp_dir }}/ceph-csi-rbd-values.yaml"
+    mode: '0644'
+
+- name: render ceph-csi-cephfs values file
+  template:
+    src: ceph-csi-cephfs-values.yaml.j2
+    dest: "{{ temp_dir }}/ceph-csi-cephfs-values.yaml"
+    mode: '0644'
+
+- name: install/upgrade ceph-csi-rbd (ブロックストレージ用CSI)
+  become_user: "{{ cluster_admin }}"
+  shell: |
+    helm upgrade --install ceph-csi-rbd ceph-csi/ceph-csi-rbd \
+      --namespace {{ ceph_csi_namespace }} --create-namespace \
+      {{ '--version ' + ceph_csi_rbd_chart_version if ceph_csi_rbd_chart_version else '' }} \
+      -f {{ temp_dir }}/ceph-csi-rbd-values.yaml
+  args:
+    chdir: "{{ temp_dir }}"
+  register: results_ceph_csi_rbd
+
+- debug: msg="stdout = {{ results_ceph_csi_rbd.stdout_lines }}"
+
+- name: install/upgrade ceph-csi-cephfs (ファイルストレージ用CSI)
+  become_user: "{{ cluster_admin }}"
+  shell: |
+    helm upgrade --install ceph-csi-cephfs ceph-csi/ceph-csi-cephfs \
+      --namespace {{ ceph_csi_namespace }} --create-namespace \
+      {{ '--version ' + ceph_csi_cephfs_chart_version if ceph_csi_cephfs_chart_version else '' }} \
+      -f {{ temp_dir }}/ceph-csi-cephfs-values.yaml
+  args:
+    chdir: "{{ temp_dir }}"
+  register: results_ceph_csi_cephfs
+
+- debug: msg="stdout = {{ results_ceph_csi_cephfs.stdout_lines }}"

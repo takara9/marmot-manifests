@@ -1,0 +1,21 @@
+csiConfig:
+  - clusterID: "{{ ceph_cluster_id }}"
+    monitors:
+{% for mon in ceph_monitors %}
+      - "{{ mon }}"
+{% endfor %}
+
+secret:
+  create: true
+  name: csi-cephfs-secret
+  userID: "{{ ceph_fs_user_id }}"
+  userKey: "{{ ceph_fs_user_key }}"
+
+storageClass:
+  create: true
+  name: "{{ ceph_csi_storageclass_cephfs_name }}"
+  clusterID: "{{ ceph_cluster_id }}"
+  fsName: "{{ ceph_fs_name }}"
+  provisionerSecret: csi-cephfs-secret
+  controllerExpandSecret: csi-cephfs-secret
+  nodeStageSecret: csi-cephfs-secret

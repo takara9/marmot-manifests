@@ -1,0 +1,31 @@
+# Ceph CSI (RBD / CephFS) 接続設定
+#
+# 56-ceph-single-node などで構築済みのCephクラスタの情報を、
+# 実際の環境に合わせて hosts の [all:vars] で上書きしてください。
+
+# ceph-csi をデプロイする namespace
+ceph_csi_namespace: ceph-csi
+
+# helm chart のバージョン（空にすると最新版がインストールされる）
+ceph_csi_rbd_chart_version: ""
+ceph_csi_cephfs_chart_version: ""
+
+# Cephクラスタ識別子（Cephノードで `ceph fsid` を実行して取得）
+ceph_cluster_id: "<ceph fsid>"
+
+# Ceph MONのアドレス一覧（例: "192.168.1.230:6789"）
+ceph_monitors: []
+
+# --- ブロックストレージ(RBD)用 ---
+# HOWTO-block-storage.md の手順で作成したプールとユーザー
+ceph_rbd_pool: "k8s-rbd-pool"
+ceph_rbd_user_id: "k8s"
+ceph_rbd_user_key: "<ceph auth print-key client.k8s の値>"
+ceph_csi_storageclass_rbd_name: "csi-rbd-sc"
+
+# --- ファイルストレージ(CephFS)用 ---
+# HOWTO-file-storage.md の手順で作成したファイルシステムとユーザー
+ceph_fs_name: "cephfs"
+ceph_fs_user_id: "k8s"
+ceph_fs_user_key: "<ceph auth print-key client.k8s の値>"
+ceph_csi_storageclass_cephfs_name: "csi-cephfs-sc"

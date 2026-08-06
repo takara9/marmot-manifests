@@ -1,0 +1,14 @@
+{
+  "yaml.schemas": {
+    "./.vscode/schemas/ansible-role-permissive.json": [
+      "**/playbook*/**/tasks/**/*.yaml",
+      "**/playbook*/**/tasks/**/*.yml",
+      "**/playbook*/**/handlers/**/*.yaml",
+      "**/playbook*/**/handlers/**/*.yml",
+      "**/playbook*/**/defaults/**/*.yaml",
+      "**/playbook*/**/defaults/**/*.yml",
+      "**/playbook*/**/vars/**/*.yaml",
+      "**/playbook*/**/vars/**/*.yml"
+    ]
+  }
+}
