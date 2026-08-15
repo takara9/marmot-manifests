@@ -1,0 +1,13 @@
+- name: Get latest stable kubectl version
+  uri:
+    url: https://dl.k8s.io/release/stable.txt
+    return_content: yes
+  register: kubectl_stable_version
+
+- name: Download kubectl and install to /usr/local/bin
+  get_url:
+    url: "https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/amd64/kubectl"
+    dest: /usr/local/bin/kubectl
+    owner: root
+    group: root
+    mode: '0755'

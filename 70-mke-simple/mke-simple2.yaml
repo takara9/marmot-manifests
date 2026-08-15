@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: KubernetesEngine
+metadata:
+    name: mke2
+    comment: 検証用K8sクラスタ
+spec:
+    version: "1.36"
+    nodes: 3
+    nodeSpec:
+        cpu: 4
+        memory: 4096
+        network:
+            kind: none
+            external: host-bridge
+        auth:
+            url: https://github.com/takara9.keys

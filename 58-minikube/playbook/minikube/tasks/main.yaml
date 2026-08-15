@@ -1,0 +1,7 @@
+- name: Download minikube and install to /usr/local/bin
+  get_url:
+    url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+    dest: /usr/local/bin/minikube
+    owner: root
+    group: root
+    mode: '0755'

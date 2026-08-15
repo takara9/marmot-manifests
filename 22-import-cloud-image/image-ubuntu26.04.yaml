@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Image
+metadata:
+    name: ubuntu26.04
+spec:
+    sourceUrl: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-amd64.img
+    osName: ubuntu
+    osVersion: "26.04"

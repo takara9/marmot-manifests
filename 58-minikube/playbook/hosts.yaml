@@ -1,0 +1,9 @@
+all:
+  vars:
+    ansible_connection: ssh
+    ansible_ssh_executable: /usr/local/bin/mactl-ssh
+    ansible_user: ubuntu
+    ansible_ssh_private_key_file: ~/.ssh/id_rsa
+    ansible_python_interpreter: /usr/bin/python3
+  hosts:
+    minikube:
