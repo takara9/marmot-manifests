@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: ubuntu-pod-2
+  name: alpine
   labels:
-    app: ubuntu
+    app: alpine
 spec:
   containers:
-  - name: ubuntu
-    image: ubuntu:26.04
+  - name: alpine
+    image: alpine
     command: ["sleep", "infinity"]
     resources:
       requests:

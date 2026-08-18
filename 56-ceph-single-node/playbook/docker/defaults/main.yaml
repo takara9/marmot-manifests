@@ -68,4 +68,5 @@
 # docker-ce | 5:26.0.1-1~ubuntu.24.04~noble | https://download.docker.com/linux/ubuntu noble/stable amd64 Packages
 # docker-ce | 5:26.0.0-1~ubuntu.24.04~noble | https://download.docker.com/linux/ubuntu noble/stable amd64 Packages
 
-docker_version_ubuntu: =5:29.5.3-1~ubuntu.24.04~noble
+# Pinned point releases get removed from Docker's repo over time, so leave unpinned to install whatever is current.
+docker_version_ubuntu: ""

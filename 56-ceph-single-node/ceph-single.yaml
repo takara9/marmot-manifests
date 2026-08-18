@@ -6,7 +6,7 @@ metadata:
 spec:
     cpu: 4
     memory: 12208
-    mmImage: ubuntu24.04
+    mmImage: ubuntu22.04 # Cephの対応はUbuntu22.04までの為
     auth:
         url: https://github.com/takara9.keys
     ansible:
@@ -21,18 +21,18 @@ spec:
           spec:
             size: 100
             #persistent: true
-            type: lvm
+            #type: lvm
         - metadata:
             name: osd2
             comment: Ceph OSD
           spec:
             size: 100
             #persistent: true
-            type: lvm
+            #type: lvm
         - metadata:
             name: osd3
             comment: Ceph OSD
           spec:
             size: 100
             #persistent: true
-            type: lvm
+            #type: lvm

@@ -6,6 +6,8 @@
     docker_user: ubuntu
     ceph_mon_iface: "{{ ansible_default_ipv4.interface }}"
     ceph_release: "debian-tentacle"
+    # Ceph upstream does not publish noble (Ubuntu 24.04) packages yet; use the jammy repo instead.
+    ceph_repo_distribution: "jammy"
     ceph_osd_devices:
       - /dev/vdb
       - /dev/vdc

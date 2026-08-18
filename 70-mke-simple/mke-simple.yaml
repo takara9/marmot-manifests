@@ -5,7 +5,7 @@ metadata:
     comment: 検証用K8sクラスタ
 spec:
     version: "1.36"
-    nodes: 1
+    nodes: 3
     nodeSpec:
         cpu: 4
         memory: 8192

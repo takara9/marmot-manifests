@@ -33,7 +33,7 @@
     dest: /etc/apt/sources.list.d/ceph.list
     mode: "0644"
     content: |
-      deb https://download.ceph.com/{{ ceph_release }}/ {{ ansible_distribution_release }} main
+      deb https://download.ceph.com/{{ ceph_release }}/ {{ ceph_repo_distribution | default(ansible_distribution_release) }} main
 
 - name: Install cephadm and ceph-common
   ansible.builtin.apt:

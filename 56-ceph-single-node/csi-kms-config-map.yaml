@@ -1,0 +1,8 @@
+# KMSによる暗号化を使用しない場合、空の設定を持つ ConfigMap が必要
+apiVersion: v1
+kind: ConfigMap
+data:
+  config.json: |-
+    {}
+metadata:
+  name: ceph-csi-encryption-kms-config

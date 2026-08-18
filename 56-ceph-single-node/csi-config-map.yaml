@@ -1,0 +1,22 @@
+# Ceph-CSI が参照するクラスタ構成の ConfigMap
+#
+# clusterID には `ceph status` の cluster id (fsid) を指定する
+# monitors には Mon デーモンのアドレス(IP:6789)を指定する
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ceph-csi-config
+data:
+  config.json: |-
+    [
+      {
+        "clusterID": "8701d0fe-9943-11f1-969a-9b462dcf4d3e",
+        "monitors": [
+          "10.1.3.11:6789"
+        ],
+        "cephFS": {
+          "subvolumeGroup": "csi"
+        }
+      }
+    ]
