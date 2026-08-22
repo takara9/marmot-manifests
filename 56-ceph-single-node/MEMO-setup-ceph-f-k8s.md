@@ -14,13 +14,7 @@ ceph osd pool set rbdpool size 1 --yes-i-really-mean-it
 ceph osd pool set rbdpool min_size 1
 ```
 
-作成後の確認
-```bash
-ceph osd pool ls detail
-rbd pool ls
-```
-
-## Ceph側の設定の確認コマンド
+## Ceph設定の確認コマンド
 
 ```bash
 # プール一覧を確認
@@ -322,7 +316,7 @@ csi-rbd-sc      rbd.csi.ceph.com      Delete          Immediate           true  
 
 
 
-
 ---
 
-次は必要なファイルを、フォルダーに集める。
+
+
