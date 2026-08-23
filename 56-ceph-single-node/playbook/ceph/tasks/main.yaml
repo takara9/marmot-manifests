@@ -89,6 +89,23 @@
       - "stderr_lines: {{ ceph_bootstrap_result.stderr_lines | default([]) }}"
   when: not ceph_conf_stat.stat.exists
 
+- name: Save cephadm bootstrap stdout_lines to file
+  ansible.builtin.copy:
+    dest: /etc/ceph/cephadm-bootstrap-stdout.log
+    content: "{{ (ceph_bootstrap_result.stdout_lines | default([])) | join('\n') }}\n"
+    mode: "0600"
+  when: not ceph_conf_stat.stat.exists
+
+- name: Extract dashboard password line
+  ansible.builtin.set_fact:
+    ceph_dashboard_password_line: "{{ ceph_bootstrap_result.stdout_lines | default([]) | select('search', 'Password:') | list }}"
+  when: not ceph_conf_stat.stat.exists
+
+- name: Show dashboard password
+  ansible.builtin.debug:
+    msg: "{{ ceph_dashboard_password_line }}"
+  when: not ceph_conf_stat.stat.exists
+
 - name: Wait for ceph command readiness
   ansible.builtin.command:
     cmd: ceph -s
@@ -167,6 +184,99 @@
     cmd: ceph osd pool set .mgr min_size 1
   when: "'.mgr' in ceph_pool_list.stdout_lines"
 
+
+##############
+
+- name: Create RBD pool
+  ansible.builtin.command:
+    cmd: ceph osd pool create {{ ceph_pool_name }} {{ ceph_pool_pg_num }} {{ ceph_pool_pgp_num }} {{ ceph_crush_rule }}
+  register: rbd_pool_create
+  failed_when: rbd_pool_create.rc != 0 and 'already exists' not in rbd_pool_create.stderr
+  changed_when: "'created pool' in rbd_pool_create.stdout"
+
+- name: Enable rbd application on RBD pool
+  ansible.builtin.command:
+    cmd: ceph osd pool application enable {{ ceph_pool_name }} rbd
+  register: rbd_pool_app_enable
+  changed_when: "'enabled application' in rbd_pool_app_enable.stdout"
+
+- name: Initialize RBD pool
+  ansible.builtin.command:
+    cmd: rbd pool init {{ ceph_pool_name }}
+  changed_when: false
+
+- name: Set RBD pool size to 1 for single-node
+  ansible.builtin.command:
+    cmd: ceph osd pool set {{ ceph_pool_name }} size 1 --yes-i-really-mean-it
+
+- name: Set RBD pool min_size to 1 for single-node
+  ansible.builtin.command:
+    cmd: ceph osd pool set {{ ceph_pool_name }} min_size 1
+
+- name: Create RBD client user keyring
+  ansible.builtin.command:
+    cmd: >
+      ceph auth get-or-create client.{{ ceph_rbd_user }}
+      mon "profile rbd"
+      osd "profile rbd pool={{ ceph_pool_name }}"
+      -o /etc/ceph/ceph.client.{{ ceph_rbd_user }}.keyring
+  args:
+    creates: /etc/ceph/ceph.client.{{ ceph_rbd_user }}.keyring
+
+- name: Read RBD client user key
+  ansible.builtin.command:
+    cmd: ceph auth print-key client.{{ ceph_rbd_user }}
+  register: rbd_user_key
+  changed_when: false
+
+- name: Write RBD client user key to file
+  ansible.builtin.copy:
+    dest: /etc/ceph/ceph.client.{{ ceph_rbd_user }}.key
+    content: "{{ rbd_user_key.stdout }}"
+    mode: "0600"
+
+- name: Apply MDS daemon for CephFS
+  ansible.builtin.command:
+    cmd: ceph orch apply mds {{ ceph_fs_name }} --placement="1"
+  changed_when: false
+
+- name: Create CephFS volume
+  ansible.builtin.command:
+    cmd: ceph fs volume create {{ ceph_fs_name }}
+  register: fs_volume_create
+  failed_when: false
+  changed_when: "'created' in fs_volume_create.stdout.lower()"
+
+- name: Create CephFS subvolume group for CSI
+  ansible.builtin.command:
+    cmd: ceph fs subvolumegroup create {{ ceph_fs_name }} {{ ceph_fs_subvolume_group }}
+  register: fs_subvolumegroup_create
+  failed_when: false
+  changed_when: "'created' in fs_subvolumegroup_create.stdout.lower()"
+
+- name: Create CephFS client user for CSI
+  ansible.builtin.command:
+    cmd: >
+      ceph auth get-or-create client.{{ ceph_fs_user }}
+      mgr "allow rw"
+      osd "allow rwx tag cephfs metadata={{ ceph_fs_name }}, allow rw tag cephfs data={{ ceph_fs_name }}"
+      mds "allow r fsname={{ ceph_fs_name }} path=/volumes, allow rws fsname={{ ceph_fs_name }} path=/volumes/{{ ceph_fs_subvolume_group }}"
+      mon "allow r fsname={{ ceph_fs_name }}"
+      -o /etc/ceph/ceph.client.{{ ceph_fs_user }}.keyring
+  args:
+    creates: /etc/ceph/ceph.client.{{ ceph_fs_user }}.keyring
+
+- name: Read CephFS client user key
+  ansible.builtin.command:
+    cmd: ceph auth print-key client.{{ ceph_fs_user }}
+  register: fs_user_key
+  changed_when: false
+
+- name: Write CephFS client user key to file
+  ansible.builtin.copy:
+    dest: /etc/ceph/ceph.client.{{ ceph_fs_user }}.key
+    content: "{{ fs_user_key.stdout }}"
+    mode: "0600"
 
 ##############
 
