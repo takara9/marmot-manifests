@@ -1,27 +1,4 @@
 # ブロックデイバイスの作成から削除まで
-プールは、VM用専用に作成して、それぞれアクセス権を付与する想定
-
-
-## 物理ディスクの情報
-Disk /dev/sda: 931.51 GiB, 1000204886016 bytes, 1953525168 sectors  boot
-Disk model: SanDisk SDSSDH3 
-
-Disk /dev/sdb: 931.51 GiB, 1000204886016 bytes, 1953525168 sectors
-Disk model: WDC WD10EZRX-00A
-
-Disk /dev/sdc: 931.51 GiB, 1000204886016 bytes, 1953525168 sectors
-Disk model: SanDisk SDSSDH3 
-
-Disk /dev/nvme0n1: 931.51 GiB, 1000204886016 bytes, 1953525168 sectors
-Disk model: CSSD-M2B1TPG3VNF                        
-
-
-```console
-ubuntu@hv4:~$ df -h -x tmpfs -x efivarfs
-Filesystem      Size  Used Avail Use% Mounted on
-/dev/sda2       915G   15G  854G   2% /
-/dev/sda1       1.1G  6.2M  1.1G   1% /boot/efi
-```
 
 ```console
 ubuntu@hv4:~$ sudo pvs
@@ -110,31 +87,38 @@ rule-nvme
 
 ## プールの作成とブロックデバイスの作成
 
-SSDのドライブクラスを指定して、プールを作成する
+ドライブクラスを指定して、プールを作成する
 
-```console
-POOL_NAME=vm-pool-1
+```bash
+POOL_NAME=marmot-ssd
 DEV_CLASS=rule-ssd
 ceph osd pool create ${POOL_NAME} 16 16 ${DEV_CLASS}
+
+POOL_NAME=marmot-hdd
+DEV_CLASS=rule-hdd
+ceph osd pool create ${POOL_NAME} 16 16 ${DEV_CLASS}
+
+POOL_NAME=marmot-nvme
+DEV_CLASS=rule-nvme
+ceph osd pool create ${POOL_NAME} 16 16 ${DEV_CLASS}
+
 ceph osd pool ls
-
-rbd pool init ${POOL_NAME}
-
-rbd create ${POOL_NAME}/disk-1 --size 2G
-rbd ls ${POOL_NAME}
-
-rbd create ${POOL_NAME}/disk-2 --size 3G
-rbd ls ${POOL_NAME}
+rbd pool init marmot-nvme
+rbd pool init marmot-hdd
+rbd pool init marmot-ssd
 ```
 
 
-## ユーザーの作成とアクセス件の付与
+
+## アクセスユーザーの作成とアクセス件の付与
 
 権限の存在チェック
 ```console
-CEPH_USER=user-1
+CEPH_USER=marmot-user-1
 ceph auth get client.${CEPH_USER}
 ```
+
+POOL_NAMEは、marmot-nvme, marmot-hdd, marmot-ssd について設定する
 
 ユーザーと権限のセット
 ```console
@@ -154,64 +138,4 @@ ceph auth ls | grep -A 3 client.${CEPH_USER}
 ceph auth print-key client.${CEPH_USER}
 ```
 
-## Cephクライアントからのアクセス・テストを実施する
-
-手順はXX参照のこと
-
-
-## ユーザーの削除
-
-削除の実行
-```console
-ceph auth del client.${CEPH_USER}
-```
-
-実行後の確認
-```console
-ceph auth ls | grep client.${CEPH_USER}
-```
-
-
-## ブロックデバイスの削除
-
-ブロックデバイスのリスト
-```console
-rbd ls ${POOL_NAME} 
-```
-
-ステータスのチェック
-```console
-rbd status ${POOL_NAME}/disk-1
-rbd status ${POOL_NAME}/disk-2
-```
-
-スナップショットのリスト
-```console
-rbd snap ls ${POOL_NAME}/disk-1
-rbd snap ls ${POOL_NAME}/disk-2
-```
-
-スナップショットの削除と本体の削除
-```console
-rbd snap purge ${POOL_NAME}/disk-1
-rbd rm ${POOL_NAME}/disk-1
-rbd snap purge ${POOL_NAME}/disk-2
-rbd rm ${POOL_NAME}/disk-2
-```
-
-
-## プールの削除
-
-プールの削除を許可
-```console
-ceph config get mon mon_allow_pool_delete
-ceph config set global mon_allow_pool_delete true
-```
-
-プールを指定して削除
-```console
-ceph osd pool delete ${POOL_NAME} ${POOL_NAME} --yes-i-really-really-mean-it
-ceph osd pool ls
-```
-
-
+注意点: CephFSのpool名は cephfs.<fs_name>.meta / cephfs.<fs_name>.data という命名規則を前提にしています(Ceph Quincy以降のceph fs volume createのデフォルト命名)。実際のクラスタでプール名が異なる場合はceph fs lsやceph osd pool lsで確認し、必要ならタスク内のプール名を調整してください。

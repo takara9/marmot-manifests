@@ -5,18 +5,39 @@
   vars:
     docker_user: ubuntu
     ceph_mon_iface: "{{ ansible_default_ipv4.interface }}"
-    ceph_release: "debian-tentacle"
-    # Ceph upstream does not publish noble (Ubuntu 24.04) packages yet; use the jammy repo instead.
-    ceph_repo_distribution: "jammy"
+    # Must match the ceph-common package version installed from the distro repo (see ceph role);
+    # a floating tag like "v19" can drift ahead and produce an admin keyring ceph-common can't parse.
+    ceph_container_image: "quay.io/ceph/ceph:v19.2.3"
     ceph_osd_devices:
       - /dev/vdb
       - /dev/vdc
       - /dev/vdd
+    # Map each OSD (by ID, assigned in the order the devices above are added) to a device class.
+    ceph_osd_device_classes:
+      - osd_id: 0
+        device_class: hdd
+      - osd_id: 1
+        device_class: ssd
+      - osd_id: 2
+        device_class: nvme
     ceph_crush_rule: "single-node-rule"
     ceph_pool_name: "rbdpool"
     ceph_pool_pg_num: 16
     ceph_pool_pgp_num: 16
     ceph_rbd_user: "rbduser1"
+    # CRUSH rule used by the rbdpool and cephfs data/metadata pools.
+    ceph_rbd_pool_crush_rule: "rule-ssd"
+    ceph_fs_crush_rule: "rule-ssd"
+    # Optional multi-tier (hdd/ssd/nvme) pool layout, see HOWTO-block-storage.md.
+    ceph_enable_tiered_pools: true
+    ceph_storage_tiers:
+      - device_class: hdd
+        pool: marmot-hdd
+      - device_class: ssd
+        pool: marmot-ssd
+      - device_class: nvme
+        pool: marmot-nvme
+    ceph_tiered_rbd_user: "marmot-user-1"
     ceph_fs_name: "cephfs"
     ceph_fs_subvolume_group: "csi"
     ceph_fs_user: "fsuser1"

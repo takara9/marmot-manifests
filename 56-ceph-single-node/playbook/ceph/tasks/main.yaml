@@ -16,25 +16,6 @@
     enabled: true
     state: started
 
-- name: Ensure keyring dir exists
-  ansible.builtin.file:
-    path: /etc/apt/trusted.gpg.d
-    state: directory
-    mode: "0755"
-
-- name: Add Ceph repo key
-  ansible.builtin.get_url:
-    url: https://download.ceph.com/keys/release.asc
-    dest: /etc/apt/trusted.gpg.d/ceph.asc
-    mode: "0644"
-
-- name: Add Ceph apt repository
-  ansible.builtin.copy:
-    dest: /etc/apt/sources.list.d/ceph.list
-    mode: "0644"
-    content: |
-      deb https://download.ceph.com/{{ ceph_release }}/ {{ ceph_repo_distribution | default(ansible_distribution_release) }} main
-
 - name: Install cephadm and ceph-common
   ansible.builtin.apt:
     name:
@@ -77,7 +58,8 @@
 
 - name: Bootstrap Ceph (first time only)
   ansible.builtin.command:
-    cmd: cephadm bootstrap --mon-ip {{ ceph_mon_ip }}
+    # --image is a global cephadm option and must precede the bootstrap subcommand.
+    cmd: cephadm --image {{ ceph_container_image }} bootstrap --mon-ip {{ ceph_mon_ip }}
   register: ceph_bootstrap_result
   when: not ceph_conf_stat.stat.exists
 
@@ -121,6 +103,12 @@
   register: ceph_devices
   changed_when: false
 
+- name: List OSD tree with device classes (info)
+  ansible.builtin.command:
+    cmd: ceph osd df tree
+  register: ceph_osd_df_tree
+  changed_when: false
+
 - name: Add OSD daemons
   ansible.builtin.command:
     cmd: ceph orch daemon add osd {{ ansible_hostname }}:{{ item }}
@@ -129,21 +117,19 @@
   changed_when: "'Created osd' in osd_add_result.stdout or 'Scheduled' in osd_add_result.stdout"
   failed_when: false
 
-- name: List OSD ID
+- name: Remove existing device class from OSDs (per explicit mapping)
   ansible.builtin.command:
-    cmd: ceph osd crush class ls-osd hdd
-  register: osd_id_list_result
-  changed_when: false
+    cmd: ceph osd crush rm-device-class osd.{{ item.osd_id }}
+  loop: "{{ ceph_osd_device_classes }}"
+  loop_control:
+    label: "osd.{{ item.osd_id }}"
 
-- name: Remove existing device class from OSDs
+- name: Set device class for OSDs (per explicit mapping)
   ansible.builtin.command:
-    cmd: ceph osd crush rm-device-class {{ item }}
-  loop: "{{ osd_id_list_result.stdout_lines | map('trim') | reject('equalto', '') | list }}"
-
-- name: Set SSD device class for OSDs
-  ansible.builtin.command:
-    cmd: ceph osd crush set-device-class ssd {{ item }}
-  loop: "{{ osd_id_list_result.stdout_lines | map('trim') | reject('equalto', '') | list }}"
+    cmd: ceph osd crush set-device-class {{ item.device_class }} osd.{{ item.osd_id }}
+  loop: "{{ ceph_osd_device_classes }}"
+  loop_control:
+    label: "osd.{{ item.osd_id }} -> {{ item.device_class }}"
 
 - name: Ensure single-node crush rule exists
   ansible.builtin.command:
@@ -151,6 +137,16 @@
   register: crush_rule_create
   failed_when: false
   changed_when: "'created rule' in crush_rule_create.stdout.lower()"
+
+- name: Ensure per-device-class crush rules exist (rule-hdd/rule-ssd/rule-nvme)
+  ansible.builtin.command:
+    cmd: ceph osd crush rule create-replicated rule-{{ item.device_class }} default osd {{ item.device_class }}
+  loop: "{{ ceph_storage_tiers }}"
+  loop_control:
+    label: "rule-{{ item.device_class }}"
+  register: tiered_crush_rule_create
+  failed_when: false
+  changed_when: "'created rule' in tiered_crush_rule_create.stdout.lower()"
 
 - name: Allow pool size 1 for single-node
   ansible.builtin.command:
@@ -189,7 +185,7 @@
 
 - name: Create RBD pool
   ansible.builtin.command:
-    cmd: ceph osd pool create {{ ceph_pool_name }} {{ ceph_pool_pg_num }} {{ ceph_pool_pgp_num }} {{ ceph_crush_rule }}
+    cmd: ceph osd pool create {{ ceph_pool_name }} {{ ceph_pool_pg_num }} {{ ceph_pool_pgp_num }} {{ ceph_rbd_pool_crush_rule }}
   register: rbd_pool_create
   failed_when: rbd_pool_create.rc != 0 and 'already exists' not in rbd_pool_create.stderr
   changed_when: "'created pool' in rbd_pool_create.stdout"
@@ -235,6 +231,84 @@
     content: "{{ rbd_user_key.stdout }}"
     mode: "0600"
 
+- name: Create tiered RBD pools (per device class)
+  ansible.builtin.command:
+    cmd: ceph osd pool create {{ item.pool }} {{ ceph_pool_pg_num }} {{ ceph_pool_pgp_num }} rule-{{ item.device_class }}
+  loop: "{{ ceph_storage_tiers }}"
+  loop_control:
+    label: "{{ item.pool }}"
+  register: tiered_pool_create
+  failed_when: tiered_pool_create.rc != 0 and 'already exists' not in tiered_pool_create.stderr
+  changed_when: "'created pool' in tiered_pool_create.stdout"
+  when: ceph_enable_tiered_pools | default(false)
+
+- name: Enable rbd application on tiered pools
+  ansible.builtin.command:
+    cmd: ceph osd pool application enable {{ item.pool }} rbd
+  loop: "{{ ceph_storage_tiers }}"
+  loop_control:
+    label: "{{ item.pool }}"
+  register: tiered_pool_app_enable
+  changed_when: "'enabled application' in tiered_pool_app_enable.stdout"
+  when: ceph_enable_tiered_pools | default(false)
+
+- name: Initialize tiered RBD pools
+  ansible.builtin.command:
+    cmd: rbd pool init {{ item.pool }}
+  loop: "{{ ceph_storage_tiers }}"
+  loop_control:
+    label: "{{ item.pool }}"
+  changed_when: false
+  when: ceph_enable_tiered_pools | default(false)
+
+- name: Set tiered RBD pool size to 1 for single-node
+  ansible.builtin.command:
+    cmd: ceph osd pool set {{ item.pool }} size 1 --yes-i-really-mean-it
+  loop: "{{ ceph_storage_tiers }}"
+  loop_control:
+    label: "{{ item.pool }}"
+  when: ceph_enable_tiered_pools | default(false)
+
+- name: Set tiered RBD pool min_size to 1 for single-node
+  ansible.builtin.command:
+    cmd: ceph osd pool set {{ item.pool }} min_size 1
+  loop: "{{ ceph_storage_tiers }}"
+  loop_control:
+    label: "{{ item.pool }}"
+  when: ceph_enable_tiered_pools | default(false)
+
+- name: Build combined osd caps for tiered RBD client user
+  ansible.builtin.set_fact:
+    ceph_tiered_rbd_user_osd_caps: "{{ ceph_storage_tiers | map(attribute='pool') | map('regex_replace', '^(.*)$', 'profile rbd pool=\\1') | join(', ') }}"
+  when: ceph_enable_tiered_pools | default(false)
+
+- name: Create tiered RBD client user keyring (access to all tiers)
+  ansible.builtin.command:
+    cmd: >
+      ceph auth get-or-create client.{{ ceph_tiered_rbd_user }}
+      mon "profile rbd"
+      osd "{{ ceph_tiered_rbd_user_osd_caps }}"
+      -o /etc/ceph/ceph.client.{{ ceph_tiered_rbd_user }}.keyring
+  args:
+    creates: /etc/ceph/ceph.client.{{ ceph_tiered_rbd_user }}.keyring
+  when: ceph_enable_tiered_pools | default(false)
+
+- name: Read tiered RBD client user key
+  ansible.builtin.command:
+    cmd: ceph auth print-key client.{{ ceph_tiered_rbd_user }}
+  register: tiered_rbd_user_key
+  changed_when: false
+  when: ceph_enable_tiered_pools | default(false)
+
+- name: Write tiered RBD client user key to file
+  ansible.builtin.copy:
+    dest: /etc/ceph/ceph.client.{{ ceph_tiered_rbd_user }}.key
+    content: "{{ tiered_rbd_user_key.stdout }}"
+    mode: "0600"
+  when:
+    - ceph_enable_tiered_pools | default(false)
+    - tiered_rbd_user_key.stdout is defined
+
 - name: Apply MDS daemon for CephFS
   ansible.builtin.command:
     cmd: ceph orch apply mds {{ ceph_fs_name }} --placement="1"
@@ -246,6 +320,18 @@
   register: fs_volume_create
   failed_when: false
   changed_when: "'created' in fs_volume_create.stdout.lower()"
+
+- name: Set crush rule for CephFS metadata pool
+  ansible.builtin.command:
+    cmd: ceph osd pool set cephfs.{{ ceph_fs_name }}.meta crush_rule {{ ceph_fs_crush_rule }}
+  register: fs_meta_crush_rule_set
+  failed_when: false
+
+- name: Set crush rule for CephFS data pool
+  ansible.builtin.command:
+    cmd: ceph osd pool set cephfs.{{ ceph_fs_name }}.data crush_rule {{ ceph_fs_crush_rule }}
+  register: fs_data_crush_rule_set
+  failed_when: false
 
 - name: Create CephFS subvolume group for CSI
   ansible.builtin.command:

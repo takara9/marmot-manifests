@@ -6,8 +6,11 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    mmImage: ubuntu24.04
+    mmImage: ubuntu22.04 # download.ceph.com の debian-tentacle(jammy)リポジトリで最新版を使用
     auth:
         url: https://github.com/takara9.keys
+    ansible:
+        playbook: playbook/install-client.yaml
+        inventory: playbook/hosts-client1.yaml
     networkInterface:
         - networkname: host-bridge

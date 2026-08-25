@@ -6,8 +6,11 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    mmImage: ubuntu24.04
+    mmImage: ubuntu24.04 # ceph-commonはOS標準リポジトリからインストール(バージョンはOSごとに異なる)
     auth:
         url: https://github.com/takara9.keys
+    ansible:
+        playbook: playbook/install-client.yaml
+        inventory: playbook/hosts-client2.yaml
     networkInterface:
         - networkname: host-bridge
