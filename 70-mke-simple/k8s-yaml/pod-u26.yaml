@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: pod-u1
+  name: pod-u26
   labels:
     app: ubuntu
 spec:
@@ -9,10 +9,3 @@ spec:
   - name: ubuntu
     image: ubuntu:26.04
     command: ["sleep", "infinity"]
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "250m"
-      limits:
-        memory: "128Mi"
-        cpu: "500m"

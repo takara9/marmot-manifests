@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: alpine
+  name: alpine3
   labels:
     app: alpine
 spec:
@@ -9,10 +9,3 @@ spec:
   - name: alpine
     image: alpine
     command: ["sleep", "infinity"]
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "250m"
-      limits:
-        memory: "128Mi"
-        cpu: "500m"
