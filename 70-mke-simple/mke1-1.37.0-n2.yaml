@@ -10,7 +10,6 @@ spec:
         cpu: 4
         memory: 8192
         network:
-            kind: none
             external: host-bridge
         auth:
             url: https://github.com/takara9.keys

@@ -42,3 +42,18 @@ spec:
     networkInterface:
         - networkname: private
         - networkname: default
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: server-53
+    comment: プライベートネットワークに接続するサーバー
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+    networkInterface:
+        - networkname: private
+        - networkname: default

@@ -8,6 +8,8 @@ spec:
     nodes: 3
     nodeSpec:
         cpu: 2
-        memory: 4192
+        memory: 4096
+        network:
+            external: host-bridge
         auth:
             url: https://github.com/takara9.keys
