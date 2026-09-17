@@ -1,9 +1,11 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: server-01
+    name: server-02
     comment: Mgmtネットワークに繋がる設定
 spec:
     cpu: 1
     memory: 1024
     mmImage: ubuntu24.04
+    #networkInterface:
+    #    - networkname: default

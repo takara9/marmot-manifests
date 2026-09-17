@@ -1,0 +1,12 @@
+- name: setup servers
+  hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+    ca_home: /CertificationAuthorities
+    ca_owner: ubuntu
+    ca_group: ubuntu
+  roles:
+    - ca
+  tasks:
+    - debug: msg="{{ ansible_facts.hostname }}"

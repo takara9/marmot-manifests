@@ -1,0 +1,8 @@
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth
+subjectKeyIdentifier = hash
+authorityKeyIdentifier=keyid,issuer
+subjectAltName = @alt_names
+
+[alt_names]
