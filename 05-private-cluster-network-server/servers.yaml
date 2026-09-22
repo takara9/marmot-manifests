@@ -10,8 +10,7 @@ spec:
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
-        - networkname: private
-        - networkname: default
+        - networkname: net-private
 ---
 apiVersion: v1
 kind: Server
@@ -25,8 +24,7 @@ spec:
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
-        - networkname: private
-        - networkname: default
+        - networkname: net-private
 ---
 apiVersion: v1
 kind: Server
@@ -40,8 +38,7 @@ spec:
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
-        - networkname: private
-        - networkname: default
+        - networkname: net-private
 ---
 apiVersion: v1
 kind: Server
@@ -55,5 +52,4 @@ spec:
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
-        - networkname: private
-        - networkname: default
+        - networkname: net-private

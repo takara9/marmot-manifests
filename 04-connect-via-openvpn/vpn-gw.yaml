@@ -3,11 +3,11 @@ kind: VpnGateway
 metadata:
     name: vpn-gw
 spec:
-    bindPublicIpAddress: 10.10.0.40 # VPN-GWのエンドポイント
+    bindPublicIpAddress: 192.168.1.199 # VPN-GWのエンドポイント
     routes:
     - to: default
       via: 10.10.0.1 
-    internalVirtualNetwork: admin     # 内部側の仮想ネットワーク
+    internalVirtualNetwork: net-admin # 内部側の仮想ネットワーク
     remoteCIDRs:                      # アクセスを受け付けるアドレス
       - 0.0.0.0/0                 
 

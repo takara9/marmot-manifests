@@ -7,6 +7,10 @@ spec:
     cpu: 4
     memory: 12208
     mmImage: ubuntu24.04 # Cephの対応はUbuntu22.04までの為
+    bootVolume:
+        spec:
+            size: 100
+            type: qcow2
     auth:
         url: https://github.com/takara9.keys
     ansible:

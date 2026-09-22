@@ -10,5 +10,4 @@ spec:
     auth:
         url: https://github.com/takara9.keys
     networkInterface:
-        - networkname: default
-        - networkname: admin
+        - networkname: net-admin
