@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: srv-0102
+    name: srv01-1
     comment: Mgmtネットワークに繋がる設定
 spec:
     cpu: 1

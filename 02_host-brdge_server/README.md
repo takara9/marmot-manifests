@@ -32,15 +32,15 @@ $ chmod 0400 ~/.ssh/id_ed25519
 
 ## ブリッジ接続する仮想サーバー ３種のマニフェスト
 
-- srv-0201.yaml IPアドレス自動割り当て
-- srv-0202.yaml IPアドレス手動設定
-- srv-0203.yaml IPアドレス自動割り当て、GitHub公開鍵利用
+- srv02-1.yaml IPアドレス自動割り当て
+- srv02-2.yaml IPアドレス手動設定
+- srv02-3.yaml IPアドレス自動割り当て、GitHub公開鍵利用
 
 
 ## 仮想サーバーの起動方法
 
 ```bash
-$ mactl create -f srv-0201.yaml 
+$ mactl create -f srv02-1.yaml 
 リソースの作成要求が受け入れられました。ID: ebe84
 ```
 
@@ -54,9 +54,9 @@ $ mactl create -f srv-0201.yaml
 $ mactl get server srv-0201
 NAME             NODE          STATUS        CPU  RAM(MB)  IP-ADDRESS       NETWORK          AGE
 ----             ----          ------        ---  -------  ----------       -------          ---
-srv-0201         mh5           RUNNING       1    1024     192.168.1.201    host-bridge      12m
+srv02-1          mh5           RUNNING       1    1024     192.168.1.201    host-bridge      12m
 
-$ mactl ssh srv-0201
+$ mactl ssh srv02-1
 Welcome to Ubuntu 24.04.5 LTS (GNU/Linux 6.8.0-139-generic x86_64)
 ＜以下省略＞
 ```

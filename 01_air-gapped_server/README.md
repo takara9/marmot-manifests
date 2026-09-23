@@ -17,7 +17,7 @@ $ mactl create -f srv-0101.yaml
 $ mactl get srv
 NAME             NODE          STATUS        CPU  RAM(MB)  IP-ADDRESS       NETWORK          AGE
 ----             ----          ------        ---  -------  ----------       -------          ---
-srv-0101         mh5           RUNNING       1    1024     10.245.0.7       mgmt             8m
+srv01-1          mh5           RUNNING       1    1024     10.245.0.7       mgmt             8m
 ```
 
 このサーバーが接続する `NETWORK` の `mgmt` は、Marmotホスト内部の専用のネットワークです。
@@ -28,7 +28,7 @@ srv-0101         mh5           RUNNING       1    1024     10.245.0.7       mgmt
 仮想サーバーにログインするには、次のコマンドで、シリアルコンソールに接続できます。
 
 ```bash
-$ mactl console srv-0101
+$ mactl console srv01-1
 ```
 
 コマンド実行後に、何も応答が無い時は、リターンキーを押します。
@@ -47,5 +47,5 @@ $ mactl console srv-0101
 仮想サーバーを削除するには、`mactl del server/srv <server name>`を実行します。
 
 ```bash
-$ mactl del srv srv-0101
+$ mactl del srv srv01-1
 ```
