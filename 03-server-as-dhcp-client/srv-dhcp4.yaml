@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: srv-dhcp4
+    name: srv03-ip4
     comment: DHCPクライアントとして動作する仮想サーバー
 spec:
     cpu: 1

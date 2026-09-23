@@ -4,14 +4,17 @@
 エアギャップ環境と異なり、`apt-get update` や `apt install curl` などは実行できます。
 `プライベートネットワーク`や`host-bridge`にも接続されないため、`ssh`を利用してネットワーク経由でアクセスもできません。
 
-唯一のアクセス方法は、`mactl console srv-0101` を実行してシリアルコンソールに接続する事です。
+唯一のアクセス方法は、`mactl console srv01-1` を実行してシリアルコンソールに接続する事です。
+
+![どこにも繋がらない仮想マシン](image/pic01-1.png)
+
 
 ## サーバーの起動方法
 
-マニフェスト `server-01.yaml` を以下のように適用することで、仮想サーバーが起動します。
+マニフェスト `srv01-1.yaml` を以下のように適用することで、仮想サーバーが起動します。
 
 ```bash
-$ mactl create -f srv-0101.yaml
+$ mactl create -f srv01-1.yaml
 リソースの作成要求が受け入れられました。ID: 574b4
 
 $ mactl get srv

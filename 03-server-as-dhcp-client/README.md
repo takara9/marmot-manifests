@@ -2,6 +2,8 @@
 
 MarmotのIPアドレス管理機能を使わず、LANのDHCPサーバーからIPアドレスを割当ることができます。
 
+![pic03-1](image/pic03-1.png)
+
 ## ２種のDHCPクライアントのマニフェスト
 
 - srv-dhcp4.yaml : DHCP4 の IPアドレスをキャッチ
