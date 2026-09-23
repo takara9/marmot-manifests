@@ -102,3 +102,41 @@ applicable law.
 ubuntu@srv04-1:~$ hostname
 srv04-1
 ```
+
+
+踏み台サーバー経由で、プライベートネットワークのサーバーにアクセスするには、`ssh -J 踏み台IP ターゲットIP`とします。
+```bash
+$ ssh -J 192.168.1.180 172.16.50.2
+Welcome to Ubuntu 24.04.5 LTS (GNU/Linux 6.8.0-139-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Wed Sep 23 07:33:49 UTC 2026
+
+  System load: 0.0                Memory usage: 17%   Processes:       127
+  Usage of /:  11.1% of 14.46GB   Swap usage:   0%    Users logged in: 0
+
+Expanded Security Maintenance for Applications is not enabled.
+
+0 updates can be applied immediately.
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+The list of available updates is more than a week old.
+To check for new updates run: sudo apt update
+
+
+The programs included with the Ubuntu system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Ubuntu comes with ABSOLUTELY NO WARRANTY, to the extent permitted by
+applicable law.
+
+ubuntu@srv04-2:~$ hostname
+srv04-2
+```
