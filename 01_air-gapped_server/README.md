@@ -10,15 +10,11 @@
 
 マニフェスト `server-01.yaml` を以下のように適用することで、仮想サーバーが起動します。
 
-```console
+```bash
 $ mactl create -f srv-0101.yaml
 リソースの作成要求が受け入れられました。ID: 574b4
-```
 
-
-
-```console
-ubuntu@mh5:~/marmot-manifests/01-simple-server$ mactl get srv
+$ mactl get srv
 NAME             NODE          STATUS        CPU  RAM(MB)  IP-ADDRESS       NETWORK          AGE
 ----             ----          ------        ---  -------  ----------       -------          ---
 srv-0101         mh5           RUNNING       1    1024     10.245.0.7       mgmt             8m
@@ -31,7 +27,7 @@ srv-0101         mh5           RUNNING       1    1024     10.245.0.7       mgmt
 
 仮想サーバーにログインするには、次のコマンドで、シリアルコンソールに接続できます。
 
-```console
+```bash
 $ mactl console srv-0101
 ```
 
@@ -50,6 +46,6 @@ $ mactl console srv-0101
 ## サーバーの削除
 仮想サーバーを削除するには、`mactl del server/srv <server name>`を実行します。
 
-```console
+```bash
 $ mactl del srv srv-0101
 ```

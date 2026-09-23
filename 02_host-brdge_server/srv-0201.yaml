@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: srv-0201
+    comment: ブリッジ接続する仮想サーバー、IPアドレス自動割り当て
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        users:
+         - ubuntu
+    networkInterface:
+        - networkname: host-bridge
