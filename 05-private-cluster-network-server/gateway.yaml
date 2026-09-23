@@ -3,7 +3,7 @@ kind: Gateway
 metadata:
     name: igw
 spec:
-    bindPublicIpAddress: 10.10.0.50      # パブリック側のIPアドレスでアクセスを許可
+    bindPublicIpAddress: 192.168.1.180   # パブリック側のIPアドレスでアクセスを許可
     internalServerName: server-50        # サーバーの名前
     internalVirtualNetwork: net-private  # 内部側の仮想ネットワーク
     remoteCIDR: 0.0.0.0/0                # 接続を許すリモートのIPアドレス

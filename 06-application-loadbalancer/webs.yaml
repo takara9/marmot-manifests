@@ -13,7 +13,6 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: app-net
-        - networkname: default
         - networkname: host-bridge
 ---
 apiVersion: v1
@@ -31,7 +30,6 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: app-net
-        - networkname: default
 ---
 apiVersion: v1
 kind: Server
@@ -48,4 +46,3 @@ spec:
         url: https://github.com/takara9.keys
     networkInterface:
         - networkname: app-net
-        - networkname: default
