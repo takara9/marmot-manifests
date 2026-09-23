@@ -2,7 +2,7 @@
 
 MarmotのIPアドレス管理機能を使わず、LANのDHCPサーバーからIPアドレスを割当ることができます。
 
-![pic03-1](image/pic03-1.png)
+<IMG WIDTH="600" SRC="image/pic03-1.png" />
 
 ## ２種のDHCPクライアントのマニフェスト
 

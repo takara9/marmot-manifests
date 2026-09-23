@@ -6,8 +6,7 @@
 
 唯一のアクセス方法は、`mactl console srv01-1` を実行してシリアルコンソールに接続する事です。
 
-![どこにも繋がらない仮想マシン](image/pic01-1.png)
-
+<img width="600" src="image/pic01-1.png">
 
 ## サーバーの起動方法
 
