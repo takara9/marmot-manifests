@@ -1,16 +1,21 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: web-1
+    name: web06-1
     comment: プライベートネットワークに接続するサーバー
     labels:
         app: web3
 spec:
     cpu: 1
     memory: 1024
-    mmImage: webserver1
+    mmImage: ubuntu24.04
     auth:
-        url: https://github.com/takara9.keys
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        users:
+         - ubuntu
+    ansible:
+        playbook: playbook/install.yaml
+        inventory: playbook/hosts-1.yaml
     networkInterface:
         - networkname: app-net
         - networkname: host-bridge
@@ -18,31 +23,43 @@ spec:
 apiVersion: v1
 kind: Server
 metadata:
-    name: web-2
+    name: web06-2
     comment: プライベートネットワークに接続するサーバー
     labels:
         app: web3
 spec:
     cpu: 1
     memory: 1024
-    mmImage: webserver1
+    mmImage: ubuntu24.04
     auth:
-        url: https://github.com/takara9.keys
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        users:
+         - ubuntu
+    ansible:
+        playbook: playbook/install.yaml
+        inventory: playbook/hosts-2.yaml
     networkInterface:
         - networkname: app-net
+        - networkname: host-bridge
 ---
 apiVersion: v1
 kind: Server
 metadata:
-    name: web-3
+    name: web06-3
     comment: プライベートネットワークに接続するサーバー
     labels:
         app: web3
 spec:
     cpu: 1
     memory: 1024
-    mmImage: webserver1
+    mmImage: ubuntu24.04
     auth:
-        url: https://github.com/takara9.keys
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        users:
+         - ubuntu
+    ansible:
+        playbook: playbook/install.yaml
+        inventory: playbook/hosts-3.yaml
     networkInterface:
         - networkname: app-net
+        - networkname: host-bridge

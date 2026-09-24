@@ -12,7 +12,10 @@ spec:
             size: 30
             type: qcow2
     auth:
-        url: https://github.com/takara9.keys
+        #url: https://github.com/takara9.keys
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        users:
+         - ubuntu
     ansible:
         playbook: playbook/install.yaml
         inventory: playbook/hosts.yaml

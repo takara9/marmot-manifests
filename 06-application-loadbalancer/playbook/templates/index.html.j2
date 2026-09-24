@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Hostname Page</title>
+</head>
+<body>
+    <h1>Hostname: {{ ansible_hostname }}</h1>
+    <p>FQDN: {{ ansible_fqdn }}</p>
+    <p>IP Address: {{ ansible_default_ipv4.address | default('N/A') }}</p>
+</body>
+</html>
