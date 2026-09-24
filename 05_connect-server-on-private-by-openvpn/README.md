@@ -1,43 +1,48 @@
-## PCにインストールした VPN クライアント経由で、marmot内部のプライベートネットワークへ接続する
+## PCからVPN クライアント経由で、marmot内部のプライベートネットワークへ接続する
+
+外部ネットワークからMarmotのプライベートネットワークに、OpenVPNを利用してアクセスする方法を提供します。
+これを実現するには、`VpnGateway`を利用します。
+
+<IMG WIDTH="600" SRC="image/pic05-1.png">
+
 
 #### 管理用ネットワークをデプロイ
 
 ```console
 $ mactl create -f net-admin.yaml 
-リソースの作成要求が受け入れられました。ID: <nil>
+リソースの作成要求が受け入れられました。ID: 6d6f4
 
-$ mactl get net
+$ mactl get -f net-admin.yaml 
 NAME            NODE       BRIDGE        STATUS        AGE       IP-NET        
 ----            ---------  -----------   ----------    ---       --------------
-private         marmot-fre  br-29d56      ACTIVE        53m       172.16.10.0/24
-default         marmot-fre  virbr0        ACTIVE        29m       -             
-host-bridge     marmot-fre  br0           ACTIVE        29m       -             
-admin           marmot-fre  br-23024      ACTIVE        5s        172.16.20.0/24
+net-admin       mh5        br-6d6f4      ACTIVE        2s        172.16.20.0/24
+
 ```
 
 #### 管理対象サーバーをデプロイ
 
 ```console
-$ mactl create -f server-40.yaml 
-リソースの作成要求が受け入れられました。ID: dd1d4
+$ mactl create -f srv05.yaml 
+リソースの作成要求が受け入れられました。ID: de775
+リソースの作成要求が受け入れられました。ID: ff6fc
 
-$ mactl get srv
-NAME             NODE          STATUS        CPU  RAM(MB)  IP-ADDRESS       NETWORK        
-----             ----          ------        ---  -------  ----------       -------        
-server-40        marmot-fre    RUNNING       1    1024     N/A              default        
-                                                           172.16.20.2      admin  
+$ mactl get server
+NAME             NODE          STATUS        CPU  RAM(MB)  IP-ADDRESS       NETWORK          AGE
+----             ----          ------        ---  -------  ----------       -------          ---
+srv05-1          mh5           RUNNING       1    1024     172.16.20.2      net-admin        19s
+srv05-2          mh5           RUNNING       1    1024     172.16.20.3      net-admin        19s
 ```
 
 #### VPNゲートウェイをデプロイ
 
 ```console
-$ mactl apply -f vpn-gw.yaml 
-リソースが作成されました。ID: <nil>
+$ mactl create -f vpn-gw.yaml 
+リソースの作成要求が受け入れられました。ID: 9039c
 
 $ mactl get vpngw
 NAME            INTERNAL-NET    PUBLIC-IP         STATUS        AGE     
 ----            ------------    ---------         ------        ---     
-vpn-gw          admin           192.168.1.40      ACTIVE        1m    
+vpn-gw          net-admin       192.168.1.199     ACTIVE        4m      
 ```
 
 #### PCにインストールする OpenVPNクライアント
