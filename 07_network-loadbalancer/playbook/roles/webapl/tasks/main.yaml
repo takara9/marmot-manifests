@@ -1,0 +1,82 @@
+- name: パッケージのインストール
+  apt:
+    name: "{{ packages }}"
+    state: present
+    update_cache: true
+  vars:
+    packages:
+    - npm
+
+- name: アプリのディレクトリ作成 
+  file:
+    path: "/apl"
+    owner: "ubuntu"
+    group: "ubuntu"
+    mode: '2775'
+    state: directory
+
+- name: アプリケーションの移動
+  copy:
+    src:  server.js
+    dest: "/apl"
+    owner: "ubuntu"
+    group: "ubuntu"
+    mode: '0755'
+
+- name: ワーキングディレクトリの作成 
+  file:
+    path: "/var/lib/webapl"
+    owner: "root"
+    group: "root"
+    mode: '2775'
+    state: directory
+
+- name: HTMLディレクトリ作成 
+  file:
+    path: "/apl/public"
+    owner: "ubuntu"
+    group: "ubuntu"
+    mode: '2775'
+    state: directory
+
+- name: HTMLファイルのコピー
+  copy:
+    src:  public/index.html
+    dest: "/apl/public/index.html"
+    owner: "ubuntu"
+    group: "ubuntu"
+    mode: '0755'
+
+- name: Check if package.json exists
+  stat:
+    path: "/apl/package.json"
+  register: package_json_stat
+
+- name: Initialize npm package if not exists
+  command: npm init -y
+  args:
+    chdir: "/apl"
+  when: not package_json_stat.stat.exists
+
+- name: Install dependencies (Express)
+  npm:
+    name: express
+    path: "/apl"
+    state: present
+
+- name: サービスの設定
+  copy:
+    src:  webapl.service
+    dest: "/etc/systemd/system/webapl.service"
+    owner: "root"
+    group: "root"
+    mode: '0755'
+  notify: Reload systemd and restart myserver
+
+- name: Webアプリの開始
+  systemd:
+    name: "webapl.service"
+    enabled: yes
+    state: started
+
+

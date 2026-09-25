@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: web07-0
+    comment: プライベートネットワークに接続するサーバー
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        users:
+         - ubuntu
+    ansible:
+        playbook: playbook/install.yaml
+        inventory: playbook/host-0.yaml
+    networkInterface:
+        - networkname: nlb-net
+        - networkname: host-bridge

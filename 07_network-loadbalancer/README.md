@@ -2,16 +2,6 @@
 
 Network LoadBalancer は、内部ネットワーク上のサーバー群をラベル選択し、1つ以上の Listener で公開 IP へ振り分ける機能です。
 
-主な特徴:
-- 1 ALB リソースにつき 1 台の専用 VM を自動作成
-- LB VM 上で HAProxy と marmot-lb-agent を使って設定を反映
-- backendSelector.matchLabels に一致する稼働中サーバーを自動探索
-- ステータス遷移で反映状況を管理 (PENDING/PROVISIONING/CONFIGURING/ACTIVE/DEGRADED/FAILED/DELETING)
-
-対応リソース名:
-- applicationloadbalancer
-- application-load-balancer
-- alb (短縮名)
 
 
 以下は HTTP Listener 1 本の最小構成例です。

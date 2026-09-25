@@ -1,50 +1,53 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: webserver1
+    name: web07-1
     comment: プライベートネットワークに接続するサーバー
     labels:
         app: web
 spec:
     cpu: 1
     memory: 1024
-    mmImage: webserver1
+    mmImage: webserver2
     auth:
-        url: https://github.com/takara9.keys
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        users:
+         - ubuntu
     networkInterface:
         - networkname: nlb-net
-        - networkname: default
 ---
 apiVersion: v1
 kind: Server
 metadata:
-    name: webserver2
+    name: web07-2
     comment: プライベートネットワークに接続するサーバー
     labels:
         app: web
 spec:
     cpu: 1
     memory: 1024
-    mmImage: webserver1
+    mmImage: webserver2
     auth:
-        url: https://github.com/takara9.keys
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        users:
+         - ubuntu
     networkInterface:
         - networkname: nlb-net
-        - networkname: default
 ---
 apiVersion: v1
 kind: Server
 metadata:
-    name: webserver3
+    name: web07-3
     comment: プライベートネットワークに接続するサーバー
     labels:
         app: web
 spec:
     cpu: 1
     memory: 1024
-    mmImage: webserver1
+    mmImage: webserver2
     auth:
-        url: https://github.com/takara9.keys
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        users:
+         - ubuntu
     networkInterface:
         - networkname: nlb-net
-        - networkname: default

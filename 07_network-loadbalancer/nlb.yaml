@@ -3,14 +3,14 @@ kind: NetworkLoadBalancer
 metadata:
     name: nlb1
 spec:
-    bindPublicIpAddress: 10.10.0.72
-    remoteCIDR: 10.10.0.0/24
+    bindPublicIpAddress: 192.168.1.72
+    remoteCIDR: 192.168.0.0/16
     internalVirtualNetwork: nlb-net
     listeners:
         - name: http
           protocol: tcp
           vipPort: 80
-          backendPort: 80
+          backendPort: 3000
           backendSelector:
               matchLabels:
                   app: web

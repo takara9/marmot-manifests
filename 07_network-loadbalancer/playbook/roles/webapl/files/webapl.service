@@ -1,0 +1,23 @@
+[Unit]
+Description=My Node.js Express Server
+After=network.target
+
+[Service]
+# アプリケーションを実行するユーザー名（例: root または一般ユーザー名）
+User=root
+
+# プロジェクトのルートディレクトリの絶対パス
+WorkingDirectory=/var/lib/webapl
+
+# Node.jsのフルパスと、実行するスクリプトの絶対パス
+ExecStart=/usr/bin/node /apl/server.js
+
+# クラッシュ時などに自動で再起動させる設定
+Restart=always
+RestartSec=10
+
+# 環境変数（必要に応じて）
+Environment=NODE_ENV=production PORT=3000
+
+[Install]
+WantedBy=multi-user.target

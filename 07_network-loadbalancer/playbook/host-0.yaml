@@ -1,0 +1,8 @@
+all:
+  vars:
+    ansible_connection: ssh
+    ansible_ssh_executable: /usr/local/bin/mactl-ssh
+    ansible_user: ubuntu
+    ansible_python_interpreter: /usr/bin/python3
+  hosts:
+    web07-0:
