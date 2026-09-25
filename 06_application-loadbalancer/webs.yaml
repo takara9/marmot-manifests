@@ -8,17 +8,13 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    mmImage: ubuntu24.04
+    mmImage: webserver1
     auth:
         publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
         users:
          - ubuntu
-    ansible:
-        playbook: playbook/install.yaml
-        inventory: playbook/hosts-1.yaml
     networkInterface:
         - networkname: app-net
-        - networkname: host-bridge
 ---
 apiVersion: v1
 kind: Server
@@ -30,17 +26,13 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    mmImage: ubuntu24.04
+    mmImage: webserver1
     auth:
         publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
         users:
          - ubuntu
-    ansible:
-        playbook: playbook/install.yaml
-        inventory: playbook/hosts-2.yaml
     networkInterface:
         - networkname: app-net
-        - networkname: host-bridge
 ---
 apiVersion: v1
 kind: Server
@@ -52,14 +44,10 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    mmImage: ubuntu24.04
+    mmImage: webserver1
     auth:
         publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
         users:
          - ubuntu
-    ansible:
-        playbook: playbook/install.yaml
-        inventory: playbook/hosts-3.yaml
     networkInterface:
         - networkname: app-net
-        - networkname: host-bridge

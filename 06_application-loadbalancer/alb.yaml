@@ -12,7 +12,7 @@ spec:
         - name: web-http
           protocol: HTTP
           vipPort: 80
-          backendPort: 80
+          backendPort: 3000
           backendSelector:
               matchLabels:
                   app: web3
