@@ -2,6 +2,7 @@
 
 Application Load Balancer (ALB) は、HTTPのL7ロードバランサーです。
 外部ネットワークからのリクエストの分配先は、Kubernetesのサービスと同様に、ALBに設定されたマッチング式とサーバーに付与されたラベルで選別されます。
+
 <IMG WIDTH="500" SRC="image/pic06-2.png">
 
 同じ仕様の仮想サーバーをデプロイするために、雛形となるサーバーをAnsibleを使ってセットアップします。
@@ -9,6 +10,7 @@ Application Load Balancer (ALB) は、HTTPのL7ロードバランサーです。
 
 カスタムイメージを利用して、同じ仕様の仮想マシンを複数起動することができます。
 この様に作成された仮想マシンは、ALBによる負荷分散対象の仮想サーバーとして適しています。
+
 <IMG WIDTH="500" SRC="image/pic06-1.png">
 
 
