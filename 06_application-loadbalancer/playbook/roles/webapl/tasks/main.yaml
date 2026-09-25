@@ -64,6 +64,12 @@
     path: "/apl"
     state: present
 
+- name: Install dependencies (express-session)
+  npm:
+    name: express-session
+    path: "/apl"
+    state: present
+
 - name: サービスの設定
   copy:
     src:  webapl.service

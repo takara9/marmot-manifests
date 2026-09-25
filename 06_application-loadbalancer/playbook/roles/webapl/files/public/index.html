@@ -1,23 +1,75 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <title>Server & Client Info</title>
-    <style>
-        body { font-family: sans-serif; margin: 40px; background: #f4f4f9; color: #333; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
-        h1 { color: #0070f3; font-size: 24px; }
-        ul { line-height: 1.8; }
-    </style>
+<meta charset="utf-8">
+<title>Session Counter</title>
+<style>
+  body { font-family: sans-serif; margin: 2em; }
+  td { padding: 4px 12px; border-bottom: 1px solid #ddd; }
+  .count { font-size: 4em; font-weight: bold; }
+  .ok { color: #090; } .ng { color: #c00; } .new { color: #06c; }
+</style>
 </head>
 <body>
-    <div class="card">
-        <h1>ネットワーク情報ダッシュボード</h1>
-        <ul>
-            <li><strong>サーバーホスト名:</strong> __SERVER_HOSTNAME__</li>
-            <li><strong>サーバーIPアドレス:</strong> __SERVER_IP__</li>
-            <li><strong>あなたのIPアドレス (クライアント):</strong> __CLIENT_IP__</li>
-        </ul>
-    </div>
+<h1>Session Counter</h1>
+<div class="count" id="count">-</div>
+<p id="status"></p>
+<table>
+  <tr><td>Instance ID</td><td id="instanceId"></td></tr>
+  <tr><td>Server IPs</td><td id="serverIPs"></td></tr>
+  <tr><td>Session ID</td><td id="sessionId"></td></tr>
+  <tr><td>Session Created</td><td id="sessionCreatedAt"></td></tr>
+  <tr><td>Client IP</td><td id="clientIP"></td></tr>
+  <tr><td>X-Forwarded-For</td><td id="xForwardedFor"></td></tr>
+  <tr><td>Server Started</td><td id="serverStartedAt"></td></tr>
+  <tr><td>Time</td><td id="time"></td></tr>
+</table>
+<p>
+  <button id="reload">Reload</button>
+  <button id="reset">Reset session</button>
+</p>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  async function load() {
+    try {
+      const res = await fetch('/api', { credentials: 'same-origin', cache: 'no-store' });
+      const i = await res.json();
+
+      $('count').textContent = i.count;
+      for (const k of ['instanceId', 'sessionId', 'sessionCreatedAt', 'clientIP',
+                       'serverStartedAt', 'time']) {
+        $(k).textContent = i[k];
+      }
+      $('serverIPs').textContent = i.serverIPs.join(', ');
+      $('xForwardedFor').textContent = i.xForwardedFor || '-';
+
+      const s = $('status');
+      if (i.persistenceBroken) {
+        s.className = 'ng';
+        s.textContent = 'NG: セッションが引き継がれていません(別インスタンスへ振り分け)';
+      } else if (i.newSession) {
+        s.className = 'new';
+        s.textContent = '新規セッション';
+      } else {
+        s.className = 'ok';
+        s.textContent = 'OK: 同一インスタンスで継続中';
+      }
+    } catch (e) {
+      $('status').className = 'ng';
+      $('status').textContent = 'エラー: ' + e.message;
+    }
+  }
+
+  $('reload').onclick = load;
+  $('reset').onclick = async () => {
+    await fetch('/api/reset', { method: 'POST', credentials: 'same-origin' });
+    load();
+  };
+
+  load();
+</script>
 </body>
 </html>
+

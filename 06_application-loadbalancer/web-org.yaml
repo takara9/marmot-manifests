@@ -4,7 +4,7 @@ metadata:
     name: web-org
     comment: プライベートネットワークに接続するサーバー
     labels:
-        app: web3
+        app: web1
 spec:
     cpu: 1
     memory: 1024
