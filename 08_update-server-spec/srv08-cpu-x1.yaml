@@ -1,13 +1,15 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: server-1
+    name: srv08
     comment: 仮想サーバーのCPUの増減テスト用
 spec:
-    cpu: 2
+    cpu: 1
     memory: 1024
     mmImage: ubuntu24.04
     auth:
-        url: https://github.com/takara9.keys
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        users:
+         - ubuntu
     networkInterface:
         - networkname: host-bridge
