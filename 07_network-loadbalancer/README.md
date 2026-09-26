@@ -1,28 +1,9 @@
 # ネットワークロードバランサーでサービスを負荷分散する
 
-Network LoadBalancer は、内部ネットワーク上のサーバー群をラベル選択し、1つ以上の Listener で公開 IP へ振り分ける機能です。
+Network LoadBalancer は、内部ネットワーク上のサーバー群をラベル選択し、1つ以上の Listener でIP で振り分けるL4ロードバランサー機能です。
 
+<IMG WIDTH="500" SRC="image/pic07-1.png">
 
-
-以下は HTTP Listener 1 本の最小構成例です。
-
-```yaml
-apiVersion: v1
-kind: ApplicationLoadBalancer
-metadata:
-  name: web-alb
-spec:
-  bindPublicIpAddress: 192.168.10.80
-  internalVirtualNetwork: app-net
-  listeners:
-    - name: http
-      protocol: HTTP
-      vipPort: 80
-      backendPort: 8080
-      backendSelector:
-        matchLabels:
-          app: web
-```
 
 ## 本マニフェストでの起動手順
 
@@ -31,60 +12,49 @@ spec:
 プライベートネットワークを作成する
 
 ```console
-$ mactl create -f app-net.yaml
-```
-
-確認方法
-
-```console
+$ mactl create -f nlb-net.yaml
 $ mactl get net
 ```
 
-または、マニフェストを使って確認もできます。
-
-```console
-$ mactl get -f app-net.yaml
-```
-
-
-### 2. Webサーバーの起動
+### 2. イメージを作成するためのWebサーバーを作成
 
 プライベートネットワークに接続するサーバーを起動する。
 ```console
-$ mactl create -f webs.yaml
-```
-
-確認方法
-
-```console
+$ mactl create -f web.yaml
 $ mactl get srv
 ```
 
-または、マニフェストを使って確認もできます。
-
+### 3. イメージを作成
+Ansibleでセットアップされたアプリケーションを含む仮想マシンイメージを、webserver2 として保存します。
 ```console
-$ mactl get -f webs.yaml
+$ mactl describe server web07-0
+$ mactl server createimage <ID> webserver2
+$ mactl get image
 ```
 
-
-### 3. ロードバランサーの起動
-
+### 4. Webサーバーをデプロイ
+先のステップで、保存された仮想マシンイメージを利用した仮想サーバーを起動します。
 ```console
-$ mactl create -f ApplicationLoadbalancer.yaml
+$ mactl create -f webs.yaml
+$ mactl get server -l app=web
 ```
 
-確認方法
-
+### 5. ロードバランサーの起動
+NLB(L4ロードバランサー)を起動します。
 ```console
-$ mactl get alb
+$ mactl create -f nlb.yaml
+$ mactl get nlb
 ```
-
-または、マニフェストを使って確認もできます。
-
-```console
-$ mactl get -f ApplicationLoadbalancer.yaml
-```
-
 起動と設定が完了して、動作を開始するまでに、約１分くらい時間が必要です。
 
+### 6. ブラウザでアクセス
 
+次のコマンドで表示された`PUBLIC-IP`を使って、ブラウザからアクセスします。
+```
+ubuntu@mh5:~$ mactl get nlb
+NAME              INTERNAL-NET    PUBLIC-IP         STATUS        LISTENERS  AGE     
+----              ------------    ---------         ------        ---------  ---     
+nlb1              nlb-net         192.168.1.72      ACTIVE        1          33m     
+```
+
+ブラウザで連続してリロードすると、セッションが再利用されて、バックエンドサーバーが切り替わらないので、少し時間をおいてからリロードします。`curl`コマンドを利用する時は、コマンドが終了するとともにセッションが切れますから、より負荷分散の状況が解りやすいと思います。

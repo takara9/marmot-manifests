@@ -46,7 +46,7 @@ $ mactl create -f webs.yaml
 $ mactl get server -l app=web3
 ```
 
-### 3. ロードバランサーの起動
+### 5. ロードバランサーの起動
 
 ```console
 $ mactl create -f alb.yaml
@@ -54,5 +54,15 @@ $ mactl get alb
 ```
 起動と設定が完了して、動作を開始するまでに、約１分くらい時間が必要です。
 
+### 6. ロードバランサーの公開アドレスの取得と、ブラウザからのアクセス
 
+次のコマンドで取得した`PUBLIC-IP`で、ブラウザからアクセスします。
+```console
+$ mactl get alb
+NAME              INTERNAL-NET    PUBLIC-IP         STATUS        LISTENERS  AGE     
+----              ------------    ---------         ------        ---------  ---     
+alb-web           app-net         192.168.1.70      ACTIVE        1          2h    
+```
+
+HTTPセッションを確立して、ブラウザとサーバーの対応を固定する様に動作します。
 
