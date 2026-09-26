@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: VirtualNetwork
+metadata:
+  name: pri-net-db
+  comment: DBサーバー用のプライベートネットのネットワーク
+  labels:
+      case: 30
+      role: db
+spec:
+  iPNetworkAddress: 10.120.10.0/24

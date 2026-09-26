@@ -1,0 +1,121 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: srv30-bastion
+    comment: Privateネットワークの踏み台サーバー
+    labels:
+        case: 30
+        role: bastion
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+    networkInterface:
+        - networkname: pri-net-bastion
+        - networkname: pri-net-web
+        - networkname: pri-net-db
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: srv30-cache
+    comment: Privateネットワークのキャッシュサーバー
+    labels:
+        case: 30
+        role: cache
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+    networkInterface:
+        - networkname: pri-net-db
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: srv30-db
+    comment: PrivateネットワークのDBサーバー
+    labels:
+        case: 30
+        role: db
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+    networkInterface:
+        - networkname: pri-net-db
+    storage:
+        - metadata:
+            name: db-store-01
+            comment: DB用のデータベース領域1として利用
+          spec:
+            type: lvm
+            size: 5
+            persistent: true
+        - metadata:
+            name: db-store-02
+            comment: DB用のデータベース領域2として利用
+          spec:
+            type: lvm
+            size: 5
+            persistent: true
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: srv30-w1
+    comment: PrivateネットワークのWebサーバー
+    labels:
+        case: 30
+        role: web
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+    networkInterface:
+        - networkname: pri-net-web
+        - networkname: pri-net-db
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: srv30-w2
+    comment: PrivateネットワークのWebサーバー
+    labels:
+        case: 30
+        role: web
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+    networkInterface:
+        - networkname: pri-net-web
+        - networkname: pri-net-db
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: srv30-w3
+    comment: PrivateネットワークのWebサーバー
+    labels:
+        case: 30
+        role: web
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+    networkInterface:
+        - networkname: pri-net-web
+        - networkname: pri-net-db

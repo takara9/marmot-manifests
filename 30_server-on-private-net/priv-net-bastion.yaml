@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: VirtualNetwork
+metadata:
+  name: pri-net-bastion
+  comment: 踏み台サーバー用のプライベートネットのネットワーク
+  labels:
+      case: 30
+      role: bastion
+spec:
+  iPNetworkAddress: 172.16.90.0/26
+  
