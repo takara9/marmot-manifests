@@ -5,9 +5,9 @@ metadata:
     comment: 検証用K8sクラスタ
 spec:
     version: "1.36"
-    nodes: 2
+    nodes: 3
     nodeSpec:
-        cpu: 4
+        cpu: 2
         memory: 4096
         network:
             external: host-bridge

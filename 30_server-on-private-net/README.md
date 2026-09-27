@@ -26,7 +26,7 @@ dbサーバーは、bastionやweb1〜web3の背後にあるプライベートネ
 ### プライベートネットワークの構築
 
 ```console
-$ mactl create -f pri-networks.yaml
+$ mactl create -f networks.yaml
 $ mactl get network -l case=30
 ```
 
