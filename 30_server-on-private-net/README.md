@@ -46,87 +46,70 @@ $ mactl get gw
 ```
 
 
-##
-
-
-
-## プライベートネットワークを作成
-
-172.16.10.0/24 の ネットワークを marmot のクラスタ上に作成します。
-このネットワークに直接アクセスすることはできません。
+## サーバーへのログイン
 
 ```console
-$ mactl create -f private-net.yaml 
-リソースの作成要求が受け入れられました。ID: <nil>
-```
+$ mactl get gw
+NAME            INTERNAL-NET    PUBLIC-IP         STATUS        AGE     
+----            ------------    ---------         ------        ---     
+gw30            pri-net-bastion  192.168.1.181     ACTIVE        3m
 
-```console
-$ mactl get net
-NAME            NODE       BRIDGE        STATUS        AGE       IP-NET        
-----            ---------  -----------   ----------    ---       --------------
-host-bridge     marmot3    br0           ACTIVE        1d        -             
-default         marmot1    virbr0        ACTIVE        16h       -             
-host-bridge     marmot1    br0           ACTIVE        45m       -             
-default         marmot2    virbr0        ACTIVE        45m       -             
-host-bridge     marmot2    br0           ACTIVE        7m        -             
-default         marmot3    virbr0        ACTIVE        7m        -             
-private-net     marmot1    br-14b63      ACTIVE        2s        172.16.10.0/24
-private-net     marmot2    br-14b63      WAITING       1s        172.16.10.0/24
-private-net     marmot3    br-14b63      WAITING       1s        172.16.10.0/24
-```
-
-## プライベートネットワークに接続されたサーバーを起動
-
-`mactl create -f MANIFEST-FILE`でサーバーを起動できます。
-IPアドレスは、自動で割当られるので、マニフェストには、ネットワーク名だけが記述されています。
-
-```console
-$ mactl create -f server1.yaml 
-リソースの作成要求が受け入れられました。ID: 29130
-
-$ mactl get -f server1.yaml 
+$ mactl get server -l case=30
 NAME             NODE          STATUS        CPU  RAM(MB)  IP-ADDRESS       NETWORK          AGE
 ----             ----          ------        ---  -------  ----------       -------          ---
-server1          marmot1       RUNNING       1    1024     172.16.10.2      private-net      22s
-```
+srv30-bastion    mh5           RUNNING       1    1024     172.16.90.2      pri-net-bastion  4m
+                                                           10.120.1.3       pri-net-web      
+                                                           10.120.10.4      pri-net-db       
+srv30-cache      mh5           RUNNING       1    1024     10.120.10.3      pri-net-db       4m
+srv30-db         mh5           RUNNING       1    1024     10.120.10.7      pri-net-db       4m
+srv30-w1         mh5           RUNNING       1    1024     10.120.1.2       pri-net-web      4m
+                                                           10.120.10.2      pri-net-db       
+srv30-w2         mh5           RUNNING       1    1024     10.120.1.4       pri-net-web      4m
+                                                           10.120.10.5      pri-net-db       
+srv30-w3         mh5           RUNNING       1    1024     10.120.1.5       pri-net-web      4m
+                                                           10.120.10.6      pri-net-db     
+$ ssh -J 192.168.1.181 10.120.1.2
+Welcome to Ubuntu 24.04.5 LTS (GNU/Linux 6.8.0-139-generic x86_64)
+＜中略＞
 
-試しに、`ping` コマンドで疎通できないことを確認してみます。
+ubuntu@srv30-w1:~$ hostname
+srv30-w1
 
-```console
-$ ping -c 1 172.16.10.2
-PING 172.16.10.2 (172.16.10.2) 56(84) bytes of data.
-From 10.0.0.1 icmp_seq=1 Destination Host Unreachable
-
---- 172.16.10.2 ping statistics ---
-1 packets transmitted, 0 received, +1 errors, 100% packet loss, time 0ms
-```
-
-## サーバーにログイン
-
-ssh を使ってネットワーク経由でサーバーには、ログインできないので、シリアルコンソール経由でネットワークに接続します。
-コンソールに入るには、`mactl console SERVER_NAME` を実行します。コマンド実行後に、Enterキーを一回押すと、ログインプロンプトが
-再出力されて、画面でみることができます。
-
-```console
-$ mactl console server1
-
-server1 login: root
-Password: 
-Welcome to Ubuntu 24.04.4 LTS (GNU/Linux 6.8.0-117-generic x86_64)
-<中略>
-```
-
-サーバーの利用を開始する前に、`apt-get update` を実行してリポジトリを更新できます。
-
-```console
-root@server1:~# apt-get update
-Hit:1 http://archive.ubuntu.com/ubuntu noble InRelease
-Get:2 http://archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
-Get:3 http://archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
-<中略>
-
-Fetched 42.9 MB in 8s (5430 kB/s)                                              
+ubuntu@srv30-w1:~$ sudo apt-get update
+Get:1 http://security.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+Hit:2 http://archive.ubuntu.com/ubuntu noble InRelease
+＜中略＞
+Fetched 37.3 MB in 5s (7815 kB/s)                
 Reading package lists... Done
-root@server1:~# 
+
+ubuntu@srv30-w1:~$ curl ifconfig.io
+curl: (6) Could not resolve host: ifconfig.io
+
+ubuntu@srv30-w1:~$ ip r
+10.120.1.0/24 dev enp1s0 proto kernel scope link src 10.120.1.2 
+10.120.10.0/24 dev enp2s0 proto kernel scope link src 10.120.10.2 
+10.245.0.0/16 dev enp7s0 proto kernel scope link src 10.245.0.18 
 ```
 
+
+## クリーンナップ
+依存関係を考慮して、サーバー、ゲートウェイ、ネットワークの順番で削除します。
+
+```console
+$ mactl delete -f servers.yaml 
+server "srv30-bastion" deletion requested (accepted)
+server "srv30-cache" deletion requested (accepted)
+server "srv30-db" deletion requested (accepted)
+server "srv30-w1" deletion requested (accepted)
+server "srv30-w2" deletion requested (accepted)
+server "srv30-w3" deletion requested (accepted)
+
+$ mactl delete -f gateways.yaml 
+application load balancer "alb30" deletion requested (accepted)
+gateway "gw30" deletion requested (accepted)
+
+$ mactl delete -f networks.yaml 
+network "pri-net-bastion" deletion requested (accepted) for 1 object(s)
+network "pri-net-web" deletion requested (accepted) for 1 object(s)
+network "pri-net-db" deletion requested (accepted) for 1 object(s)
+```
