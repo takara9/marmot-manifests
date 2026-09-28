@@ -1,0 +1,131 @@
+# ---------- 前提パッケージ ----------
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ gitlab_timezone }}"
+
+- name: Install prerequisites
+  ansible.builtin.apt:
+    name:
+      - curl
+      - openssh-server
+      - ca-certificates
+      - tzdata
+      - perl
+      - gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Preseed postfix (non-interactive)
+  ansible.builtin.debconf:
+    name: postfix
+    question: "{{ item.q }}"
+    value: "{{ item.v }}"
+    vtype: "{{ item.t }}"
+  loop:
+    - { q: "postfix/main_mailer_type", v: "Internet Site", t: "select" }
+    - { q: "postfix/mailname", v: "{{ gitlab_external_url | urlsplit('hostname') }}", t: "string" }
+  when: gitlab_install_postfix
+
+- name: Install postfix
+  ansible.builtin.apt:
+    name: postfix
+    state: present
+  when: gitlab_install_postfix
+
+- name: Ensure ssh is enabled and running
+  ansible.builtin.systemd_service:
+    name: ssh
+    state: started
+    enabled: true
+
+# ---------- リポジトリ登録 ----------
+- name: Create keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download GitLab GPG key
+  ansible.builtin.get_url:
+    url: https://packages.gitlab.com/gitlab/gitlab-ce/gpgkey
+    dest: "{{ gitlab_keyring }}"
+    mode: "0644"
+
+- name: Add GitLab CE repository (deb822)
+  ansible.builtin.deb822_repository:
+    name: gitlab_gitlab-ce
+    types: [deb]
+    uris: https://packages.gitlab.com/gitlab/gitlab-ce/ubuntu/
+    suites: ["{{ ansible_distribution_release }}"]   # noble
+    components: [main]
+    signed_by: "{{ gitlab_keyring }}"
+    state: present
+
+# ---------- インストール ----------
+- name: Install GitLab CE
+  ansible.builtin.apt:
+    name: "{{ gitlab_package }}"
+    state: present
+    update_cache: true
+  environment:
+    EXTERNAL_URL: "{{ gitlab_external_url }}"
+    GITLAB_ROOT_PASSWORD: "{{ gitlab_root_password }}"
+  register: gitlab_install
+  no_log: true   # root パスワードをログに出さない
+
+- name: Hold gitlab-ce package when version is pinned
+  ansible.builtin.dpkg_selections:
+    name: gitlab-ce
+    selection: hold
+  when: gitlab_version | length > 0
+
+# ---------- 設定 ----------
+- name: Set external_url in gitlab.rb
+  ansible.builtin.lineinfile:
+    path: /etc/gitlab/gitlab.rb
+    regexp: "^external_url "
+    line: "external_url '{{ gitlab_external_url }}'"
+  notify: Reconfigure GitLab
+
+- name: Add extra settings to gitlab.rb
+  ansible.builtin.blockinfile:
+    path: /etc/gitlab/gitlab.rb
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    block: "{{ gitlab_extra_config }}"
+  notify: Reconfigure GitLab
+
+# ---------- ファイアウォール ----------
+- name: Allow ports on UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: ["22", "80", "443"]
+  when: gitlab_configure_ufw
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+  when: gitlab_configure_ufw
+
+- name: Flush handlers (apply config before health check)
+  ansible.builtin.meta: flush_handlers
+
+# ---------- 動作確認 ----------
+- name: Wait for GitLab readiness
+  ansible.builtin.uri:
+    url: http://127.0.0.1/-/readiness
+    status_code: 200
+  register: ready
+  until: ready.status == 200
+  retries: 60
+  delay: 10
+
+- name: Show result
+  ansible.builtin.debug:
+    msg:
+      - "GitLab CE is ready: {{ gitlab_external_url }}"
+      - "Login user: root"
+      - "Initial password file (deleted after 24h): /etc/gitlab/initial_root_password"
+

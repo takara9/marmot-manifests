@@ -1,0 +1,26 @@
+# アクセスURL（https:// にすると Let's Encrypt が自動で有効化される）
+gitlab_external_url: "http://gitlab.labo.local"
+
+# バージョン固定（空ならリポジトリの最新版）例: "18.4.1-ce.0"
+gitlab_version: ""
+
+# 初期 root パスワード（初回 reconfigure 時のみ有効 / 8文字以上）
+# 実運用では ansible-vault で暗号化すること
+gitlab_root_password: "Passw0rd!"
+
+# タイムゾーン
+gitlab_timezone: "Asia/Tokyo"
+
+# メール送信用 Postfix を入れるか
+gitlab_install_postfix: true
+
+# UFW で 22/80/443 を開放するか
+gitlab_configure_ufw: false
+
+# gitlab.rb に追記する任意設定（Ruby 構文のまま記述）
+gitlab_extra_config: |
+  gitlab_rails['time_zone'] = '{{ gitlab_timezone }}'
+  high_availability['mountpoint'] = '/var/opt/gitlab'
+  # puma['worker_processes'] = 2
+  # sidekiq['concurrency'] = 10
+  # prometheus_monitoring['enable'] = false
