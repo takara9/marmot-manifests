@@ -98,4 +98,5 @@ $ mactl ssh srv-ubuntu22
 Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 5.15.0-187-generic x86_64)
 ```
 
+鍵の取り扱いには、注意しましょう。
 
