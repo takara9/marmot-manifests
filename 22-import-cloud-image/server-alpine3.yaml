@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: srv-alpine3
+    comment: marmotホストが繋がるネットワークに接続する仮想サーバー
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: alpine3
+    auth:
+        publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC505T999yRHuCoaWW5cYzQJsDbaoVionhrU+Gk5aPEbSV7tw8DclKZnSaN9oitClRvA5HYUHu3Lp2OvlXiOrwsrORI3iq0QcvsETmpZrDEjcHXrzbIkSIL9UnlPlOz8mrzCzTGjLiNRr5K+hV7PMHZwDDMZRL2zc/vlFdV4LQwmJ5B/h6sdt35VGl67rCgd5R0YguqCjNES3I17quBZzfIM+ha6TsMDupH4gOmqvv2waLm4wn/OhUfvQDlRa+GwQTWPGQZ12s9s0R7UqoeZcLh3D49gjj+WozSpakJsQzsIHDfIof1t8P/r7S1tWlsfwcGvsNiMI5FUZji4MUxRclWcl7WM3wkPtGteS7jh/hP6BcyWglU1YGHlpQjsDam22mVgXYnp8N+TbbKXnpaD87/aVg+o0slWwvvKPnuV0QPIYcpzNN+9s/PpjKJHvrEqDzNhWD4qno2k9MBl9g8DIZnnOAsfbtG98PvdzkjSAb5MSBfcydy/oheQunO4K5Pdvc= ubuntu@hv0"
+    networkInterface:
+        - networkname: host-bridge

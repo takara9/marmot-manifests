@@ -1,13 +1,15 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: ubuntu22-54
+    name: srv-ubuntu22
     comment: marmotホストが繋がるネットワークに接続する仮想サーバー
 spec:
     cpu: 1
     memory: 1024
     mmImage: ubuntu22.04
     auth:
-        url: https://github.com/takara9.keys
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        #users:
+        # - ubuntu
     networkInterface:
         - networkname: host-bridge
