@@ -53,9 +53,8 @@ srv-alpine       marmot2       RUNNING       1    1024     192.168.1.51     host
 Alpine Linux のでデフォルトユーザーは、`alpine` なので、サーバー名の前に `alpine@` をセットします。
 
 ```console
-$ mactl ssh alpine@srv-alpine
+$ mactl ssh -i ../02_host-bridge_server/id_rsa alpine@srv-alpine
 Welcome to Alpine!
-
 ```
 
 ## Rocky 9 Linux の起動
@@ -94,7 +93,7 @@ NAME             NODE          STATUS        CPU  RAM(MB)  IP-ADDRESS       NETW
 ----             ----          ------        ---  -------  ----------       -------          ---
 srv-ubuntu22     hv0           RUNNING       1    1024     192.168.1.178    host-bridge      8s
 
-$ mactl ssh s../02_host-bridge_server/id_ed25519 srv-ubuntu22
+$ mactl ssh -i ../02_host-bridge_server/id_ed25519 srv-ubuntu22
 Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 5.15.0-187-generic x86_64)
 ```
 
