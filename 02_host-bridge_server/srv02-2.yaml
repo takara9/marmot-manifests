@@ -2,25 +2,14 @@ apiVersion: v1
 kind: Server
 metadata:
     name: srv02-2
-    comment: ブリッジ接続する仮想サーバー、IPアドレス手動設定
+    comment: ホスト・ブリッジ接続の仮想サーバー、IPアドレス自動割り当て RSA公開鍵利用
 spec:
     cpu: 1
     memory: 1024
-    osVariant: ubuntu24.04
+    mmImage: ubuntu24.04
     auth:
-        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
-        users:
-         - ubuntu        
+        publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC8vC+k637fOIqDf0bCC6/ETB1pE8+JlCOxVgXGqy21DvFhAXBIOG7Z7mwpjORoBtJtE71wc71aMrkI+q7TqS5aPNu2EdnZArOjf1Ou14n2WxlZraq6q4XrhO/qII6kWw402Tbx6fEzJPvXkeqn0XMMUtqwCOCtyoxscs6sY2gNhAWMOE047043bcf/6xbHj39ibSROxpCu7DRXNFixpvDF28DW4BokauieBzTMJlrA27iCXPYhxNdmKcxbVXHIbu26aW7yC1WfddJBBCCpqQ2VWq4kEDDqpBXSDK7sIn7CxgQAnaz2xqPEJVfjZEzk9TD6GMsLdjrJkndVd07YOhZkseVvJYMcM4rkxfCTnu2ZZCMbMHt//MglIjWBV+oz/goeW9lOT/vBn2my3tu0bE+VyTTEq77U+gMpR0uOrMQGWNHFSbEf8HE80PF4GJENaMZ5BQ3wdgFue7MaQzNzCNooes6DsXEUnmvqhS5QbnaLKttVokXTF+l7GFDs6fLqNMU= ubuntu@hv0"
+        #users:
+        # - ubuntu
     networkInterface:
-        - networkname: host-bridge  # marmot のサーバーが接続されるネットワーク
-          address: 192.168.1.52     # IPアドレスを手動設定（IPアドレスの重複使用に注意)
-          nameservers:              # DNSサーバー
-            addresses:
-                - 8.8.8.8
-                - 8.8.4.4
-            search:                 # ドメイン名を省略可能なドメインをセット
-                - labo.local
-          netmasklen: 24            # ネットマスク
-          routes:                   # デフォルトGW ルーターのアドレスを指定
-            - to: default
-              via: 192.168.1.1
+        - networkname: host-bridge

@@ -23,42 +23,83 @@ $ cat ~/.ssh/id_ed25519.pub
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs
 ```
 
-あまりお勧めでは無いですが、以下のコマンドで、ホームディレクトリに秘密鍵をコピーして、マニフェストの変更なしでログインできます。
-
-```bash
-$ cp id_ed25519 ~/.ssh
-$ chmod 0400 ~/.ssh/id_ed25519
-```
-
 
 ## ブリッジ接続する仮想サーバー ３種のマニフェスト
 
-- srv02-1.yaml IPアドレス自動割り当て
-- srv02-2.yaml IPアドレス手動設定
-- srv02-3.yaml IPアドレス自動割り当て、GitHub公開鍵利用
+- srv02-1.yaml ホスト・ブリッジ接続の仮想サーバー、IPアドレス自動割り当て ED25519公開鍵利用
+- srv02-2.yaml ホスト・ブリッジ接続の仮想サーバー、IPアドレス自動割り当て RSA公開鍵利用
+- srv02-3.yaml ブリッジ接続する仮想サーバー、IPアドレス手動設定
+- srv02-4.yaml ホスト・ブリッジ接続の仮想サーバー、IPアドレス自動割り当て GitHub 公開鍵利用
 
 
-## 仮想サーバーの起動方法
+## 仮想サーバーの起動とログイン_１  ED25519/RSA鍵使用
+
+デフォルトユーザーは`ubuntu`です。このフォルダーに置いてある ED25519 または RSA 鍵を使用した例です。
 
 ```bash
 $ mactl create -f srv02-1.yaml 
-リソースの作成要求が受け入れられました。ID: ebe84
-```
+リソースの作成要求が受け入れられました。ID: 42c2b
 
-起動して、ログインできるまでに、１分くらいかかります。
-
-
-## ログイン方法
-`macth ssh <SERVER-NAME>` で名前でログインできます。また、`ssh username@192.168.1.201` のようなIPアドレスとユーザー指定でのログインもできます。
-
-```bash
-$ mactl get server srv-0201
+$ mactl get server srv02-1
 NAME             NODE          STATUS        CPU  RAM(MB)  IP-ADDRESS       NETWORK          AGE
 ----             ----          ------        ---  -------  ----------       -------          ---
-srv02-1          mh5           RUNNING       1    1024     192.168.1.201    host-bridge      12m
+srv02-1          hv0           RUNNING       1    1024     192.168.1.175    host-bridge      27s
 
-$ mactl ssh srv02-1
-Welcome to Ubuntu 24.04.5 LTS (GNU/Linux 6.8.0-139-generic x86_64)
-＜以下省略＞
+$ mactl ssh -i ./id_ed25519 ubuntu@srv02-1
+Welcome to Ubuntu 24.04.4 LTS (GNU/Linux 6.8.0-137-generic x86_64)
 ```
+
+RSA鍵の場合
+```bash
+$ mactl ssh -i id_rsa srv02-2
+Welcome to Ubuntu 24.04.4 LTS (GNU/Linux 6.8.0-137-generic x86_64)
+```
+
+サーバーの削除
+```bash
+$ mactl delete server srv02-1
+```
+
+## 仮想サーバーの起動とログイン  ED25519鍵使用とIPアドレスをマニュアル設定
+
+
+```bash
+$ mactl create -f srv02-3.yaml
+
+$ mactl get srv srv02-3
+NAME             NODE          STATUS        CPU  RAM(MB)  IP-ADDRESS       NETWORK          AGE
+----             ----          ------        ---  -------  ----------       -------          ---
+srv02-3          hv0           RUNNING       1    1024     192.168.1.52     host-bridge      2m
+
+$ mactl ssh -i ./id_ed25519 srv02-3
+```
+
+削除
+```bash
+$ mactl delete server srv02-3
+```
+
+## ホスト・ブリッジ接続の仮想サーバー、IPアドレス自動割り当て GitHub 公開鍵利用
+
+GitHubで公開しているご自身のSSH鍵を使用するケースです。
+ホームディレクトリの .ssh に秘密鍵があり、コマンドの引数で指定しなくても、ログインできる例です。
+
+```bash
+$ mactl create -f srv02-4.yaml 
+リソースの作成要求が受け入れられました。ID: 6f73a
+
+$ mactl get server srv02-4
+NAME             NODE          STATUS        CPU  RAM(MB)  IP-ADDRESS       NETWORK          AGE
+----             ----          ------        ---  -------  ----------       -------          ---
+srv02-4          hv0           RUNNING       1    1024     192.168.1.182    host-bridge      2m
+
+$ mactl ssh srv02-4
+Welcome to Ubuntu 24.04.4 LTS (GNU/Linux 6.8.0-137-generic x86_64)
+```
+
+削除
+```bash
+$ mactl delete server srv02-4
+```
+
 

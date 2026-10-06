@@ -2,12 +2,25 @@ apiVersion: v1
 kind: Server
 metadata:
     name: srv02-3
-    comment: ブリッジ接続する仮想サーバー、IPアドレス自動割り当て、公開鍵利用
+    comment: ブリッジ接続する仮想サーバー、IPアドレス手動設定
 spec:
     cpu: 1
     memory: 1024
-    mmImage: ubuntu24.04
+    osVariant: ubuntu24.04
     auth:
-        url: https://github.com/takara9.keys
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        users:
+         - ubuntu        
     networkInterface:
-        - networkname: host-bridge
+        - networkname: host-bridge  # marmot のサーバーが接続されるネットワーク
+          address: 192.168.1.52     # IPアドレスを手動設定（IPアドレスの重複使用に注意)
+          nameservers:              # DNSサーバー
+            addresses:
+                - 8.8.8.8
+                - 8.8.4.4
+            search:                 # ドメイン名を省略可能なドメインをセット
+                - labo.local
+          netmasklen: 24            # ネットマスク
+          routes:                   # デフォルトGW ルーターのアドレスを指定
+            - to: default
+              via: 192.168.1.1
