@@ -24,7 +24,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy
 ```
 
 
-## ブリッジ接続する仮想サーバー ３種のマニフェスト
+## ブリッジ接続する仮想サーバー の各種マニフェスト
 
 - srv02-1.yaml ホスト・ブリッジ接続の仮想サーバー、IPアドレス自動割り当て ED25519公開鍵利用
 - srv02-2.yaml ホスト・ブリッジ接続の仮想サーバー、IPアドレス自動割り当て RSA公開鍵利用
