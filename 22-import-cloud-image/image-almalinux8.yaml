@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Image
+metadata:
+    name: almalinux8
+spec:
+    sourceUrl: "https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/AlmaLinux-8-GenericCloud-latest.x86_64.qcow2"
+    osName: "almalinux"
+    osVersion: "8"

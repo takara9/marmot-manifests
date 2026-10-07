@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: srv-rocky9
+    name: srv-rocky10
     comment: marmotホストが繋がるネットワークに接続する仮想サーバー
     labels:
         unit: 22
@@ -9,7 +9,7 @@ metadata:
 spec:
     cpu: 1
     memory: 1024
-    mmImage: rocky9
+    mmImage: rocky10
     auth:
         publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
     networkInterface:

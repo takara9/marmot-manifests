@@ -57,28 +57,41 @@ $ mactl ssh -i ../02_host-bridge_server/id_rsa alpine@srv-alpine
 Welcome to Alpine!
 ```
 
-## Rocky 9 Linux の起動
+## Rocky 8/9 /AlamaLinux 9 の起動
 
 Rocky Linux は、起動に少し時間がかかるので、`mactl console SERVER-NAME` コマンドで、コンソールを見ると、
 起動の過程を表示することができるので、`mactl ssh rocky@SERVER-NAME` を実行するタイミングが分かると思います。
 
 Rocky Linux のデフォルトユーザーは、`rocky` です。そして、rootのデフォルトパスワードも、`rocky`になっています。
+AlmaLinux のデフォルトユーザーは、`almalinux` で、rootのデフォルトパスワードも、`almalinux`です。
 
 ```console
-$ mactl create -f server-rocky9.yaml
+$ mactl create -f server-rocky8.yaml 
+リソースの作成要求が受け入れられました。ID: 57588
 ```
 
 起動過程を見るには、以下のコマンドです。コンソールから抜けるには、`Ctrl+]` を実行します。
 ```console
-$ mactl console srv-rocky9
+$ mactl console srv-rocky8
 ```
 
-ログインするには
+Rocky ログインするには
 ```console
-$ mactl ssh rocky@srv-rocky9
-Last login: Mon Oct  5 21:49:03 2026 from 192.168.1.8
-[rocky@srv-rocky9 ~]$ 
+$ mactl ssh -i ~/marmot-manifests/02_host-bridge_server/id_ed25519 rocky@srv-rocky8
+Activate the web console with: systemctl enable --now cockpit.socket
 ```
+
+
+AlmaLinux8/9
+```
+$ mactl create -f server-almalinux9.yaml 
+リソースの作成要求が受け入れられました。ID: 21916
+
+$ mactl ssh -i ../02_host-bridge_server/id_ed25519 almalinux@srv-almalinux9
+```
+
+
+
 
 ## Ubuntu 22.04/24.04/26.04 の起動
 

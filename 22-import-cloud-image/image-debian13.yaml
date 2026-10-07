@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Image
+metadata:
+    name: debian13
+spec:
+    sourceUrl: http://cloud.debian.org/images/cloud/trixie/latest/debian-13-generic-amd64.qcow2
+    osName: debian
+    osVersion: "13"

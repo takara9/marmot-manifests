@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Image
+metadata:
+    name: debian12
+spec:
+    sourceUrl: http://cloud.debian.org/images/cloud/bookworm/20260923-2610/debian-12-generic-amd64-20260923-2610.qcow2
+    osName: debian
+    osVersion: "12"

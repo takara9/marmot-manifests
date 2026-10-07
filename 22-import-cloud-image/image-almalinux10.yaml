@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Image
+metadata:
+    name: almalinux10
+spec:
+    sourceUrl: "https://repo.almalinux.org/almalinux/10/cloud/x86_64/images/AlmaLinux-10-GenericCloud-latest.x86_64.qcow2"
+    osName: "almalinux"
+    osVersion: "10"

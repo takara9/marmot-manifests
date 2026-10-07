@@ -3,6 +3,9 @@ kind: Server
 metadata:
     name: srv-alpine3
     comment: marmotホストが繋がるネットワークに接続する仮想サーバー
+    labels:
+        unit: 22
+        role: alpine
 spec:
     cpu: 1
     memory: 1024

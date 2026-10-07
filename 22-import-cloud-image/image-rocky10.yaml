@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Image
+metadata:
+    name: rocky10
+spec:
+    sourceUrl: "https://dl.rockylinux.org/pub/rocky/10/images/x86_64/Rocky-10-GenericCloud.latest.x86_64.qcow2"
+    osName: rocky
+    osVersion: "10"

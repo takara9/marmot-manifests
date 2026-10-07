@@ -3,6 +3,9 @@ kind: Server
 metadata:
     name: srv-ubuntu24
     comment: marmotホストが繋がるネットワークに接続する仮想サーバー
+    labels:
+        unit: 22
+        role: ubuntu
 spec:
     cpu: 1
     memory: 1024

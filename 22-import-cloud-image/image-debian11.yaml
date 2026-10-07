@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Image
+metadata:
+    name: debian11
+spec:
+    sourceUrl: "http://cloud.debian.org/images/cloud/bullseye/latest/debian-11-generic-amd64.qcow2"
+    osName: debian
+    osVersion: "11"
