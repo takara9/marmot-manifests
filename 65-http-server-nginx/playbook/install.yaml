@@ -1,0 +1,17 @@
+- name: setup servers
+  hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+    nginx_service_state: started
+    nginx_service_enabled: true
+    nginx_doc_root: /var/www/html
+    nginx_cert_dir: /etc/nginx/ssl
+  tasks:
+  roles:
+    - web-nginx
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded

@@ -1,0 +1,27 @@
+# HTTP (ポート80) の設定: すべてのアクセスをHTTPSにリダイレクト
+server {
+    listen 80;
+    server_name w1.labo.local;
+
+    return 301 https://$host$request_uri;
+}
+
+# HTTPS (ポート443) の設定
+server {
+    listen 443 ssl;
+    server_name labo.local w1.labo.local;
+
+    # 証明書と秘密鍵のパスを指定
+    ssl_certificate /etc/nginx/ssl/w1.labo.local.crt;
+    ssl_certificate_key /etc/nginx/ssl/w1.labo.local.key;
+
+    # 推奨されるTLSプロトコルと暗号化スイートの設定（セキュリティ強化）
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # ドキュメントルートなどの基本設定
+    root /var/www/html;
+    index index.html index.htm;
+
+}

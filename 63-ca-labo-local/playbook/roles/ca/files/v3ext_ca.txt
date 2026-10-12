@@ -1,0 +1,8 @@
+basicConstraints=critical,CA:TRUE,pathlen:1
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+extendedKeyUsage = critical, serverAuth, clientAuth, codeSigning, emailProtection, timeStamping, OCSPSigning
+subjectKeyIdentifier = hash
+authorityKeyIdentifier=keyid,issuer
+subjectAltName = @alt_names
+
+[alt_names]

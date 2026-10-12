@@ -1,0 +1,104 @@
+- name: NGINXのTLS証明書を配置するディレクトリ
+  ansible.builtin.file:
+    path: "{{ nginx_cert_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: TLS証明書をリモートサーバーへコピー
+  ansible.builtin.copy:
+    src: w1.labo.local.crt    # コントロールノード側のファイルパス（相対パスまたは絶対パス）
+    dest: "{{ nginx_cert_dir }}/w1.labo.local.crt" # 管理対象ノード側のコピー先パス
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: TLS証明書秘密鍵をリモートサーバーへコピー
+  ansible.builtin.copy:
+    src: w1.labo.local.key    # コントロールノード側のファイルパス（相対パスまたは絶対パス）
+    dest: "{{ nginx_cert_dir }}/w1.labo.local.key" # 管理対象ノード側のコピー先パス
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Ensure nginx is enabled and running
+  ansible.builtin.service:
+    name: nginx
+    state: "{{ nginx_service_state }}"
+    enabled: "{{ nginx_service_enabled }}"
+
+- name: Allow Nginx through UFW (if ufw is in use)
+  community.general.ufw:
+    rule: allow
+    name: "Nginx Full"
+  when: ansible_facts.services is defined
+  ignore_errors: true  # ufw未導入環境でも止まらないように
+
+- name: Verify nginx is responding
+  ansible.builtin.uri:
+    url: "http://localhost"
+    status_code: 200
+  register: result
+  retries: 3
+  delay: 2
+  until: result.status == 200
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Deploy default in /etc/nginx/sites-available
+  ansible.builtin.template:
+    src: default.j2
+    dest: /etc/nginx/sites-available/default
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: シンボリックリンクの作成
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/default
+    path: /etc/nginx/sites-enabled/default
+    state: link
+
+- name: Ensure nginx is enabled and running
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    #state: stopped
+    enabled: true
+
+- name: Deploy index.html showing hostname
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: "{{ nginx_doc_root }}/index.html"
+    owner: www-data
+    group: www-data
+    mode: '0644'
+  notify: Reload nginx
+
+- name: Verify page is responding
+  ansible.builtin.uri:
+    url: "http://localhost"
+    status_code: 200
+  register: result
+  retries: 3
+  delay: 2
+  until: result.status == 200

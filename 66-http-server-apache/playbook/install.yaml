@@ -1,0 +1,25 @@
+- name: setup servers
+  hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+    apache_modules:
+      - rewrite
+      - headers
+      - ssl
+    apache_open_firewall: true   # UFW で 80/443 を開放する場合 true
+    apache_index_html: |
+      <html><body><h1>{{ inventory_hostname }}</h1></body></html>
+  tasks:
+  roles:
+    - web-apache
+  handlers:
+    - name: Validate Apache config
+      ansible.builtin.command: apache2ctl configtest
+      changed_when: false
+      listen: Restart apache2
+    - name: Restart apache2 service
+      ansible.builtin.systemd_service:
+        name: apache2
+        state: restarted
+      listen: Restart apache2

@@ -1,0 +1,47 @@
+- name: setup servers
+  hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+  tasks:
+    - name: print host
+      ansible.builtin.debug:
+        msg: "Host: {{ inventory_hostname }}"
+
+    - name: Install prerequisite packages
+      ansible.builtin.apt:
+        name:
+          - gnupg
+          - software-properties-common
+          - curl
+        state: present
+        update_cache: yes
+
+    - name: Download HashiCorp apt signing key
+      ansible.builtin.get_url:
+        url: https://apt.releases.hashicorp.com/gpg
+        dest: /tmp/hashicorp.gpg
+        mode: "0644"
+
+    - name: Dearmor HashiCorp apt signing key
+      ansible.builtin.command:
+        cmd: gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg /tmp/hashicorp.gpg
+        creates: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+    - name: Add HashiCorp apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+        filename: hashicorp
+        state: present
+
+    - name: Install vault package
+      ansible.builtin.apt:
+        name: vault
+        state: present
+        update_cache: yes
+
+    - name: Enable and start vault service
+      ansible.builtin.systemd:
+        name: vault
+        enabled: true
+        state: started

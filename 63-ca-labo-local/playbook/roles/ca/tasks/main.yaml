@@ -1,0 +1,131 @@
+#- name: Install a list of packages
+#  apt:
+#    name: "{{ packages }}"
+#    state: present
+#  vars:
+#    packages:
+#    - rand
+
+- name: Create CA directory 
+  file:
+    path: "{{ ca_home }}"
+    owner: "{{ ca_owner }}"
+    group: "{{ ca_group }}"
+    mode: '2775'
+    state: directory
+
+- name: copy v3ext file to "{{ ca_home }}"
+  copy:
+    src:  v3ext_ca.txt
+    dest: "{{ ca_home }}"
+    owner: "{{ ca_owner }}"
+    group: "{{ ca_group }}"
+    mode: '0755'
+
+- name: copy v3ext file to "{{ ca_home }}"
+  copy:
+    src:  v3ext.txt
+    dest: "{{ ca_home }}"
+    owner: "{{ ca_owner }}"
+    group: "{{ ca_group }}"
+    mode: '0755'
+
+- name: copy ca files create_csr.sh
+  copy:
+    src: create_csr.sh
+    dest: "{{ ca_home }}"
+    owner: "{{ ca_owner }}"
+    group: "{{ ca_group }}"
+    mode: '0755'
+
+- name: copy ca files create_csr.sh
+  copy:
+    src: create_csr_noip.sh
+    dest: "{{ ca_home }}"
+    owner: "{{ ca_owner }}"
+    group: "{{ ca_group }}"
+    mode: '0755'
+
+- name: copy ca files environment
+  copy:
+    src: environment
+    dest: "{{ ca_home }}"
+    owner: "{{ ca_owner }}"
+    group: "{{ ca_group }}"
+    mode: '0644'
+
+- name: copy issue_certs.sh
+  copy:
+    src: issue_certs.sh
+    dest: "{{ ca_home }}"
+    owner: "{{ ca_owner }}"
+    group: "{{ ca_group }}"
+    mode: '0755'
+
+- name: copy setup_ca.sh
+  copy:
+    src: setup_ca.sh
+    dest: "{{ ca_home }}"
+    owner: "{{ ca_owner }}"
+    group: "{{ ca_group }}"
+    mode: '0755'
+
+- name: copy signature_cert.sh
+  copy:
+    src: signature_cert.sh
+    dest: "{{ ca_home }}"
+    owner: "{{ ca_owner }}"
+    group: "{{ ca_group }}"
+    mode: '0755'
+
+- name: copy cp_ca_htdocs.sh
+  copy:
+    src: cp_ca_htdocs.sh
+    dest: "{{ ca_home }}"
+    owner: "{{ ca_owner }}"
+    group: "{{ ca_group }}"
+    mode: '0755'
+
+- name: copy HOTO-CA.md
+  copy:
+    src: HOTO-CA.md
+    dest: "{{ ca_home }}"
+    owner: "{{ ca_owner }}"
+    group: "{{ ca_group }}"
+    mode: '0644'
+
+#
+# 既存の証明書のアーカイブを展開
+#
+#- name: copy certs
+#  copy:
+#    src:  certs.tgz
+#    dest: "{{ ca_home }}"
+#    owner: "{{ ca_owner }}"
+#    group: "{{ ca_group }}"
+#    mode: '0755'
+#  ignore_errors: True
+
+#- name: check exits
+#  stat:
+#     path: "{{ ca_home }}/certs.tgz"
+#  register: certs_tgz
+
+#- name: unarchive tar
+#  unarchive:
+#    src:  "{{ ca_home }}/certs.tgz"
+#    dest: "{{ ca_home }}"
+#    owner: "{{ ca_owner }}"
+#    group: "{{ ca_group }}"
+#    mode: '0755'
+#    remote_src: yes
+#  when: certs_tgz.stat.exists == true
+
+#
+# 既存の証明書がない場合は、新たに展開
+#
+#- shell: |
+#    ./issue_certs.sh
+#  args:
+#      chdir: "{{ ca_home }}"
+

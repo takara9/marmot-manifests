@@ -1,0 +1,32 @@
+- name: Install GitLab CE on Ubuntu 24.04
+  hosts: all
+  become: true
+  tasks:
+  - name: Install a list of packages
+    apt:
+      name: "{{ packages }}"
+      state: present
+      update_cache: yes
+    vars:
+      packages:
+      - python3-pip
+      - default-jdk
+
+  - name: Install ansible via pip
+    pip:
+      name: ansible
+      state: present
+      executable: pip3
+      extra_args: --break-system-packages
+
+  - name: Install ansible-rulebook via pip
+    pip:
+      name: ansible-rulebook
+      state: present
+      executable: pip3
+      extra_args: --break-system-packages
+
+  - name: Install ansible.eda collection
+    ansible.builtin.command:
+      cmd: ansible-galaxy collection install ansible.eda
+    changed_when: true

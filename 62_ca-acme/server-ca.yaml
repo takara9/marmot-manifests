@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: ca
+    comment: "CA サーバー"
+spec:
+    cpu: 1
+    memory: 2048
+    mmImage: ubuntu26.04 
+    bootVolume:
+        spec:
+            #size: 100   ## Debugログが出ているため、一時的にサイズを増やしています
+            type: qcow2
+    auth:
+        url: https://github.com/takara9.keys
+    #ansible:
+    #    playbook: playbook/install.yaml
+    #    inventory: playbook/hosts.yaml
+    networkInterface:
+        - networkname: host-bridge
+          address: 192.168.1.250    # IPアドレスを手動設定（IPアドレスの重複使用に注意)
+          nameservers:              # DNSサーバー
+            addresses:
+                - 192.168.1.9       # 内部DNSのアドレス
+            search:                 # ドメイン名を省略可能なドメインをセット
+                - labo.local
+          netmasklen: 24            # ネットマスク
+          routes:                   # デフォルトGW ルーターのアドレスを指定
+            - to: default
+              via: 192.168.1.1
