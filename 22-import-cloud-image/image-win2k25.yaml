@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Image
+metadata:
+    name: win2k25
+spec:
+    sourceUrl: file:/var/lib/marmot/windows2025-build.qcow2
+    osName: windows
+    osVersion: "2025"

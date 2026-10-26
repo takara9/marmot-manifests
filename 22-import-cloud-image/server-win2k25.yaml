@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: win2k25-vm
+spec:
+    cpu: 4
+    memory: 4096
+    osVariant: win2k25
+    bootVolume:
+        spec:
+            size: 64
+    networkInterface:
+        - networkname: "host-bridge"
