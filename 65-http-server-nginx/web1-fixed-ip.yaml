@@ -2,9 +2,9 @@ apiVersion: v1
 kind: Server
 metadata:
     name: web1
-    comment: Ansibleで、Webserverをインストールする
+    comment: NGINX Webサーバーを構築、IPアドレスは固定
     labels:
-        app: w1
+        app: webs
 spec:
     cpu: 1
     memory: 1024
