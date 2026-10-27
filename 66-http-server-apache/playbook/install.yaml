@@ -8,8 +8,10 @@
       - headers
       - ssl
     apache_open_firewall: true   # UFW で 80/443 を開放する場合 true
+    apache_server_name: web2.labo.local   # roles/web-apache/files/ に <apache_server_name>.crt/.key を置く
+    apache_cert_dir: /etc/apache2/ssl
     apache_index_html: |
-      <html><body><h1>{{ inventory_hostname }}</h1></body></html>
+      <html><body><h1>{{ inventory_hostname }}.host-bridge.hv0.labo.local</h1></body></html>
   tasks:
   roles:
     - web-apache

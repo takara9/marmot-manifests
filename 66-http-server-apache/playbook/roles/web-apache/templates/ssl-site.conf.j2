@@ -1,0 +1,21 @@
+# HTTP (ポート80): すべてのアクセスをHTTPSへリダイレクト
+<VirtualHost *:80>
+    ServerName {{ apache_server_name }}
+    Redirect permanent / https://{{ apache_server_name }}/
+</VirtualHost>
+
+# HTTPS (ポート443)
+<VirtualHost *:443>
+    ServerName {{ apache_server_name }}
+    DocumentRoot /var/www/html
+
+    SSLEngine on
+    SSLCertificateFile {{ apache_cert_dir }}/{{ apache_server_name }}.crt
+    SSLCertificateKeyFile {{ apache_cert_dir }}/{{ apache_server_name }}.key
+
+    SSLProtocol -all +TLSv1.2 +TLSv1.3
+    SSLCipherSuite HIGH:!aNULL:!MD5
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>

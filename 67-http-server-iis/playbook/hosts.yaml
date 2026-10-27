@@ -1,0 +1,8 @@
+all:
+  hosts:
+    web3:
+      ansible_host: web3
+      ansible_user: administrator
+      ansible_connection: ssh
+      ansible_shell_type: powershell
+      ansible_ssh_executable: /usr/local/bin/mactl-ssh

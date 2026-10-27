@@ -15,6 +15,54 @@
   loop: "{{ apache_modules }}"
   notify: Restart apache2
 
+- name: Create TLS certificate directory
+  ansible.builtin.file:
+    path: "{{ apache_cert_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Copy TLS certificate
+  ansible.builtin.copy:
+    src: "{{ apache_server_name }}.crt"    # roles/web-apache/files/ から取得
+    dest: "{{ apache_cert_dir }}/{{ apache_server_name }}.crt"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart apache2
+
+- name: Copy TLS private key
+  ansible.builtin.copy:
+    src: "{{ apache_server_name }}.key"
+    dest: "{{ apache_cert_dir }}/{{ apache_server_name }}.key"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart apache2
+
+- name: Deploy HTTPS virtual host
+  ansible.builtin.template:
+    src: ssl-site.conf.j2
+    dest: /etc/apache2/sites-available/{{ apache_server_name }}.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart apache2
+
+- name: Disable default HTTP site
+  ansible.builtin.command: a2dissite 000-default
+  args:
+    removes: /etc/apache2/sites-enabled/000-default.conf
+  notify: Restart apache2
+
+- name: Enable HTTPS virtual host
+  ansible.builtin.command: "a2ensite {{ apache_server_name }}"
+  args:
+    creates: "/etc/apache2/sites-enabled/{{ apache_server_name }}.conf"
+  notify: Restart apache2
+
 - name: Deploy index.html
   ansible.builtin.copy:
     dest: /var/www/html/index.html
@@ -38,10 +86,21 @@
 - name: Flush handlers before verification
   ansible.builtin.meta: flush_handlers
 
-- name: Verify Apache responds on localhost
+- name: Verify HTTP redirects to HTTPS
   ansible.builtin.uri:
     url: http://localhost/
+    follow_redirects: none
+    status_code: 301
+  register: apache_http_check
+  retries: 3
+  delay: 2
+  until: apache_http_check.status == 301
+
+- name: Verify HTTPS responds
+  ansible.builtin.uri:
+    url: https://localhost/
     status_code: 200
+    validate_certs: false   # localhost は証明書のCN/SANと一致しないため応答確認のみ
   register: apache_check
   retries: 3
   delay: 2
