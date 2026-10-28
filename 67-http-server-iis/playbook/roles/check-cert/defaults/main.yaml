@@ -1,0 +1,2 @@
+check_cert_store: Cert:\LocalMachine\My
+check_cert_warn_days: 30   # 残り日数がこの値以下の証明書を警告する

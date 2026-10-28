@@ -1,0 +1,6 @@
+renew_cert_site_name: Default Web Site
+renew_cert_file: web3.labo.local.pfx   # roles/renew-cert/files 配下の更新用PKCS#12ファイル
+renew_cert_password: ""   # PKCS#12のパスワード。ansible-vault で暗号化して -e @secrets.yaml で渡す
+renew_cert_port: 443
+renew_cert_store: My   # 証明書をインポートする LocalMachine のストア名
+renew_cert_remove_old: false   # true の場合、置き換え前にバインドされていた証明書をストアから削除する

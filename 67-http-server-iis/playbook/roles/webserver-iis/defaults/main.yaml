@@ -1,0 +1,7 @@
+webserver_iis_site_name: Default Web Site
+webserver_iis_cert_file: web3.labo.local.pfx   # roles/webserver-iis/files 配下のPKCS#12ファイル
+webserver_iis_cert_password: ""   # PKCS#12のパスワード。ansible-vault で暗号化して -e @secrets.yaml で渡す
+webserver_iis_web_root: C:\inetpub\wwwroot
+webserver_iis_open_firewall: true   # Windows Firewall で 80/443 を開放する場合 true
+webserver_iis_index_html: |
+  <html><body><h1>{{ inventory_hostname }}.host-bridge.hv0.labo.local</h1></body></html>

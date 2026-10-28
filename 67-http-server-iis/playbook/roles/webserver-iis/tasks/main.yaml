@@ -1,0 +1,119 @@
+- name: Install IIS
+  ansible.windows.win_feature:
+    name: Web-Server
+    state: present
+    include_management_tools: true
+  register: webserver_iis_feature
+
+- name: Reboot if required by IIS installation
+  ansible.windows.win_reboot:
+  when: webserver_iis_feature.reboot_required
+
+- name: Deploy index.html
+  ansible.windows.win_copy:
+    dest: "{{ webserver_iis_web_root }}\\index.html"
+    content: "{{ webserver_iis_index_html }}"
+
+- name: Assert TLS certificate password is provided
+  ansible.builtin.assert:
+    that: webserver_iis_cert_password | length > 0
+    fail_msg: webserver_iis_cert_password (web3.labo.local.pfx のパスワード) を ansible-vault で暗号化したファイルを -e @secrets.yaml で渡してください
+
+- name: Import TLS certificate from PKCS#12
+  block:
+    - name: Create temporary file for PKCS#12
+      ansible.windows.win_tempfile:
+        state: file
+        suffix: .pfx
+      register: webserver_iis_cert_tmp
+
+    - name: Copy PKCS#12 to Windows host
+      ansible.windows.win_copy:
+        src: "{{ webserver_iis_cert_file }}"
+        dest: "{{ webserver_iis_cert_tmp.path }}"
+
+    - name: Import PKCS#12 into LocalMachine\My
+      ansible.windows.win_certificate_store:
+        path: "{{ webserver_iis_cert_tmp.path }}"
+        password: "{{ webserver_iis_cert_password }}"
+        store_location: LocalMachine
+        store_name: My
+        state: present
+        key_exportable: false
+      # SSH接続(ネットワークログオン)のままだと秘密鍵が正しく保存されず、HTTPSバインドに失敗するためSYSTEMで実行する
+      become: true
+      become_method: ansible.builtin.runas
+      become_user: SYSTEM
+      register: webserver_iis_cert
+  always:
+    - name: Remove temporary PKCS#12
+      ansible.windows.win_file:
+        path: "{{ webserver_iis_cert_tmp.path }}"
+        state: absent
+      when: webserver_iis_cert_tmp.path is defined
+
+- name: Find imported certificate with private key
+  ansible.windows.win_powershell:
+    parameters:
+      Thumbprints: "{{ webserver_iis_cert.thumbprints }}"
+    script: |
+      param([string[]]$Thumbprints)
+      $Ansible.Changed = $false
+      # PFXにはCA証明書も含まれるため、秘密鍵を持つ証明書を選ぶ
+      $cert = Get-ChildItem Cert:\LocalMachine\My |
+        Where-Object { $Thumbprints -contains $_.Thumbprint -and $_.HasPrivateKey } |
+        Select-Object -First 1
+      if (-not $cert) { throw "秘密鍵を持つ証明書が見つかりません" }
+      $Ansible.Result = $cert.Thumbprint
+  register: webserver_iis_server_cert
+
+- name: Add HTTPS binding
+  community.windows.win_iis_webbinding:
+    name: "{{ webserver_iis_site_name }}"
+    protocol: https
+    port: 443
+    ip: "*"
+    certificate_hash: "{{ webserver_iis_server_cert.result }}"
+    certificate_store_name: My
+    state: present
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: SYSTEM
+
+- name: Allow HTTP/HTTPS via Windows Firewall
+  community.windows.win_firewall_rule:
+    name: "IIS {{ item.name }}"
+    localport: "{{ item.port }}"
+    protocol: tcp
+    direction: in
+    action: allow
+    state: present
+    enabled: true
+  loop:
+    - { name: HTTP, port: 80 }
+    - { name: HTTPS, port: 443 }
+  when: webserver_iis_open_firewall | bool
+
+- name: Ensure W3SVC is started and enabled
+  ansible.windows.win_service:
+    name: W3SVC
+    state: started
+    start_mode: auto
+
+- name: Verify HTTP responds
+  ansible.windows.win_uri:
+    url: http://localhost/
+    return_content: true
+  register: webserver_iis_http_check
+  retries: 3
+  delay: 2
+  until: webserver_iis_http_check.status_code == 200
+
+- name: Verify HTTPS responds
+  ansible.windows.win_uri:
+    url: https://localhost/
+    validate_certs: false   # localhost は証明書のCN/SANと一致しないため応答確認のみ
+  register: webserver_iis_https_check
+  retries: 3
+  delay: 2
+  until: webserver_iis_https_check.status_code == 200

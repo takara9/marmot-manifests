@@ -1,0 +1,103 @@
+- name: Assert TLS certificate password is provided
+  ansible.builtin.assert:
+    that: renew_cert_password | length > 0
+    fail_msg: renew_cert_password (更新用PKCS#12のパスワード) を ansible-vault で暗号化したファイルを -e @secrets.yaml で渡してください
+
+- name: Check renewal PKCS#12 exists in role files
+  ansible.builtin.stat:
+    path: "{{ role_path }}/files/{{ renew_cert_file }}"
+  delegate_to: localhost
+  become: false
+  register: renew_cert_file_stat
+
+- name: Assert renewal PKCS#12 exists
+  ansible.builtin.assert:
+    that: renew_cert_file_stat.stat.exists
+    fail_msg: "{{ role_path }}/files/{{ renew_cert_file }} に更新用の証明書(PKCS#12)を配置してください"
+
+- name: Import renewal TLS certificate from PKCS#12
+  block:
+    - name: Create temporary file for PKCS#12
+      ansible.windows.win_tempfile:
+        state: file
+        suffix: .pfx
+      register: renew_cert_tmp
+
+    - name: Copy PKCS#12 to Windows host
+      ansible.windows.win_copy:
+        src: "{{ renew_cert_file }}"
+        dest: "{{ renew_cert_tmp.path }}"
+
+    - name: Import PKCS#12 into LocalMachine store
+      ansible.windows.win_certificate_store:
+        path: "{{ renew_cert_tmp.path }}"
+        password: "{{ renew_cert_password }}"
+        store_location: LocalMachine
+        store_name: "{{ renew_cert_store }}"
+        state: present
+        key_exportable: false
+      # SSH接続(ネットワークログオン)のままだと秘密鍵が正しく保存されず、HTTPSバインドに失敗するためSYSTEMで実行する
+      become: true
+      become_method: ansible.builtin.runas
+      become_user: SYSTEM
+      register: renew_cert_import
+  always:
+    - name: Remove temporary PKCS#12
+      ansible.windows.win_file:
+        path: "{{ renew_cert_tmp.path }}"
+        state: absent
+      when: renew_cert_tmp.path is defined
+
+- name: Replace certificate of HTTPS binding
+  ansible.windows.win_powershell:
+    parameters:
+      Thumbprints: "{{ renew_cert_import.thumbprints }}"
+      SiteName: "{{ renew_cert_site_name }}"
+      Port: "{{ renew_cert_port | int }}"
+      Store: "{{ renew_cert_store }}"
+      RemoveOld: "{{ renew_cert_remove_old | bool }}"
+    script: |
+      param([string[]]$Thumbprints, [string]$SiteName, [int]$Port, [string]$Store, [bool]$RemoveOld)
+      $Ansible.Changed = $false
+      Import-Module WebAdministration
+
+      # PFXにはCA証明書も含まれるため、秘密鍵を持つ証明書を選ぶ
+      $cert = Get-ChildItem "Cert:\LocalMachine\$Store" |
+        Where-Object { $Thumbprints -contains $_.Thumbprint -and $_.HasPrivateKey } |
+        Select-Object -First 1
+      if (-not $cert) { throw "秘密鍵を持つ証明書が見つかりません" }
+
+      $binding = Get-WebBinding -Name $SiteName -Protocol https -Port $Port | Select-Object -First 1
+      if (-not $binding) { throw "サイト '$SiteName' にHTTPS($Port)バインドがありません。先に install.yaml を実行してください" }
+
+      $old = $binding.certificateHash
+      if ($old -ne $cert.Thumbprint) {
+        $binding.AddSslCertificate($cert.Thumbprint, $Store)
+        $Ansible.Changed = $true
+      }
+
+      if ($RemoveOld -and $old -and $old -ne $cert.Thumbprint) {
+        $oldCert = Get-Item "Cert:\LocalMachine\$Store\$old" -ErrorAction SilentlyContinue
+        if ($oldCert) { Remove-Item $oldCert.PSPath -Force }
+      }
+
+      $Ansible.Result = [ordered]@{ old = $old; new = $cert.Thumbprint; not_after = $cert.NotAfter.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") }
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: SYSTEM
+  register: renew_cert_result
+
+- name: Show renewed certificate
+  ansible.builtin.debug:
+    msg: >-
+      HTTPSバインドの証明書を更新しました: {{ renew_cert_result.result.old | default('なし') }} -> {{ renew_cert_result.result.new }}
+      (有効期限={{ renew_cert_result.result.not_after }})
+
+- name: Verify HTTPS responds
+  ansible.windows.win_uri:
+    url: "https://localhost:{{ renew_cert_port }}/"
+    validate_certs: false   # localhost は証明書のCN/SANと一致しないため応答確認のみ
+  register: renew_cert_https_check
+  retries: 3
+  delay: 2
+  until: renew_cert_https_check.status_code == 200

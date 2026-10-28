@@ -1,0 +1,5 @@
+- name: update TLS certificate on Windows Server
+  hosts: all
+  gather_facts: false   # SSH接続のWindowsでは setup モジュールを使わない
+  roles:
+    - renew-cert

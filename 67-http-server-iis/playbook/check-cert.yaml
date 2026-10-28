@@ -1,0 +1,5 @@
+- name: collect TLS certificate expiry on Windows Server
+  hosts: all
+  gather_facts: false   # SSH接続のWindowsでは setup モジュールを使わない
+  roles:
+    - check-cert

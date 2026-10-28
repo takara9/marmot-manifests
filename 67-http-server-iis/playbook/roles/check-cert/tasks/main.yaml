@@ -1,0 +1,53 @@
+- name: Collect TLS certificate expiry from certificate store
+  ansible.windows.win_powershell:
+    parameters:
+      Store: "{{ check_cert_store }}"
+    script: |
+      param([string]$Store)
+      $Ansible.Changed = $false
+
+      # IISのHTTPSバインドで使用中の証明書のサムプリントを取得する
+      $bound = @()
+      try {
+        Import-Module WebAdministration -ErrorAction Stop
+        $bound = @(Get-WebBinding -Protocol https | ForEach-Object { $_.certificateHash })
+      } catch {
+        $Ansible.Warnings.Add("IISのバインド情報を取得できませんでした: $($_.Exception.Message)")
+      }
+
+      $now = Get-Date
+      $Ansible.Result = @(Get-ChildItem $Store | Where-Object { $_.HasPrivateKey } | ForEach-Object {
+        [ordered]@{
+          subject        = $_.Subject
+          thumbprint     = $_.Thumbprint
+          not_before     = $_.NotBefore.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          not_after      = $_.NotAfter.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          days_remaining = [int][math]::Floor(($_.NotAfter - $now).TotalDays)
+          iis_bound      = [bool]($bound -contains $_.Thumbprint)
+        }
+      })
+  register: check_cert_result
+
+- name: Set TLS certificate expiry facts
+  ansible.builtin.set_fact:
+    check_cert_certificates: >-
+      {{ [check_cert_result.result] if check_cert_result.result is mapping
+         else (check_cert_result.result | default([], true)) }}
+
+- name: Show TLS certificate expiry
+  ansible.builtin.debug:
+    msg: >-
+      {{ item.subject }} (thumbprint={{ item.thumbprint }})
+      有効期限={{ item.not_after }} 残り{{ item.days_remaining }}日
+      IISバインド={{ item.iis_bound }}
+  loop: "{{ check_cert_certificates }}"
+  loop_control:
+    label: "{{ item.thumbprint }}"
+
+- name: Warn about certificates expiring soon
+  ansible.builtin.debug:
+    msg: "警告: {{ item.subject }} は残り{{ item.days_remaining }}日で期限切れになります ({{ item.not_after }})"
+  loop: "{{ check_cert_certificates }}"
+  loop_control:
+    label: "{{ item.thumbprint }}"
+  when: item.days_remaining <= check_cert_warn_days | int
