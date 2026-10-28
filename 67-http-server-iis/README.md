@@ -4,27 +4,27 @@ Windows Server 2025 の仮想サーバーを起動し、AnsibleでIISを構成�
 接続はWindows標準のOpenSSHサーバー経由で、PowerShellをシェルとして使用します。
 
 ## 起動方法
+次のコマンドで、Windows Server 2025を起動します。
 
 ```console
 $ mactl create -f web3-ip-free.yaml
 ```
+Windows Server のステータスが `RUNNING` となった後、`mactl console -g web3` で表示されるSPICEクライアントで接続して、パスワードを設定した後、IPアドレスが付与され、リモートアクセスが可能なったら、Windows リモートデスクトップで接続します。
+
 
 ## Ansible Pingの実行
+SSHで Windows Server にアクセスできることを確認します。
 
 ```console
 $ ansible -i playbook/hosts.yaml all -m ansible.windows.win_ping
 ```
 
-## Ansibleコレクションの準備
+## Ansibleコレクションの準備とIISの起動
+Windows Server の HTTPDサーバー IISをインストールして、セットアップします。
 
 ```console
 $ cd playbook
 $ ansible-galaxy collection install -r requirements.yaml
-```
-
-## IISの構成
-
-```console
 $ ansible-playbook -i hosts.yaml install.yaml -e @secrets.yaml --ask-vault-pass
 ```
 
@@ -49,13 +49,12 @@ Vaultのパスワードを毎回入力したくない場合は、ファイルに
 実施内容は、IISのインストール、`index.html`の配置、PKCS#12証明書(`roles/webserver-iis/files/web3.labo.local.pfx`)のインポートとHTTPS(443)バインド、Windowsファイアウォールの開放、W3SVCの起動です。
 
 ## TLS証明書の有効期限の確認
+Windowsの証明書ストア(`LocalMachine\My`)にある秘密鍵付き証明書の、サブジェクト、サムプリント、有効期限、残り日数、IISのHTTPSバインドでの使用有無を収集して表示します。
+残り日数が`check_cert_warn_days`(既定30日)以下の証明書は警告します。収集結果はfact `check_cert_certificates`に格納されます。
 
 ```console
 $ ansible-playbook -i hosts.yaml check-cert.yaml
 ```
-
-Windowsの証明書ストア(`LocalMachine\My`)にある秘密鍵付き証明書の、サブジェクト、サムプリント、有効期限、残り日数、IISのHTTPSバインドでの使用有無を収集して表示します。
-残り日数が`check_cert_warn_days`(既定30日)以下の証明書は警告します。収集結果はfact `check_cert_certificates`に格納されます。
 
 ## TLS証明書の更新
 
