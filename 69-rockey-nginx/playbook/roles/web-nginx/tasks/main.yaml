@@ -1,0 +1,87 @@
+- name: NGINXのTLS証明書を配置するディレクトリ
+  ansible.builtin.file:
+    path: "{{ nginx_cert_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: TLS証明書をリモートサーバーへコピー
+  ansible.builtin.copy:
+    src: web1.labo.local.crt    # コントロールノード側のファイルパス（相対パスまたは絶対パス）
+    dest: "{{ nginx_cert_dir }}/web1.labo.local.crt" # 管理対象ノード側のコピー先パス
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: TLS証明書秘密鍵をリモートサーバーへコピー
+  ansible.builtin.copy:
+    src: web1.labo.local.key    # コントロールノード側のファイルパス（相対パスまたは絶対パス）
+    dest: "{{ nginx_cert_dir }}/web1.labo.local.key" # 管理対象ノード側のコピー先パス
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Install nginx
+  ansible.builtin.dnf:
+    name: nginx
+    state: present
+
+- name: Deploy default.conf in /etc/nginx/conf.d
+  ansible.builtin.template:
+    src: default.j2
+    dest: /etc/nginx/conf.d/default.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload nginx
+
+- name: Ensure nginx is enabled and running
+  ansible.builtin.service:
+    name: nginx
+    state: "{{ nginx_service_state }}"
+    enabled: "{{ nginx_service_enabled }}"
+
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Check whether firewalld is installed
+  ansible.builtin.command: rpm -q firewalld
+  register: firewalld_pkg
+  changed_when: false
+  failed_when: false
+
+- name: Install python3-firewall (required by ansible.posix.firewalld)
+  ansible.builtin.dnf:
+    name: python3-firewall
+    state: present
+  when: firewalld_pkg.rc == 0
+
+- name: Allow HTTP/HTTPS through firewalld (if firewalld is in use)
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: true
+    immediate: "{{ ansible_facts.services['firewalld.service'].state | default('stopped') == 'running' }}"
+    state: enabled
+  loop:
+    - http
+    - https
+  when: firewalld_pkg.rc == 0
+
+- name: Deploy index.html showing hostname
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: "{{ nginx_doc_root }}/index.html"
+    owner: nginx
+    group: nginx
+    mode: '0644'
+
+- name: Verify page is responding
+  ansible.builtin.uri:
+    url: "https://localhost"
+    validate_certs: false  # 証明書のCNがlocalhostと一致しないため
+    status_code: 200
+  register: result
+  retries: 3
+  delay: 2
+  until: result.status == 200

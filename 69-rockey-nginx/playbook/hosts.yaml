@@ -1,0 +1,7 @@
+all:
+  hosts:
+    web4:
+      ansible_host: web4
+      ansible_user: rocky
+      ansible_ssh_executable: /usr/local/bin/mactl-ssh
+      ansible_python_interpreter: /usr/bin/python3
