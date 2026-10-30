@@ -2,11 +2,12 @@
   hosts: all
   become: true
   gather_facts: yes
+  vars_files:
+    - vars/cert.yaml
   vars:
     nginx_service_state: started
     nginx_service_enabled: true
     nginx_doc_root: /usr/share/nginx/html
-    nginx_cert_dir: /etc/nginx/ssl
   tasks:
   roles:
     - web-nginx

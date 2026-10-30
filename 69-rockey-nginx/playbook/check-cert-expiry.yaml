@@ -1,0 +1,50 @@
+- name: TLS証明書の有効期限を確認する
+  hosts: all
+  become: true
+  gather_facts: yes
+  vars_files:
+    - vars/cert.yaml
+  vars:
+    cert_expiry_warning_days: 30
+  tasks:
+    - name: 証明書ディレクトリ内の.crtファイルを検索
+      ansible.builtin.find:
+        paths: "{{ nginx_cert_dir }}"
+        patterns: "*.crt"
+      register: cert_files
+
+    - name: 各証明書の有効期限(notAfter)を取得
+      ansible.builtin.command: "openssl x509 -enddate -noout -in {{ item.path }}"
+      loop: "{{ cert_files.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+      register: cert_enddates
+      changed_when: false
+
+    - name: 有効期限レポートを作成
+      ansible.builtin.set_fact:
+        cert_expiry_report: "{{ cert_expiry_report | default([]) + [ {
+          'path': item.item.path,
+          'not_after': not_after,
+          'days_remaining': ((not_after | to_datetime('%b %d %H:%M:%S %Y')) - (ansible_date_time.iso8601 | to_datetime('%Y-%m-%dT%H:%M:%SZ'))).days
+          } ] }}"
+      vars:
+        not_after: "{{ item.stdout | regex_replace('^notAfter=', '') | regex_replace(' GMT$', '') }}"
+      loop: "{{ cert_enddates.results }}"
+      loop_control:
+        label: "{{ item.item.path }}"
+
+    - name: 有効期限一覧を表示
+      ansible.builtin.debug:
+        msg: "{{ item.path }}: 有効期限 {{ item.not_after }} GMT（残り {{ item.days_remaining }} 日）"
+      loop: "{{ cert_expiry_report }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: 期限が近い証明書に警告を表示
+      ansible.builtin.debug:
+        msg: "警告: {{ item.path }} は {{ cert_expiry_warning_days }} 日以内（残り {{ item.days_remaining }} 日）に失効します"
+      loop: "{{ cert_expiry_report }}"
+      loop_control:
+        label: "{{ item.path }}"
+      when: item.days_remaining <= cert_expiry_warning_days

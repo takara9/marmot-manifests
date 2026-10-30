@@ -8,16 +8,16 @@
 
 - name: TLS証明書をリモートサーバーへコピー
   ansible.builtin.copy:
-    src: web1.labo.local.crt    # コントロールノード側のファイルパス（相対パスまたは絶対パス）
-    dest: "{{ nginx_cert_dir }}/web1.labo.local.crt" # 管理対象ノード側のコピー先パス
+    src: "{{ cert_basename }}.crt"    # コントロールノード側のファイルパス（相対パスまたは絶対パス）
+    dest: "{{ nginx_cert_dir }}/{{ cert_basename }}.crt" # 管理対象ノード側のコピー先パス
     owner: root
     group: root
     mode: '0644'
 
 - name: TLS証明書秘密鍵をリモートサーバーへコピー
   ansible.builtin.copy:
-    src: web1.labo.local.key    # コントロールノード側のファイルパス（相対パスまたは絶対パス）
-    dest: "{{ nginx_cert_dir }}/web1.labo.local.key" # 管理対象ノード側のコピー先パス
+    src: "{{ cert_basename }}.key"    # コントロールノード側のファイルパス（相対パスまたは絶対パス）
+    dest: "{{ nginx_cert_dir }}/{{ cert_basename }}.key" # 管理対象ノード側のコピー先パス
     owner: root
     group: root
     mode: '0644'

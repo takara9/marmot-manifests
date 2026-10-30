@@ -1,0 +1,124 @@
+# ローカルの証明書ファイルの正当性を検証したうえで、配置済みWebサービスの正常性を確認するプレイブック
+- name: TLS証明書ファイル(files)の正当性を検証
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - vars/cert.yaml
+  vars:
+    cert_file: "{{ playbook_dir }}/roles/web-nginx/files/{{ cert_basename }}.crt"
+    key_file: "{{ playbook_dir }}/roles/web-nginx/files/{{ cert_basename }}.key"
+    cert_expiry_warning_days: 30
+  tasks:
+    - name: 証明書のフォーマットを検証
+      ansible.builtin.command: "openssl x509 -noout -in {{ cert_file }}"
+      changed_when: false
+
+    - name: 秘密鍵のフォーマットを検証
+      ansible.builtin.command: "openssl rsa -noout -check -in {{ key_file }}"
+      changed_when: false
+
+    - name: 証明書のモジュラスを取得
+      ansible.builtin.command: "openssl x509 -noout -modulus -in {{ cert_file }}"
+      changed_when: false
+      register: cert_modulus
+
+    - name: 秘密鍵のモジュラスを取得
+      ansible.builtin.command: "openssl rsa -noout -modulus -in {{ key_file }}"
+      changed_when: false
+      register: key_modulus
+
+    - name: 証明書と秘密鍵が対になっていることを確認
+      ansible.builtin.assert:
+        that:
+          - cert_modulus.stdout == key_modulus.stdout
+        fail_msg: "証明書と秘密鍵が一致しません: {{ cert_file }} / {{ key_file }}"
+        success_msg: "証明書と秘密鍵は一致しています"
+
+    - name: 証明書が閾値日数以上の有効期限を持つことを確認
+      ansible.builtin.command: "openssl x509 -checkend {{ cert_expiry_warning_days * 86400 }} -noout -in {{ cert_file }}"
+      register: cert_checkend
+      changed_when: false
+      failed_when: false
+
+    - name: 有効期限が迫っている場合の警告
+      ansible.builtin.debug:
+        msg: "警告: {{ cert_file }} は {{ cert_expiry_warning_days }} 日以内に失効します。証明書の更新が必要です"
+      when: cert_checkend.rc != 0
+
+    - name: 有効期限に余裕があることの確認
+      ansible.builtin.debug:
+        msg: "{{ cert_file }} の有効期限には {{ cert_expiry_warning_days }} 日以上の余裕があります"
+      when: cert_checkend.rc == 0
+
+- name: TLS証明書を更新してWebサービスの正常性を確認
+  hosts: all
+  become: true
+  gather_facts: false
+  vars_files:
+    - vars/cert.yaml
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+  tasks:
+    - name: NGINXのTLS証明書を配置するディレクトリ
+      ansible.builtin.file:
+        path: "{{ nginx_cert_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: TLS証明書をリモートサーバーへコピー
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/roles/web-nginx/files/{{ cert_basename }}.crt"
+        dest: "{{ nginx_cert_dir }}/{{ cert_basename }}.crt"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload nginx
+
+    - name: TLS証明書秘密鍵をリモートサーバーへコピー
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/roles/web-nginx/files/{{ cert_basename }}.key"
+        dest: "{{ nginx_cert_dir }}/{{ cert_basename }}.key"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload nginx
+
+    - name: 証明書配置後に即座にnginxへ反映
+      ansible.builtin.meta: flush_handlers
+
+    - name: サービス情報を取得
+      ansible.builtin.service_facts:
+
+    - name: nginxサービスが起動していることを確認
+      ansible.builtin.assert:
+        that:
+          - "'nginx.service' in ansible_facts.services"
+          - ansible_facts.services['nginx.service'].state == 'running'
+        fail_msg: "nginxサービスが起動していません"
+
+    - name: 配置済み証明書の存在を確認
+      ansible.builtin.stat:
+        path: "{{ nginx_cert_dir }}/{{ cert_basename }}.crt"
+      register: deployed_cert
+
+    - name: 配置済み証明書が存在することを確認
+      ansible.builtin.assert:
+        that:
+          - deployed_cert.stat.exists
+        fail_msg: "{{ nginx_cert_dir }}/{{ cert_basename }}.crt が配置されていません"
+
+    - name: HTTPSでWebサービスの応答を確認
+      ansible.builtin.uri:
+        url: "https://localhost"
+        validate_certs: false  # 証明書のCNがlocalhostと一致しないため
+        status_code: 200
+      register: result
+      retries: 3
+      delay: 2
+      until: result.status == 200

@@ -1,0 +1,3 @@
+# install.yaml / renew-cert.yaml / check-cert-expiry.yaml で共通して参照するTLS証明書の指定
+cert_basename: web4.labo.local
+nginx_cert_dir: /etc/nginx/ssl

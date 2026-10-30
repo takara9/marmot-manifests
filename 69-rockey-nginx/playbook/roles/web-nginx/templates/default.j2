@@ -1,7 +1,7 @@
 # HTTP (ポート80) の設定: すべてのアクセスをHTTPSにリダイレクト
 server {
     listen 80;
-    server_name web1.labo.local;
+    server_name {{ cert_basename }};
 
     return 301 https://$host$request_uri;
 }
@@ -9,11 +9,11 @@ server {
 # HTTPS (ポート443) の設定
 server {
     listen 443 ssl;
-    server_name labo.local web1.labo.local;
+    server_name labo.local {{ cert_basename }};
 
     # 証明書と秘密鍵のパスを指定
-    ssl_certificate /etc/nginx/ssl/web1.labo.local.crt;
-    ssl_certificate_key /etc/nginx/ssl/web1.labo.local.key;
+    ssl_certificate {{ nginx_cert_dir }}/{{ cert_basename }}.crt;
+    ssl_certificate_key {{ nginx_cert_dir }}/{{ cert_basename }}.key;
 
     # 推奨されるTLSプロトコルと暗号化スイートの設定（セキュリティ強化）
     ssl_protocols TLSv1.2 TLSv1.3;
