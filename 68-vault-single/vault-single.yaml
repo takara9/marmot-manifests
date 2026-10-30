@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Server
 metadata:
-    name: vault
+    name: vault-single
     comment: VAULTサーバー
     labels:
         app: vault
 spec:
-    cpu: 1
-    memory: 1024
+    cpu: 2
+    memory: 2048
     mmImage: ubuntu24.04
     auth:
         url: https://github.com/takara9.keys
