@@ -23,8 +23,8 @@ listener "tcp" {
   tls_key_file  = "/opt/vault/tls/tls.key"
 }
 
-api_addr     = "https://vault.example.local:8200"
-cluster_addr = "https://vault.example.local:8201"
+api_addr     = "https://vault.labo.local:8200"
+cluster_addr = "https://vault.labo.local:8201"
 
 
 # Enterprise license_path

@@ -13,6 +13,7 @@ spec:
         url: https://github.com/takara9.keys
         users:
           - ubuntu
+          - vault
     ansible:
         playbook: playbook/install.yaml
         inventory: playbook/hosts.yaml
