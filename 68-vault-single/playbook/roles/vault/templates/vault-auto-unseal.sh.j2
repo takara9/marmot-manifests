@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export VAULT_ADDR="https://127.0.0.1:8200"
+export VAULT_SKIP_VERIFY=true
+
+KEYS_FILE=/opt/vault/unseal-keys.json
+[ -f "$KEYS_FILE" ] || exit 0
+
+sealed="$(vault status -format=json | jq -r '.sealed')"
+[ "$sealed" = "false" ] && exit 0
+
+threshold="$(jq -r '.unseal_threshold' "$KEYS_FILE")"
+jq -r '.unseal_keys_b64[]' "$KEYS_FILE" | head -n "$threshold" | while read -r key; do
+  vault operator unseal "$key" >/dev/null
+done

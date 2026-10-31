@@ -1,0 +1,144 @@
+- name: Install prerequisite packages
+  ansible.builtin.apt:
+    name:
+      - gnupg
+      - software-properties-common
+      - curl
+      - jq
+    state: present
+    update_cache: yes
+
+- name: Download HashiCorp apt signing key
+  ansible.builtin.get_url:
+    url: https://apt.releases.hashicorp.com/gpg
+    dest: /tmp/hashicorp.gpg
+    mode: "0644"
+
+- name: Dearmor HashiCorp apt signing key
+  ansible.builtin.command:
+    cmd: gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg /tmp/hashicorp.gpg
+    creates: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+- name: Add HashiCorp apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+    filename: hashicorp
+    state: present
+
+- name: Install vault package
+  ansible.builtin.apt:
+    name: vault
+    state: present
+    update_cache: yes
+
+- name: Deploy vault.hcl configuration
+  ansible.builtin.template:
+    src: vault.hcl
+    dest: /etc/vault.d/vault.hcl
+    owner: vault
+    group: vault
+    mode: "0640"
+  notify: Restart vault
+
+- name: Enable and start vault service
+  ansible.builtin.systemd:
+    name: vault
+    enabled: true
+    state: started
+
+- name: Wait for Vault API to be reachable
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 8200
+    delay: 2
+    timeout: 60
+
+# 設定ファイルの場所やTLS有無を推測せず、実際にHTTPSで応答するか試して接続方式を決定する
+- name: Probe Vault over HTTPS
+  ansible.builtin.command:
+    cmd: vault status -format=json
+  environment:
+    VAULT_ADDR: https://127.0.0.1:8200
+    VAULT_SKIP_VERIFY: "true"
+  register: vault_probe_https
+  changed_when: false
+  failed_when: false
+
+- name: Set Vault CLI connection facts
+  ansible.builtin.set_fact:
+    vault_env: "{{ {'VAULT_ADDR': 'https://127.0.0.1:8200', 'VAULT_SKIP_VERIFY': 'true'} if vault_probe_https.rc in [0, 2] else {'VAULT_ADDR': 'http://127.0.0.1:8200'} }}"
+
+- name: Check Vault initialization status
+  ansible.builtin.command:
+    cmd: vault status -format=json
+  environment: "{{ vault_env }}"
+  register: vault_status
+  changed_when: false
+  failed_when: vault_status.rc not in [0, 2]
+  when: vault_probe_https.rc not in [0, 2]
+
+- name: Reuse HTTPS probe result as initialization status
+  ansible.builtin.set_fact:
+    vault_status: "{{ vault_probe_https }}"
+  when: vault_probe_https.rc in [0, 2]
+
+# 初回起動時のみ初期化する。2回目以降は initialized: true のためスキップされる
+- name: Initialize Vault (first boot only)
+  ansible.builtin.command:
+    cmd: vault operator init -format=json
+  environment: "{{ vault_env }}"
+  register: vault_init
+  when: not (vault_status.stdout | from_json).initialized
+
+- name: Unseal Vault with the newly generated keys
+  ansible.builtin.command:
+    cmd: "vault operator unseal {{ item }}"
+  environment: "{{ vault_env }}"
+  loop: "{{ (vault_init.stdout | from_json).unseal_keys_b64[:(vault_init.stdout | from_json).unseal_threshold] }}"
+  no_log: true
+  when: vault_init is changed
+
+# Unseal Key と Root Token はこの初期化時にしか表示されないため、必ず画面出力して控える
+- name: Display Vault unseal keys and root token (shown only once!)
+  ansible.builtin.debug:
+    msg:
+      - "=== Vault initialized. SAVE THIS INFORMATION NOW. It will not be shown again. ==="
+      - "Unseal Keys (b64): {{ (vault_init.stdout | from_json).unseal_keys_b64 }}"
+      - "Unseal Threshold : {{ (vault_init.stdout | from_json).unseal_threshold }}"
+      - "Root Token       : {{ (vault_init.stdout | from_json).root_token }}"
+  when: vault_init is changed
+
+# 再起動時の自動unsealのため、Unsealキーをroot権限のみ読めるファイルに保存する
+- name: Persist Vault unseal keys for auto-unseal on reboot
+  ansible.builtin.copy:
+    content: "{{ vault_init.stdout }}"
+    dest: /opt/vault/unseal-keys.json
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: vault_init is changed
+
+- name: Deploy auto-unseal script
+  ansible.builtin.template:
+    src: vault-auto-unseal.sh.j2
+    dest: /usr/local/bin/vault-auto-unseal.sh
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Deploy vault-unseal systemd unit
+  ansible.builtin.template:
+    src: vault-unseal.service.j2
+    dest: /etc/systemd/system/vault-unseal.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Enable and start vault-unseal service
+  ansible.builtin.systemd:
+    name: vault-unseal
+    enabled: true
+    state: started
+    daemon_reload: true

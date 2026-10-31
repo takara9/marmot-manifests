@@ -1,0 +1,27 @@
+- name: Disable swap immediately
+  ansible.builtin.command:
+    cmd: swapoff -a
+  when: ansible_swaptotal_mb > 0
+
+- name: Remove swap entries from /etc/fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^\S+\s+\S+\s+swap\s+'
+    state: absent
+
+- name: Disable swap unit (if present)
+  ansible.builtin.systemd:
+    name: swap.target
+    enabled: false
+    masked: true
+  failed_when: false
+
+- name: Set Vault CLI environment variables for ubuntu user
+  ansible.builtin.copy:
+    dest: /etc/profile.d/vault-env.sh
+    content: |
+      export VAULT_ADDR="https://127.0.0.1:8200"
+      export VAULT_SKIP_VERIFY=true
+    owner: root
+    group: root
+    mode: "0644"

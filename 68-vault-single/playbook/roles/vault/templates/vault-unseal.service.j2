@@ -1,0 +1,12 @@
+[Unit]
+Description=Auto-unseal Vault on startup
+After=vault.service
+Requires=vault.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/vault-auto-unseal.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
