@@ -109,3 +109,47 @@ bc7e425a-d573-11f1-9c46-6b337b9e28ff
 $ vault kv get -field=token secret/app1/cli 
 eac73ec8-d573-11f1-a1f8-83b392fdada6
 ```
+
+## 鍵の削除
+`app1/api` のキーを指定して、トークンを削除します。
+`vault kv delete`を実行して データが取り出されなくなった事が確認できます。
+```console
+$ vault kv get -field=token secret/app1/api 
+bc7e425a-d573-11f1-9c46-6b337b9e28ff
+
+$ vault kv delete secret/app1/api
+Success! Data deleted (if it existed) at: secret/data/app1/api
+
+$ vault kv get -field=token secret/app1/api 
+No data found at secret/data/app1/api
+```
+この時点では、`vault kv undelete` で復活できます。
+
+完全に削除するには、`vault kv destroy` を使います。
+```console
+$ vault kv destroy -versions=1 secret/app1/api
+Success! Data written to: secret/destroy/app1/api
+```
+
+
+## 更新と世代管理
+
+既存のキーに tokeを `put` することで、version=2 に書き込まれる。
+```console
+$ vault kv put secret/app1/cli token='2f1ae4ce-d585-11f1-aa0a-331289a9c134'
+```
+
+バージョンを指定して、トークンを取り出せます。
+```console
+$ vault kv get -version=1 -field=token secret/app1/cli
+eac73ec8-d573-11f1-a1f8-83b392fdada6
+$ vault kv get -version=2 -field=token secret/app1/cli
+2f1ae4ce-d585-11f1-aa0a-331289a9c134
+```
+
+バージョンの指定しないと、最新のバージョンが取り出される
+```console
+$ vault kv get -field=token secret/app1/cli
+2f1ae4ce-d585-11f1-aa0a-331289a9c134
+```
+
