@@ -153,3 +153,33 @@ $ vault kv get -field=token secret/app1/cli
 2f1ae4ce-d585-11f1-aa0a-331289a9c134
 ```
 
+## SSH秘密鍵の保存
+
+鍵を生成します。鍵のパスフレーズは設定していません。
+```console
+$ ssh-keygen -t ed25519 -f takara
+
+$ ls |grep takara
+takara
+takara.pub
+```
+sshの秘密鍵はtakaraで、公開鍵はtakara.pubなので、takaraをvaultへ保存します。
+
+
+`private_key=@takara`を指定することで、キー `secret/tls-key/takara`に保存します。
+```console
+$ vault kv put secret/tls-key/takara private_key=@takara
+```
+
+## 保存した鍵の取り出し
+
+キーを指定してファイルの書き出します。
+元のSSH秘密鍵と比較して、同じである事が確認できました。
+```console
+$ vault kv get -field=private_key secret/tls-key/takara > /tmp/vault.key
+$ sha1sum takara
+4f19e3e6fe3327cdcfa9758b131ead40d62cdfd3  takara
+$ sha1sum /tmp/vault.key 
+4f19e3e6fe3327cdcfa9758b131ead40d62cdfd3  /tmp/vault.key
+```
+
