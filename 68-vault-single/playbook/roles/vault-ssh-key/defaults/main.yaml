@@ -1,0 +1,5 @@
+# Vault KV の秘密鍵を保存しているシークレットパスとフィールド名
+vault_ssh_secret_path: secret/ssh/almalinux
+vault_ssh_secret_field: private_key
+# 取得した秘密鍵の保存ファイル名 (~/.ssh/ 配下)
+vault_ssh_key_filename: id_ed25519_vault

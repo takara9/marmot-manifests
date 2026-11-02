@@ -1,0 +1,8 @@
+# Vault から SSH 秘密鍵を取得するヘルパースクリプトを配置する
+- name: Deploy vault-ssh-key helper script
+  ansible.builtin.template:
+    src: vault-ssh-key.sh.j2
+    dest: /usr/local/bin/vault-ssh-key.sh
+    owner: root
+    group: root
+    mode: "0755"

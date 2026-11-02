@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Vault (vault.labo.local) から接続先サーバーのSSH秘密鍵を取得して ~/.ssh に保存する
+# 事前に `vault login` でトークンを取得しておくこと
+#
+# 使い方: vault-ssh-key.sh [シークレットパス] [フィールド名] [保存先ファイル]
+#   例:   vault-ssh-key.sh secret/ssh/almalinux private_key ~/.ssh/id_ed25519_vault
+set -euo pipefail
+
+SECRET_PATH="${1:-{{ vault_ssh_secret_path }}}"
+FIELD="${2:-{{ vault_ssh_secret_field }}}"
+OUT="${3:-$HOME/.ssh/{{ vault_ssh_key_filename }}}"
+
+export VAULT_ADDR="${VAULT_ADDR:-https://vault.labo.local:8200}"
+export VAULT_SKIP_VERIFY="${VAULT_SKIP_VERIFY:-true}"
+
+if ! vault token lookup >/dev/null 2>&1; then
+    echo "エラー: Vault にログインしていません。先に 'vault login' を実行してください。" >&2
+    exit 1
+fi
+
+install -d -m 700 "$(dirname "$OUT")"
+umask 077
+vault kv get -field="$FIELD" "$SECRET_PATH" > "$OUT"
+chmod 600 "$OUT"
+echo "秘密鍵を保存しました: $OUT"
+echo "接続例: ssh -i $OUT <user>@<host>"

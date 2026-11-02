@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: ssh-server
+    comment: 接続対象のサーバー 
+    labels:
+        role: almalinux
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: almalinux10
+    auth:
+        #publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        url: https://github.com/takara9.keys
+        users:
+         - almalinux
+    ansible:
+        playbook: playbook/install-ssh-server.yaml
+        inventory: playbook/hosts-ssh-server.yaml
+    networkInterface:
+        - networkname: host-bridge  # marmot のサーバーが接続されるネットワーク

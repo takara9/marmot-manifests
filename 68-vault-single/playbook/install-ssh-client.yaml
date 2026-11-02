@@ -1,0 +1,11 @@
+- name: setup ssh client with vault
+  hosts: all
+  become: true
+  gather_facts: yes
+  tasks:
+    - name: print host
+      ansible.builtin.debug:
+        msg: "Host: {{ inventory_hostname }}"
+  roles:
+    - vault-client
+    - vault-ssh-key
