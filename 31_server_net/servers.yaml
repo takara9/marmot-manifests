@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: srv31-1
+    comment: Privateネットワークのサーバー
+    labels:
+        case: 31
+        role: server
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+    networkInterface:
+        - networkname: server-net
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: srv31-2
+    comment: Privateネットワークのサーバー
+    labels:
+        case: 31
+        role: server
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+    networkInterface:
+        - networkname: server-net
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: srv31-3
+    comment: PrivateネットワークのDBサーバー
+    labels:
+        case: 31
+        role: server
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+    networkInterface:
+        - networkname: server-net

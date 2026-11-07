@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Gateway
+metadata:
+    name: gw31
+    comment: Privateネットワークのゲートウェイ
+    labels:
+        case: 31
+        role: gateway
+spec:
+    #bindPublicIpAddress: 10.1.0.30          # パブリック側のIPアドレスでアクセスを許可
+    bindPublicIpAddress: 192.168.1.232       # パブリック側のIPアドレスでアクセスを許可
+    internalServerName: srv31-1             # サーバーの名前
+    internalVirtualNetwork: server-net      # 内部側の仮想ネットワーク
+    remoteCIDR: 0.0.0.0/0                   # 接続を許すリモートのIPアドレス
+    serverPorts:                            # リクエストを転送するポート番号のリストを以下に記述する
+        - ssh                               # sshの通信を許可、それ以外は禁止    

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: VirtualNetwork
+metadata:
+  name: server-net
+  comment: サーバー用のプライベートネットのネットワーク
+  labels:
+      case: 31
+      role: server
+spec:
+  iPNetworkAddress: 172.16.100.0/24
