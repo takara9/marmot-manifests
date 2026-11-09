@@ -20,3 +20,14 @@ spec:
         inventory: playbook/hosts.yaml
     networkInterface:
         - networkname: host-bridge
+          address: 192.168.1.252    # 内部DNSに登録済のIPアドレス app.labo.local
+          nameservers:
+            addresses:
+                - 192.168.1.9       # 内部DNSのアドレス
+            search:                 # ドメイン名を省略可能なドメインをセット
+                - labo.local
+          netmasklen: 24            # ネットマスク
+          routes:                   # デフォルトGW ルーターのアドレスを指定
+            - to: default
+              via: 192.168.1.1
+

@@ -7,8 +7,7 @@ metadata:
         case: 31
         role: gateway
 spec:
-    #bindPublicIpAddress: 10.1.0.30          # パブリック側のIPアドレスでアクセスを許可
-    bindPublicIpAddress: 192.168.1.232       # パブリック側のIPアドレスでアクセスを許可
+    bindPublicIpAddress: 10.1.0.230         # パブリック側のIPアドレスでアクセスを許可
     internalServerName: srv31-1             # サーバーの名前
     internalVirtualNetwork: server-net      # 内部側の仮想ネットワーク
     remoteCIDR: 0.0.0.0/0                   # 接続を許すリモートのIPアドレス

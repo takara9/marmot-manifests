@@ -12,5 +12,7 @@ spec:
     mmImage: rocky9
     auth:
         publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP6CPvNHHeF8rHScC7vrq7HMqTPQJcl08atMSqHk/gSy For marmot VMs"
+        users:
+         - rocky
     networkInterface:
         - networkname: host-bridge
