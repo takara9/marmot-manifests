@@ -1,0 +1,5 @@
+linux_supported_distribution: Ubuntu
+linux_supported_version: "24.04"
+linux_data_dev: /dev/vdb          # サーバー作成時に作成したデータ用ボリューム
+linux_data_mount_dir: /var/lib/etcd
+linux_data_fs_label: etcd-data

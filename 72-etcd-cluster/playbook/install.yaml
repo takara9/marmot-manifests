@@ -1,0 +1,13 @@
+- name: Install 3-node etcd cluster on Ubuntu 24.04
+  hosts: etcd
+  become: true
+  gather_facts: true
+
+  vars:
+    etcd_mount_dir: /var/lib/etcd
+    linux_data_dev: /dev/vdb          # サーバー作成時に作成した /var/lib/etcd 用ボリューム
+    linux_data_mount_dir: "{{ etcd_mount_dir }}"
+
+  roles:
+    - linux
+    - etcd

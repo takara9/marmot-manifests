@@ -1,0 +1,137 @@
+# 先頭ノード(etcd_ca_host)にプライベートCAを作成し、各ノードのサーバー証明書をそこで発行する
+- name: Install python3-cryptography (required by community.crypto)
+  ansible.builtin.apt:
+    name: python3-cryptography
+    state: present
+
+- name: Create TLS directory
+  ansible.builtin.file:
+    path: "{{ etcd_tls_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create CA directories on the CA host
+  ansible.builtin.file:
+    path: "{{ etcd_tls_dir }}/issued"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  delegate_to: "{{ etcd_ca_host }}"
+  run_once: true
+
+- name: Generate CA private key
+  community.crypto.openssl_privatekey:
+    path: "{{ etcd_tls_dir }}/ca.key"
+    type: RSA
+    size: 4096
+    owner: root
+    group: root
+    mode: "0600"
+  delegate_to: "{{ etcd_ca_host }}"
+  run_once: true
+
+- name: Generate CA CSR
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ etcd_tls_dir }}/ca.key"
+    common_name: "{{ etcd_ca_common_name }}"
+    organization_name: System Labo
+    country_name: JP
+    basic_constraints:
+      - "CA:TRUE"
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+    key_usage_critical: true
+  register: ca_csr
+  changed_when: false
+  delegate_to: "{{ etcd_ca_host }}"
+  run_once: true
+
+- name: Issue self-signed CA certificate
+  community.crypto.x509_certificate:
+    path: "{{ etcd_tls_dir }}/ca.crt"
+    csr_content: "{{ ca_csr.csr }}"
+    privatekey_path: "{{ etcd_tls_dir }}/ca.key"
+    provider: selfsigned
+    selfsigned_not_after: "+{{ etcd_ca_days }}d"
+    owner: root
+    group: root
+    mode: "0644"
+  delegate_to: "{{ etcd_ca_host }}"
+  run_once: true
+
+- name: Read CA certificate
+  ansible.builtin.slurp:
+    src: "{{ etcd_tls_dir }}/ca.crt"
+  register: ca_crt
+  delegate_to: "{{ etcd_ca_host }}"
+  run_once: true
+
+- name: Distribute CA certificate to all nodes
+  ansible.builtin.copy:
+    content: "{{ ca_crt.content | b64decode }}"
+    dest: "{{ etcd_tls_dir }}/ca.crt"
+    owner: root
+    group: root
+    mode: "0644"
+  when: inventory_hostname != etcd_ca_host
+  notify: Restart etcd
+
+- name: Generate etcd server private key
+  community.crypto.openssl_privatekey:
+    path: "{{ etcd_tls_dir }}/server.key"
+    type: RSA
+    size: 2048
+    owner: etcd
+    group: etcd
+    mode: "0600"
+
+# サーバー認証とクライアント認証の両方を持たせ、ピア間通信 (相互TLS) にも使う
+- name: Generate etcd server CSR
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ etcd_tls_dir }}/server.key"
+    common_name: "{{ etcd_server_fqdn }}"
+    organization_name: System Labo
+    country_name: JP
+    subject_alt_name: "{{ etcd_tls_san }}"
+    key_usage:
+      - digitalSignature
+      - keyEncipherment
+    key_usage_critical: true
+    extended_key_usage:
+      - serverAuth
+      - clientAuth
+  register: server_csr
+  changed_when: false
+
+- name: Issue etcd server certificate signed by the CA (on the CA host)
+  community.crypto.x509_certificate:
+    path: "{{ etcd_tls_dir }}/issued/{{ inventory_hostname }}.crt"
+    csr_content: "{{ server_csr.csr }}"
+    provider: ownca
+    ownca_path: "{{ etcd_tls_dir }}/ca.crt"
+    ownca_privatekey_path: "{{ etcd_tls_dir }}/ca.key"
+    ownca_not_after: "+{{ etcd_cert_days }}d"
+    owner: root
+    group: root
+    mode: "0600"
+  delegate_to: "{{ etcd_ca_host }}"
+
+- name: Read issued server certificate
+  ansible.builtin.slurp:
+    src: "{{ etcd_tls_dir }}/issued/{{ inventory_hostname }}.crt"
+  register: server_crt
+  delegate_to: "{{ etcd_ca_host }}"
+
+- name: Install etcd server certificate
+  ansible.builtin.copy:
+    content: "{{ server_crt.content | b64decode }}"
+    dest: "{{ etcd_tls_dir }}/server.crt"
+    owner: etcd
+    group: etcd
+    mode: "0644"
+  notify: Restart etcd

@@ -1,0 +1,128 @@
+- name: Install etcd server and client
+  ansible.builtin.apt:
+    name:
+      - etcd-server
+      - etcd-client
+    state: present
+    update_cache: true
+
+- name: Check cluster bootstrap marker
+  ansible.builtin.stat:
+    path: "{{ etcd_bootstrap_marker }}"
+  register: bootstrap_marker
+
+# パッケージ導入時に自動起動した単一ノード用のデータが残っていると
+# クラスタに参加できないため、初回構築時のみ破棄する
+- name: Reset package default data (first bootstrap only)
+  when: not bootstrap_marker.stat.exists
+  block:
+    - name: Stop etcd
+      ansible.builtin.systemd:
+        name: etcd
+        state: stopped
+
+    - name: Remove package default data directory
+      ansible.builtin.file:
+        path: "{{ etcd_data_dir }}"
+        state: absent
+
+- name: Set ownership of the mounted volume
+  ansible.builtin.file:
+    path: "{{ etcd_mount_dir }}"
+    state: directory
+    owner: etcd
+    group: etcd
+    mode: "0700"
+
+- name: Create etcd data directory
+  ansible.builtin.file:
+    path: "{{ etcd_data_dir }}"
+    state: directory
+    owner: etcd
+    group: etcd
+    mode: "0700"
+
+- name: Issue TLS certificates
+  ansible.builtin.import_tasks: tls.yaml
+
+- name: Configure etcd
+  ansible.builtin.copy:
+    dest: /etc/default/etcd
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      ETCD_NAME="{{ inventory_hostname }}"
+      ETCD_DATA_DIR="{{ etcd_data_dir }}"
+      ETCD_LISTEN_CLIENT_URLS="https://127.0.0.1:2379,https://{{ etcd_listen_address }}:2379"
+      ETCD_ADVERTISE_CLIENT_URLS="https://{{ etcd_listen_address }}:2379"
+      ETCD_CERT_FILE="{{ etcd_tls_dir }}/server.crt"
+      ETCD_KEY_FILE="{{ etcd_tls_dir }}/server.key"
+      ETCD_LISTEN_PEER_URLS="https://{{ etcd_listen_address }}:2380"
+      ETCD_INITIAL_ADVERTISE_PEER_URLS="https://{{ etcd_listen_address }}:2380"
+      ETCD_PEER_CERT_FILE="{{ etcd_tls_dir }}/server.crt"
+      ETCD_PEER_KEY_FILE="{{ etcd_tls_dir }}/server.key"
+      ETCD_PEER_TRUSTED_CA_FILE="{{ etcd_tls_dir }}/ca.crt"
+      ETCD_PEER_CLIENT_CERT_AUTH="true"
+      ETCD_INITIAL_CLUSTER="{{ etcd_initial_cluster }}"
+      ETCD_INITIAL_CLUSTER_TOKEN="{{ etcd_cluster_token }}"
+      ETCD_INITIAL_CLUSTER_STATE="new"
+  notify: Restart etcd
+
+# etcd は過半数のノードが起動するまで起動完了にならないため、
+# 全ノードで同時に実行する (ansible の forks がノード数以上であること)
+- name: Enable and start etcd
+  ansible.builtin.systemd:
+    name: etcd
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for etcd client port
+  ansible.builtin.wait_for:
+    host: "{{ etcd_listen_address }}"
+    port: 2379
+    timeout: 60
+
+- name: Check etcd cluster health
+  ansible.builtin.command: >-
+    etcdctl --endpoints=https://127.0.0.1:2379 --cacert={{ etcd_tls_dir }}/ca.crt
+    endpoint health --cluster
+  environment:
+    ETCDCTL_API: "3"
+  register: etcd_health
+  changed_when: false
+  retries: 10
+  delay: 3
+  until: etcd_health.rc == 0
+
+- name: Show etcd cluster health
+  ansible.builtin.debug:
+    msg: "{{ etcd_health.stdout_lines + etcd_health.stderr_lines }}"
+
+- name: Show etcd members
+  ansible.builtin.command: >-
+    etcdctl --endpoints=https://127.0.0.1:2379 --cacert={{ etcd_tls_dir }}/ca.crt
+    member list -w table
+  environment:
+    ETCDCTL_API: "3"
+  register: etcd_members_list
+  changed_when: false
+  run_once: true
+
+- name: Show etcd members table
+  ansible.builtin.debug:
+    msg: "{{ etcd_members_list.stdout_lines }}"
+  run_once: true
+
+- name: Record cluster bootstrap marker
+  ansible.builtin.copy:
+    content: ""
+    dest: "{{ etcd_bootstrap_marker }}"
+    owner: root
+    group: root
+    mode: "0644"
+    force: false
+
+- name: Set etcdctl environment variables for the user
+  ansible.builtin.import_tasks: client_env.yaml

@@ -1,0 +1,20 @@
+# etcdctl 用の環境変数を、ユーザーの ~/.bashrc の先頭に設定する
+# (先頭に置くことで ssh 経由の非対話コマンドでも有効になる)
+- name: Get home directory of the etcd client user
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ etcd_client_user }}"
+
+- name: Set etcdctl environment variables in ~/.bashrc
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts.getent_passwd[etcd_client_user][4] }}/.bashrc"
+    create: true
+    owner: "{{ etcd_client_user }}"
+    group: "{{ etcd_client_user }}"
+    mode: "0644"
+    insertbefore: BOF
+    marker: "# {mark} ANSIBLE MANAGED BLOCK etcdctl"
+    block: |
+      export ETCDCTL_API=3
+      export ETCDCTL_ENDPOINTS={{ etcd_client_endpoint }}
+      export ETCDCTL_CACERT={{ etcd_tls_dir }}/ca.crt

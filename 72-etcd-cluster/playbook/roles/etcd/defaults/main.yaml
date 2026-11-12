@@ -1,0 +1,35 @@
+etcd_group: etcd
+etcd_mount_dir: /var/lib/etcd
+etcd_data_dir: /var/lib/etcd/default
+etcd_listen_address: "{{ ansible_default_ipv4.address }}"
+etcd_domain: labo.local
+etcd_cluster_token: etcd-cluster-1
+etcd_bootstrap_marker: "{{ etcd_mount_dir }}/.etcd-bootstrapped"
+
+# クラスタ全ノードのアドレスから組み立てる
+etcd_members: "{{ groups[etcd_group] }}"
+etcd_initial_cluster: >-
+  {% for h in etcd_members -%}
+  {{ h }}=https://{{ hostvars[h].ansible_default_ipv4.address }}:2380{{ ',' if not loop.last else '' }}
+  {%- endfor %}
+
+# TLS (CA は先頭ノードに置き、各ノードの証明書をそこで発行する)
+etcd_ca_host: "{{ etcd_members[0] }}"
+etcd_tls_dir: /etc/etcd/pki
+etcd_ca_common_name: etcd Labo CA
+etcd_ca_days: 3650
+etcd_cert_days: 825
+etcd_server_fqdn: "{{ inventory_hostname }}.{{ etcd_domain }}"
+etcd_tls_san:
+  - "DNS:{{ etcd_server_fqdn }}"
+  - "DNS:{{ inventory_hostname }}"
+  - "DNS:localhost"
+  - "IP:127.0.0.1"
+  - "IP:{{ etcd_listen_address }}"
+
+# etcdctl 用の環境変数を設定するユーザー
+etcd_client_user: "{{ ansible_user | default('ubuntu') }}"
+etcd_client_endpoint: >-
+  {% for h in etcd_members -%}
+  https://{{ hostvars[h].ansible_default_ipv4.address }}:2379{{ ',' if not loop.last else '' }}
+  {%- endfor %}

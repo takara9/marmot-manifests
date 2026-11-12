@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: etcd-cluster-1
+    comment: ETCDサーバー
+    labels:
+        app: etcd
+spec:
+    cpu: 1
+    memory: 2048
+    mmImage: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+        users:
+          - ubuntu
+    #ansible:
+    #    playbook: playbook/install.yaml
+    #    inventory: playbook/hosts.yaml
+    networkInterface:
+        - networkname: host-bridge
+          address: 192.168.1.191    # 内部DNSに登録済のIPアドレス etcd.labo.local
+          nameservers:              
+            addresses:
+                - 192.168.1.9       # 内部DNSのアドレス
+            search:                 # ドメイン名を省略可能なドメインをセット
+                - labo.local
+          netmasklen: 24            # ネットマスク
+          routes:                   # デフォルトGW ルーターのアドレスを指定
+            - to: default
+              via: 192.168.1.1
+    storage:
+        - metadata:
+            name: /var/lib/etcd
+            comment: ETCDのデータを格納するディレクトリ
+          spec:
+            size: 6
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: etcd-cluster-2
+    comment: ETCDサーバー
+    labels:
+        app: etcd
+spec:
+    cpu: 1
+    memory: 2048
+    mmImage: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+        users:
+          - ubuntu
+    #ansible:
+    #    playbook: playbook/install.yaml
+    #    inventory: playbook/hosts.yaml
+    networkInterface:
+        - networkname: host-bridge
+          address: 192.168.1.192    # 内部DNSに登録済のIPアドレス etcd.labo.local
+          nameservers:              
+            addresses:
+                - 192.168.1.9       # 内部DNSのアドレス
+            search:                 # ドメイン名を省略可能なドメインをセット
+                - labo.local
+          netmasklen: 24            # ネットマスク
+          routes:                   # デフォルトGW ルーターのアドレスを指定
+            - to: default
+              via: 192.168.1.1
+    storage:
+        - metadata:
+            name: /var/lib/etcd
+            comment: ETCDのデータを格納するディレクトリ
+          spec:
+            size: 6
+---
+apiVersion: v1
+kind: Server
+metadata:
+    name: etcd-cluster-3
+    comment: ETCDサーバー
+    labels:
+        app: etcd
+spec:
+    cpu: 1
+    memory: 2048
+    mmImage: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+        users:
+          - ubuntu
+    #ansible:
+    #    playbook: playbook/install.yaml
+    #    inventory: playbook/hosts.yaml
+    networkInterface:
+        - networkname: host-bridge
+          address: 192.168.1.193    # 内部DNSに登録済のIPアドレス etcd.labo.local
+          nameservers:              
+            addresses:
+                - 192.168.1.9       # 内部DNSのアドレス
+            search:                 # ドメイン名を省略可能なドメインをセット
+                - labo.local
+          netmasklen: 24            # ネットマスク
+          routes:                   # デフォルトGW ルーターのアドレスを指定
+            - to: default
+              via: 192.168.1.1
+    storage:
+        - metadata:
+            name: /var/lib/etcd
+            comment: ETCDのデータを格納するディレクトリ
+          spec:
+            size: 6

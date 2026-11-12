@@ -1,0 +1,88 @@
+# プライベートCAを作成し、そのCAで etcd サーバー証明書を発行する
+- name: Install python3-cryptography (required by community.crypto)
+  ansible.builtin.apt:
+    name: python3-cryptography
+    state: present
+
+- name: Create TLS directory
+  ansible.builtin.file:
+    path: "{{ etcd_tls_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Generate CA private key
+  community.crypto.openssl_privatekey:
+    path: "{{ etcd_tls_dir }}/ca.key"
+    type: RSA
+    size: 4096
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Generate CA CSR
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ etcd_tls_dir }}/ca.key"
+    common_name: "{{ etcd_ca_common_name }}"
+    organization_name: System Labo
+    country_name: JP
+    basic_constraints:
+      - "CA:TRUE"
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+    key_usage_critical: true
+  register: ca_csr
+  changed_when: false
+
+- name: Issue self-signed CA certificate
+  community.crypto.x509_certificate:
+    path: "{{ etcd_tls_dir }}/ca.crt"
+    csr_content: "{{ ca_csr.csr }}"
+    privatekey_path: "{{ etcd_tls_dir }}/ca.key"
+    provider: selfsigned
+    selfsigned_not_after: "+{{ etcd_ca_days }}d"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Generate etcd server private key
+  community.crypto.openssl_privatekey:
+    path: "{{ etcd_tls_dir }}/server.key"
+    type: RSA
+    size: 2048
+    owner: etcd
+    group: etcd
+    mode: "0600"
+
+- name: Generate etcd server CSR
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ etcd_tls_dir }}/server.key"
+    common_name: "{{ etcd_server_fqdn }}"
+    organization_name: System Labo
+    country_name: JP
+    subject_alt_name: "{{ etcd_tls_san }}"
+    key_usage:
+      - digitalSignature
+      - keyEncipherment
+    key_usage_critical: true
+    extended_key_usage:
+      - serverAuth
+      - clientAuth
+  register: server_csr
+  changed_when: false
+
+- name: Issue etcd server certificate signed by the CA
+  community.crypto.x509_certificate:
+    path: "{{ etcd_tls_dir }}/server.crt"
+    csr_content: "{{ server_csr.csr }}"
+    provider: ownca
+    ownca_path: "{{ etcd_tls_dir }}/ca.crt"
+    ownca_privatekey_path: "{{ etcd_tls_dir }}/ca.key"
+    ownca_not_after: "+{{ etcd_cert_days }}d"
+    owner: etcd
+    group: etcd
+    mode: "0644"
+  notify: Restart etcd

@@ -1,0 +1,17 @@
+all:
+  vars:
+    ansible_connection: ssh
+    ansible_user: ubuntu
+    ansible_python_interpreter: /usr/bin/python3
+    # mactl-ssh は並列接続時に認証エラーが発生するため、
+    # クラスタ構築 (全ノード同時実行が必要) では IP アドレスへ直接 SSH 接続する
+    ansible_ssh_common_args: -o StrictHostKeyChecking=accept-new
+  children:
+    etcd:
+      hosts:
+        etcd-cluster-1:     # 先頭のノードにプライベートCAを置く
+          ansible_host: 192.168.1.191
+        etcd-cluster-2:
+          ansible_host: 192.168.1.192
+        etcd-cluster-3:
+          ansible_host: 192.168.1.193

@@ -1,0 +1,20 @@
+etcd_mount_dir: /var/lib/etcd
+etcd_data_dir: /var/lib/etcd/default
+etcd_listen_address: "{{ ansible_default_ipv4.address }}"
+
+# TLS
+etcd_tls_dir: /etc/etcd/pki
+etcd_server_fqdn: etcd.labo.local
+etcd_ca_common_name: etcd Labo CA
+etcd_ca_days: 3650
+etcd_cert_days: 825
+etcd_tls_san:
+  - "DNS:{{ etcd_server_fqdn }}"
+  - "DNS:{{ inventory_hostname }}"
+  - "DNS:localhost"
+  - "IP:127.0.0.1"
+  - "IP:{{ etcd_listen_address }}"
+
+# etcdctl 用の環境変数を設定するユーザー
+etcd_client_user: "{{ ansible_user | default('ubuntu') }}"
+etcd_client_endpoint: "https://{{ etcd_listen_address }}:2379"

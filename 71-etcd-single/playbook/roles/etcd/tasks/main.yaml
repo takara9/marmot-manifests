@@ -1,0 +1,80 @@
+- name: Install etcd server and client
+  ansible.builtin.apt:
+    name:
+      - etcd-server
+      - etcd-client
+    state: present
+    update_cache: true
+
+- name: Stop etcd until the data directory is ready
+  ansible.builtin.systemd:
+    name: etcd
+    state: stopped
+
+- name: Set ownership of the mounted volume
+  ansible.builtin.file:
+    path: "{{ etcd_mount_dir }}"
+    state: directory
+    owner: etcd
+    group: etcd
+    mode: "0700"
+
+- name: Create etcd data directory
+  ansible.builtin.file:
+    path: "{{ etcd_data_dir }}"
+    state: directory
+    owner: etcd
+    group: etcd
+    mode: "0700"
+
+- name: Issue TLS certificates
+  ansible.builtin.import_tasks: tls.yaml
+
+- name: Configure etcd
+  ansible.builtin.copy:
+    dest: /etc/default/etcd
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      ETCD_NAME="{{ inventory_hostname }}"
+      ETCD_DATA_DIR="{{ etcd_data_dir }}"
+      ETCD_LISTEN_CLIENT_URLS="https://127.0.0.1:2379,https://{{ etcd_listen_address }}:2379"
+      ETCD_ADVERTISE_CLIENT_URLS="https://{{ etcd_listen_address }}:2379"
+      ETCD_CERT_FILE="{{ etcd_tls_dir }}/server.crt"
+      ETCD_KEY_FILE="{{ etcd_tls_dir }}/server.key"
+      ETCD_LISTEN_PEER_URLS="http://127.0.0.1:2380"
+      ETCD_INITIAL_ADVERTISE_PEER_URLS="http://127.0.0.1:2380"
+      ETCD_INITIAL_CLUSTER="{{ inventory_hostname }}=http://127.0.0.1:2380"
+      ETCD_INITIAL_CLUSTER_STATE="new"
+  notify: Restart etcd
+
+- name: Enable and start etcd
+  ansible.builtin.systemd:
+    name: etcd
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for etcd client port
+  ansible.builtin.wait_for:
+    host: "{{ etcd_listen_address }}"
+    port: 2379
+    timeout: 60
+
+- name: Check etcd health
+  ansible.builtin.command: etcdctl --endpoints=https://127.0.0.1:2379 --cacert={{ etcd_tls_dir }}/ca.crt endpoint health
+  environment:
+    ETCDCTL_API: "3"
+  register: etcd_health
+  changed_when: false
+  retries: 5
+  delay: 3
+  until: etcd_health.rc == 0
+
+- name: Show etcd health
+  ansible.builtin.debug:
+    msg: "{{ etcd_health.stdout_lines + etcd_health.stderr_lines }}"
+
+- name: Set etcdctl environment variables for the user
+  ansible.builtin.import_tasks: client_env.yaml
