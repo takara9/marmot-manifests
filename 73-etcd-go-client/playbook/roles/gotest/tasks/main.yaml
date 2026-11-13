@@ -1,0 +1,35 @@
+# テストコード (../gotest) をクライアントに配置し、依存モジュールを取得してビルドを確認する。
+# certs/ は配置しない (CA 証明書は etcdctl ロールが /etc/etcd-client に配置する)
+- name: Create test code directory
+  ansible.builtin.file:
+    path: "{{ gotest_dir }}"
+    state: directory
+    mode: "0755"
+  become: false
+
+- name: Copy test code
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ gotest_dir }}/{{ item | basename }}"
+    mode: "0644"
+  loop: "{{ lookup('ansible.builtin.fileglob', gotest_src ~ '/*', wantlist=True) }}"
+  become: false
+
+- name: Download Go modules
+  ansible.builtin.command: "{{ gotest_go }} mod download"
+  args:
+    chdir: "{{ gotest_dir }}"
+  environment:
+    GOPATH: "/home/{{ gotest_user }}/go"
+  register: go_mod_download
+  changed_when: false
+  become: false
+
+- name: Vet test code
+  ansible.builtin.command: "{{ gotest_go }} vet ./..."
+  args:
+    chdir: "{{ gotest_dir }}"
+  environment:
+    GOPATH: "/home/{{ gotest_user }}/go"
+  changed_when: false
+  become: false

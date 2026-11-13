@@ -1,0 +1,91 @@
+- name: Install etcdctl (etcd-client)
+  ansible.builtin.apt:
+    name: etcd-client
+    state: present
+    update_cache: true
+
+- name: Create CA certificate directory
+  ansible.builtin.file:
+    path: "{{ etcd_client_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# 構築済みの 71 / 72 のサーバーから CA 証明書を取得する。未構築のサーバーは飛ばす
+- name: Read CA certificate from each etcd target
+  ansible.builtin.slurp:
+    src: /etc/etcd/pki/ca.crt
+  delegate_to: "{{ item.host }}"
+  become: true
+  loop: "{{ etcd_targets }}"
+  loop_control:
+    label: "{{ item.name }} ({{ item.host }})"
+  register: etcd_ca
+  ignore_errors: true
+  ignore_unreachable: true
+
+- name: Install CA certificates
+  ansible.builtin.copy:
+    content: "{{ item.content | b64decode }}"
+    dest: "{{ etcd_client_dir }}/{{ item.item.name }}-ca.crt"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ etcd_ca.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: item.content is defined
+
+- name: Warn about targets whose CA certificate could not be read
+  ansible.builtin.debug:
+    msg: "{{ item.item.name }}: CA certificate was not fetched from {{ item.item.host }} (not deployed?)"
+  loop: "{{ etcd_ca.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: item.content is not defined
+
+- name: Install etcd-use helper (switch between single and cluster)
+  ansible.builtin.copy:
+    dest: "{{ etcd_client_dir }}/etcd-use.sh"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # source して使う: etcd-use single | etcd-use cluster
+      etcd-use() {
+        case "$1" in
+      {% for t in etcd_targets %}
+        {{ t.name }})
+          export ETCD_ENDPOINTS={{ t.endpoints | join(',') }}
+          ;;
+      {% endfor %}
+        *)
+          echo "usage: etcd-use {{ etcd_targets | map(attribute='name') | join('|') }}" >&2
+          return 1
+          ;;
+        esac
+        export ETCD_TARGET="$1"
+        export ETCDCTL_API=3
+        export ETCDCTL_ENDPOINTS="$ETCD_ENDPOINTS"
+        export ETCDCTL_CACERT="{{ etcd_client_dir }}/$1-ca.crt"
+        echo "etcd target: $1 ($ETCD_ENDPOINTS)"
+      }
+
+- name: Get home directory of the etcd client user
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ etcd_client_user }}"
+
+- name: Load etcd-use in ~/.bashrc
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts.getent_passwd[etcd_client_user][4] }}/.bashrc"
+    create: true
+    owner: "{{ etcd_client_user }}"
+    group: "{{ etcd_client_user }}"
+    mode: "0644"
+    insertbefore: BOF
+    marker: "# {mark} ANSIBLE MANAGED BLOCK etcd-use"
+    block: |
+      . {{ etcd_client_dir }}/etcd-use.sh
+      etcd-use {{ etcd_default_target }} > /dev/null

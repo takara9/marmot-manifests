@@ -1,0 +1,16 @@
+etcd_client_user: "{{ ansible_user | default('ubuntu') }}"
+etcd_client_dir: /etc/etcd-client
+etcd_default_target: single
+
+# host は CA 証明書 (/etc/etcd/pki/ca.crt) の取得元 (hosts.yaml の etcd_ca_sources)
+etcd_targets:
+  - name: single
+    host: etcd-single
+    endpoints:
+      - https://192.168.1.190:2379
+  - name: cluster
+    host: etcd-cluster-1
+    endpoints:
+      - https://192.168.1.191:2379
+      - https://192.168.1.192:2379
+      - https://192.168.1.193:2379

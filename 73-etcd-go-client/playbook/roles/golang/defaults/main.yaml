@@ -1,0 +1,8 @@
+go_version: "1.26.4"
+go_install_dir: /usr/local
+go_user: "{{ ansible_user | default('ubuntu') }}"
+go_arch_map:
+  x86_64: amd64
+  amd64: amd64
+  aarch64: arm64
+  arm64: arm64

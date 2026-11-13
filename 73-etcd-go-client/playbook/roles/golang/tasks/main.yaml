@@ -1,0 +1,78 @@
+- name: Install build tools
+  ansible.builtin.apt:
+    name:
+      - gcc
+      - make
+      - git
+    state: present
+    update_cache: true
+
+- name: Check installed Go version
+  ansible.builtin.command: "{{ go_install_dir }}/go/bin/go version"
+  register: go_installed
+  changed_when: false
+  failed_when: false
+
+- name: Install Go {{ go_version }}
+  when: go_installed.rc != 0 or ('go' + go_version) not in go_installed.stdout
+  vars:
+    go_arch: "{{ go_arch_map.get(ansible_architecture, ansible_architecture) }}"
+    go_archive: "/tmp/go{{ go_version }}.linux-{{ go_arch }}.tar.gz"
+  block:
+    - name: Download Go archive
+      ansible.builtin.get_url:
+        url: "https://go.dev/dl/go{{ go_version }}.linux-{{ go_arch }}.tar.gz"
+        dest: "{{ go_archive }}"
+        mode: "0644"
+
+    - name: Remove old Go
+      ansible.builtin.file:
+        path: "{{ go_install_dir }}/go"
+        state: absent
+
+    - name: Extract Go archive
+      ansible.builtin.unarchive:
+        src: "{{ go_archive }}"
+        dest: "{{ go_install_dir }}"
+        remote_src: true
+
+    - name: Remove Go archive
+      ansible.builtin.file:
+        path: "{{ go_archive }}"
+        state: absent
+
+- name: Add Go to PATH for all login shells
+  ansible.builtin.copy:
+    dest: /etc/profile.d/go.sh
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      export PATH=$PATH:{{ go_install_dir }}/go/bin
+
+# ssh 経由の非対話コマンドでも go を使えるよう、~/.bashrc の先頭にも設定する
+- name: Get home directory of the Go user
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ go_user }}"
+
+- name: Add Go to PATH in ~/.bashrc
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts.getent_passwd[go_user][4] }}/.bashrc"
+    create: true
+    owner: "{{ go_user }}"
+    group: "{{ go_user }}"
+    mode: "0644"
+    insertbefore: BOF
+    marker: "# {mark} ANSIBLE MANAGED BLOCK go"
+    block: |
+      export PATH=$PATH:{{ go_install_dir }}/go/bin
+
+- name: Show Go version
+  ansible.builtin.command: "{{ go_install_dir }}/go/bin/go version"
+  register: go_version_out
+  changed_when: false
+
+- name: Report Go version
+  ansible.builtin.debug:
+    var: go_version_out.stdout

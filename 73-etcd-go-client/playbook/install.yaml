@@ -1,0 +1,9 @@
+- name: Setup etcd client (Go and etcdctl) for 71-etcd-single and 72-etcd-cluster
+  hosts: etcd_client
+  become: true
+  gather_facts: true
+
+  roles:
+    - golang
+    - etcdctl
+    - gotest
