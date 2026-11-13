@@ -1,0 +1,51 @@
+- name: Deploy auto-unseal script
+  ansible.builtin.template:
+    src: vault-auto-unseal.sh.j2
+    dest: /usr/local/bin/vault-auto-unseal.sh
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Deploy vault-unseal systemd unit
+  ansible.builtin.template:
+    src: vault-unseal.service.j2
+    dest: /etc/systemd/system/vault-unseal.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Reload systemd now
+  ansible.builtin.meta: flush_handlers
+
+# 先頭ノードがunsealされるとフォロワーがRaftに参加し、各ノードのスクリプトがunsealする
+- name: Enable vault-unseal and unseal now (also runs on every boot)
+  ansible.builtin.systemd:
+    name: vault-unseal
+    enabled: true
+    state: restarted
+
+- name: Verify node is unsealed
+  ansible.builtin.command: vault status -format=json
+  environment: "{{ vault_env }}"
+  register: vault_final
+  changed_when: false
+  retries: 10
+  delay: 3
+  until: vault_final.rc == 0
+
+- name: List Raft peers (first run only)
+  ansible.builtin.command: vault operator raft list-peers
+  environment: "{{ vault_env | combine({'VAULT_TOKEN': (vault_init.stdout | from_json).root_token}) }}"
+  register: raft_peers
+  changed_when: false
+  no_log: true
+  retries: 20
+  delay: 5
+  until: raft_peers.rc == 0 and (raft_peers.stdout_lines | select('search', 'true') | list | length) >= (groups[vault_group] | length)
+  when: vault_init is changed
+
+- name: Show Raft peers
+  ansible.builtin.debug:
+    msg: "{{ raft_peers.stdout_lines }}"
+  when: vault_init is changed

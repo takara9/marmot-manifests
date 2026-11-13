@@ -1,0 +1,9 @@
+# vault-unseal.service は Requires=vault.service のため、vault の再起動に連動して再実行される
+- name: Restart vault
+  ansible.builtin.systemd:
+    name: vault
+    state: restarted
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true

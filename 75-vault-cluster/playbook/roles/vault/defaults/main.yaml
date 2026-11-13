@@ -1,0 +1,23 @@
+vault_group: vault
+vault_leader: "{{ groups[vault_group][0] }}"      # CA と init を担当するノード
+vault_domain: labo.local
+vault_node_ip: "{{ ansible_default_ipv4.address }}"
+vault_node_fqdn: "{{ inventory_hostname }}.{{ vault_domain }}"
+
+vault_data_dir: /opt/vault/data
+vault_tls_dir: /opt/vault/tls
+vault_ca_dir: /opt/vault/ca                       # CA秘密鍵は先頭ノードのみ (0700)
+vault_ca_common_name: Vault Labo CA
+vault_ca_days: 3650
+vault_cert_days: 825
+vault_extra_san: []                               # 例: ["DNS:vault.labo.local"]
+vault_tls_san: "{{ ['DNS:' ~ vault_node_fqdn, 'DNS:' ~ inventory_hostname, 'DNS:localhost', 'IP:127.0.0.1', 'IP:' ~ vault_node_ip] + vault_extra_san }}"
+
+vault_key_shares: 5
+vault_key_threshold: 3
+vault_keys_file: /opt/vault/unseal-keys.json
+vault_unseal_timeout: 300
+
+vault_env:
+  VAULT_ADDR: https://127.0.0.1:8200
+  VAULT_CACERT: "{{ vault_tls_dir }}/ca.crt"

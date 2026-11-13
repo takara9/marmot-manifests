@@ -1,0 +1,14 @@
+- name: Install Vault
+  ansible.builtin.import_tasks: install.yaml
+
+- name: Issue TLS certificates
+  ansible.builtin.import_tasks: tls.yaml
+
+- name: Configure and start Vault
+  ansible.builtin.import_tasks: configure.yaml
+
+- name: Initialize Vault cluster
+  ansible.builtin.import_tasks: init.yaml
+
+- name: Set up auto-unseal
+  ansible.builtin.import_tasks: unseal.yaml

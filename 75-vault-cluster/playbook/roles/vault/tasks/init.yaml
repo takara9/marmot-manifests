@@ -1,0 +1,71 @@
+- name: Check Vault status
+  ansible.builtin.command: vault status -format=json
+  environment: "{{ vault_env }}"
+  register: vault_status
+  changed_when: false
+  failed_when: vault_status.rc not in [0, 2]
+  retries: 15
+  delay: 2
+  until: vault_status.rc in [0, 2]
+
+# 初回のみ先頭ノードで初期化する。他ノードは retry_join で自動参加する
+- name: Initialize Vault (first run, leader only)
+  ansible.builtin.command: >-
+    vault operator init -format=json
+    -key-shares={{ vault_key_shares }} -key-threshold={{ vault_key_threshold }}
+  environment: "{{ vault_env }}"
+  register: vault_init
+  no_log: true
+  when:
+    - inventory_hostname == vault_leader
+    - not (vault_status.stdout | from_json).initialized
+
+- name: Persist unseal keys on the leader
+  ansible.builtin.copy:
+    content: "{{ vault_init.stdout }}"
+    dest: "{{ vault_keys_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: vault_init is changed
+
+# Unseal Key と Root Token は初期化時にしか表示されないため、必ず控えること
+- name: Display unseal keys and root token (shown only once!)
+  ansible.builtin.debug:
+    msg:
+      - "=== Vault initialized. SAVE THIS INFORMATION NOW. It will not be shown again. ==="
+      - "Unseal Keys (b64): {{ (vault_init.stdout | from_json).unseal_keys_b64 }}"
+      - "Unseal Threshold : {{ (vault_init.stdout | from_json).unseal_threshold }}"
+      - "Root Token       : {{ (vault_init.stdout | from_json).root_token }}"
+  when: vault_init is changed
+
+- name: Check unseal keys file on the leader
+  ansible.builtin.stat:
+    path: "{{ vault_keys_file }}"
+  register: leader_keys_stat
+  delegate_to: "{{ vault_leader }}"
+  run_once: true
+
+- name: Read unseal keys from the leader
+  ansible.builtin.slurp:
+    src: "{{ vault_keys_file }}"
+  register: leader_keys
+  no_log: true
+  delegate_to: "{{ vault_leader }}"
+  run_once: true
+  when: leader_keys_stat.stat.exists
+
+# 再起動時の自動unsealのため、全ノードにUnsealキーを配置する
+- name: Distribute unseal keys to the other nodes
+  ansible.builtin.copy:
+    content: "{{ leader_keys.content | b64decode }}"
+    dest: "{{ vault_keys_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+    force: false
+  no_log: true
+  when:
+    - inventory_hostname != vault_leader
+    - leader_keys_stat.stat.exists

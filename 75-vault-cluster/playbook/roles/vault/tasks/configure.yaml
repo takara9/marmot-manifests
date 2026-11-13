@@ -1,0 +1,24 @@
+- name: Deploy vault.hcl
+  ansible.builtin.template:
+    src: vault.hcl.j2
+    dest: /etc/vault.d/vault.hcl
+    owner: vault
+    group: vault
+    mode: "0640"
+  notify: Restart vault
+
+# 設定・証明書の変更を、初期化の前に反映しておく
+- name: Apply pending restarts
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start vault
+  ansible.builtin.systemd:
+    name: vault
+    enabled: true
+    state: started
+
+- name: Wait for Vault API port
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 8200
+    timeout: 60

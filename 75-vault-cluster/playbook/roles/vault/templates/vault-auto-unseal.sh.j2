@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Vault が応答し、初期化済み(Raft参加済み)になるまで待ち、sealed なら unseal する
+export VAULT_ADDR="{{ vault_env.VAULT_ADDR }}"
+export VAULT_CACERT="{{ vault_env.VAULT_CACERT }}"
+
+KEYS_FILE="{{ vault_keys_file }}"
+TIMEOUT="{{ vault_unseal_timeout }}"
+
+[ -f "$KEYS_FILE" ] || { echo "no unseal keys file: skip"; exit 0; }
+threshold="$(jq -r '.unseal_threshold' "$KEYS_FILE")"
+
+deadline=$((SECONDS + TIMEOUT))
+while [ "$SECONDS" -lt "$deadline" ]; do
+  status="$(vault status -format=json 2>/dev/null)"
+  rc=$?
+  if [ "$rc" -eq 0 ]; then
+    exit 0
+  fi
+  if [ "$rc" -eq 2 ] && [ "$(jq -r '.initialized' <<<"$status")" = "true" ]; then
+    jq -r --argjson n "$threshold" '.unseal_keys_b64[:$n][]' "$KEYS_FILE" | while read -r key; do
+      vault operator unseal "$key" >/dev/null
+    done
+    sleep 1
+    continue
+  fi
+  sleep 3
+done
+echo "timed out waiting for vault to be unsealed" >&2
+exit 1

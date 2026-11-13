@@ -1,0 +1,115 @@
+# apt-cacher-ng 経由の通信でパイプライン処理が固まり apt update が止まることがあるため、
+# パイプラインを無効にし、タイムアウトとリトライを設定する
+- name: Harden apt against stalled proxy connections
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/99-vault-client-apt
+    content: |
+      Acquire::http::Pipeline-Depth "0";
+      Acquire::http::Timeout "30";
+      Acquire::Retries "3";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install prerequisite packages
+  ansible.builtin.apt:
+    name:
+      - gnupg
+      - software-properties-common
+      - curl
+      - jq
+    state: present
+    update_cache: true
+
+- name: Download HashiCorp apt signing key
+  ansible.builtin.get_url:
+    url: https://apt.releases.hashicorp.com/gpg
+    dest: /tmp/hashicorp.gpg
+    mode: "0644"
+
+- name: Dearmor HashiCorp apt signing key
+  ansible.builtin.command:
+    cmd: gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg /tmp/hashicorp.gpg
+    creates: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+- name: Add HashiCorp apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+    filename: hashicorp
+    state: present
+
+# サーバーに常駐させないよう、vault パッケージの CLI だけを使う (サービスは有効化しない)
+- name: Install vault CLI
+  ansible.builtin.apt:
+    name: vault
+    state: present
+    update_cache: true
+
+- name: Stop and disable the vault server service (client only)
+  ansible.builtin.systemd:
+    name: vault
+    state: stopped
+    enabled: false
+  failed_when: false
+
+- name: Create CA certificate directory
+  ansible.builtin.file:
+    path: "{{ vault_client_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# 構築済みの 75-vault-cluster の先頭ノードから CA 証明書を取得する。未構築なら飛ばす
+- name: Read CA certificate from the Vault cluster
+  ansible.builtin.slurp:
+    src: "{{ vault_ca_remote_path }}"
+  delegate_to: "{{ vault_ca_host }}"
+  become: true
+  register: vault_ca
+  ignore_errors: true
+  ignore_unreachable: true
+
+- name: Install CA certificate
+  ansible.builtin.copy:
+    content: "{{ vault_ca.content | b64decode }}"
+    dest: "{{ vault_client_dir }}/ca.crt"
+    owner: root
+    group: root
+    mode: "0644"
+  when: vault_ca.content is defined
+
+- name: Warn when the CA certificate could not be read
+  ansible.builtin.debug:
+    msg: "CA certificate was not fetched from {{ vault_ca_host }} (75-vault-cluster not deployed?). Run `make fetch-ca` later."
+  when: vault_ca.content is not defined
+
+- name: Set Vault client environment variables
+  ansible.builtin.copy:
+    dest: "{{ vault_client_dir }}/vault-client.sh"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # VAULT_ADDR は vault CLI 用、VAULT_ADDRS は Go のテストコード用 (全ノードを順に試す)
+      export VAULT_ADDR="{{ vault_addrs[0] }}"
+      export VAULT_ADDRS="{{ vault_addrs | join(',') }}"
+      export VAULT_CACERT="{{ vault_client_dir }}/ca.crt"
+
+- name: Get home directory of the Vault client user
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ vault_client_user }}"
+
+# ssh 経由の非対話コマンドでも使えるよう、~/.bashrc の先頭にも設定する
+- name: Load Vault client environment in ~/.bashrc
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts.getent_passwd[vault_client_user][4] }}/.bashrc"
+    create: true
+    owner: "{{ vault_client_user }}"
+    group: "{{ vault_client_user }}"
+    mode: "0644"
+    insertbefore: BOF
+    marker: "# {mark} ANSIBLE MANAGED BLOCK vault-client"
+    block: |
+      . {{ vault_client_dir }}/vault-client.sh

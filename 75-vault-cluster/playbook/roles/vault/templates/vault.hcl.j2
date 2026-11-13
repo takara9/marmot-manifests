@@ -1,0 +1,25 @@
+ui            = true
+disable_mlock = true
+
+storage "raft" {
+  path    = "{{ vault_data_dir }}"
+  node_id = "{{ inventory_hostname }}"
+{% for h in groups[vault_group] %}
+
+  retry_join {
+    leader_api_addr     = "https://{{ hostvars[h].ansible_default_ipv4.address }}:8200"
+    leader_ca_cert_file = "{{ vault_tls_dir }}/ca.crt"
+  }
+{% endfor %}
+}
+
+listener "tcp" {
+  address         = "0.0.0.0:8200"
+  cluster_address = "0.0.0.0:8201"
+  tls_cert_file   = "{{ vault_tls_dir }}/vault.crt"
+  tls_key_file    = "{{ vault_tls_dir }}/vault.key"
+  tls_min_version = "tls12"
+}
+
+api_addr     = "https://{{ vault_node_ip }}:8200"
+cluster_addr = "https://{{ vault_node_ip }}:8201"

@@ -1,0 +1,131 @@
+# 先頭ノード(vault_leader)にプライベートCAを作成し、各ノードのサーバー証明書をそこで発行する
+- name: Create TLS directory
+  ansible.builtin.file:
+    path: "{{ vault_tls_dir }}"
+    state: directory
+    owner: root
+    group: vault
+    mode: "0755"   # CLI を使う一般ユーザーが ca.crt を読めるようにする (秘密鍵は個別に 0600)
+
+- name: Create CA directories on the CA host
+  ansible.builtin.file:
+    path: "{{ vault_ca_dir }}/issued"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  delegate_to: "{{ vault_leader }}"
+  run_once: true
+
+- name: Generate CA private key
+  community.crypto.openssl_privatekey:
+    path: "{{ vault_ca_dir }}/ca.key"
+    type: RSA
+    size: 4096
+    owner: root
+    group: root
+    mode: "0600"
+  delegate_to: "{{ vault_leader }}"
+  run_once: true
+
+- name: Generate CA CSR
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ vault_ca_dir }}/ca.key"
+    common_name: "{{ vault_ca_common_name }}"
+    organization_name: System Labo
+    country_name: JP
+    basic_constraints:
+      - "CA:TRUE"
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+    key_usage_critical: true
+  register: ca_csr
+  changed_when: false
+  delegate_to: "{{ vault_leader }}"
+  run_once: true
+
+- name: Issue self-signed CA certificate
+  community.crypto.x509_certificate:
+    path: "{{ vault_ca_dir }}/ca.crt"
+    csr_content: "{{ ca_csr.csr }}"
+    privatekey_path: "{{ vault_ca_dir }}/ca.key"
+    provider: selfsigned
+    selfsigned_not_after: "+{{ vault_ca_days }}d"
+    owner: root
+    group: root
+    mode: "0644"
+  delegate_to: "{{ vault_leader }}"
+  run_once: true
+
+- name: Read CA certificate
+  ansible.builtin.slurp:
+    src: "{{ vault_ca_dir }}/ca.crt"
+  register: ca_crt
+  delegate_to: "{{ vault_leader }}"
+  run_once: true
+
+- name: Distribute CA certificate to all nodes
+  ansible.builtin.copy:
+    content: "{{ ca_crt.content | b64decode }}"
+    dest: "{{ vault_tls_dir }}/ca.crt"
+    owner: root
+    group: vault
+    mode: "0644"
+  notify: Restart vault
+
+- name: Generate node private key
+  community.crypto.openssl_privatekey:
+    path: "{{ vault_tls_dir }}/vault.key"
+    type: RSA
+    size: 2048
+    owner: vault
+    group: vault
+    mode: "0600"
+
+# サーバー認証とクライアント認証の両方を持たせ、ノード間通信にも使う
+- name: Generate node CSR
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ vault_tls_dir }}/vault.key"
+    common_name: "{{ vault_node_fqdn }}"
+    organization_name: System Labo
+    country_name: JP
+    subject_alt_name: "{{ vault_tls_san }}"
+    key_usage:
+      - digitalSignature
+      - keyEncipherment
+    key_usage_critical: true
+    extended_key_usage:
+      - serverAuth
+      - clientAuth
+  register: node_csr
+  changed_when: false
+
+- name: Issue node certificate signed by the CA (on the CA host)
+  community.crypto.x509_certificate:
+    path: "{{ vault_ca_dir }}/issued/{{ inventory_hostname }}.crt"
+    csr_content: "{{ node_csr.csr }}"
+    provider: ownca
+    ownca_path: "{{ vault_ca_dir }}/ca.crt"
+    ownca_privatekey_path: "{{ vault_ca_dir }}/ca.key"
+    ownca_not_after: "+{{ vault_cert_days }}d"
+    owner: root
+    group: root
+    mode: "0600"
+  delegate_to: "{{ vault_leader }}"
+
+- name: Read issued node certificate
+  ansible.builtin.slurp:
+    src: "{{ vault_ca_dir }}/issued/{{ inventory_hostname }}.crt"
+  register: node_crt
+  delegate_to: "{{ vault_leader }}"
+
+- name: Install node certificate
+  ansible.builtin.copy:
+    content: "{{ node_crt.content | b64decode }}"
+    dest: "{{ vault_tls_dir }}/vault.crt"
+    owner: vault
+    group: vault
+    mode: "0644"
+  notify: Restart vault

@@ -1,0 +1,9 @@
+- name: Setup Vault client (Go and vault CLI) for 75-vault-cluster
+  hosts: vault_client
+  become: true
+  gather_facts: true
+
+  roles:
+    - golang
+    - vaultcli
+    - gotest

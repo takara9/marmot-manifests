@@ -1,0 +1,64 @@
+# apt-cacher-ng 経由の通信でパイプライン処理が固まり apt update が無限に止まることがあるため、
+# パイプラインを無効にし、タイムアウトとリトライを設定する
+- name: Harden apt against stalled proxy connections
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/99-vault-cluster-apt
+    content: |
+      Acquire::http::Pipeline-Depth "0";
+      Acquire::http::Timeout "30";
+      Acquire::Retries "3";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install prerequisite packages
+  ansible.builtin.apt:
+    name:
+      - gnupg
+      - software-properties-common
+      - curl
+      - jq
+      - python3-cryptography   # community.crypto が必要とする
+    state: present
+    update_cache: true
+
+- name: Download HashiCorp apt signing key
+  ansible.builtin.get_url:
+    url: https://apt.releases.hashicorp.com/gpg
+    dest: /tmp/hashicorp.gpg
+    mode: "0644"
+
+- name: Dearmor HashiCorp apt signing key
+  ansible.builtin.command:
+    cmd: gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg /tmp/hashicorp.gpg
+    creates: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+- name: Add HashiCorp apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+    filename: hashicorp
+    state: present
+
+- name: Install vault package
+  ansible.builtin.apt:
+    name: vault
+    state: present
+    update_cache: true
+
+- name: Create Vault data directory
+  ansible.builtin.file:
+    path: "{{ vault_data_dir }}"
+    state: directory
+    owner: vault
+    group: vault
+    mode: "0700"
+
+- name: Set Vault CLI environment variables for login users
+  ansible.builtin.copy:
+    dest: /etc/profile.d/vault-env.sh
+    content: |
+      export VAULT_ADDR="{{ vault_env.VAULT_ADDR }}"
+      export VAULT_CACERT="{{ vault_env.VAULT_CACERT }}"
+    owner: root
+    group: root
+    mode: "0644"

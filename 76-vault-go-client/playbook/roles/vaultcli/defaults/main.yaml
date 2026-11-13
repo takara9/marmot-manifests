@@ -1,0 +1,10 @@
+vault_client_dir: /etc/vault-client
+vault_client_user: "{{ ansible_user | default('ubuntu') }}"
+
+# CA 証明書の取得元 (75-vault-cluster の先頭ノード) と、クライアントが接続するノード
+vault_ca_host: vault-cluster-1
+vault_ca_remote_path: /opt/vault/tls/ca.crt
+vault_addrs:
+  - https://192.168.1.194:8200
+  - https://192.168.1.195:8200
+  - https://192.168.1.196:8200

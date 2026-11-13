@@ -1,0 +1,8 @@
+- name: Install 3-node Vault cluster (Raft + TLS + auto-unseal)
+  hosts: vault
+  become: true
+  gather_facts: true
+
+  roles:
+    - linux
+    - vault

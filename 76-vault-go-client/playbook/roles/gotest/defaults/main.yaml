@@ -1,0 +1,4 @@
+gotest_src: "{{ playbook_dir }}/../gotest"
+gotest_user: "{{ ansible_user | default('ubuntu') }}"
+gotest_dir: "/home/{{ gotest_user }}/vault-go-client"
+gotest_go: /usr/local/go/bin/go
