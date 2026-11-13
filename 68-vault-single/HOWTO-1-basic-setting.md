@@ -123,4 +123,3 @@ $ vault operator generate-root -decode=<encoded-token> -otp=<otp>
 - `admin` ポリシーは `*` に `sudo` を許可しており、実質 root 相当です。`takara` のパスワードは強固にし、日常運用は権限を絞ったポリシーに分けることを勧めます。
 - 自動アンシールの仕組みが root トークンに依存していないか、失効前に確認してください。`vault-unseal` はアンシールキーを使うだけなので、通常は影響しません。
 
-HOWTO-1 に追記が必要なら、反映します。
