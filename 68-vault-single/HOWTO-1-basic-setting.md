@@ -64,3 +64,63 @@ $ vault write auth/userpass/users/takara password='******' policies=admin
 $ vault login -method=userpass username=takara
 ```
 
+---
+
+# root トークンの無効化
+
+Vault の root トークンを無効化（失効）する手順です。この HOWTO の流れ（admin ポリシーの `takara` ユーザーを作成済み）を前提にしています。
+
+## 手順
+
+1. 別の管理者でログインできることを先に確認します。root を失効すると、他に管理手段がない場合に締め出されます。
+
+```console
+$ vault login -method=userpass username=takara
+```
+
+2. root トークンを失効させます。
+
+```console
+# root トークンでログインした状態で、自分自身を失効
+$ vault token revoke -self
+
+# 別の管理者でログインしている場合は、root トークンの値を指定
+$ vault token revoke <root-token>
+```
+
+3. 失効したか確認します。`permission denied` や `bad token` になれば失効済みです。
+
+```console
+$ VAULT_TOKEN=<root-token> vault token lookup
+```
+
+4. 履歴や環境変数に root トークンが残っていれば消します。
+
+```console
+$ unset VAULT_TOKEN
+$ rm -f ~/.vault-token
+$ history -c
+```
+
+`vault operator init` の出力ファイルや自動アンシール用の設定に root トークンを保存している場合は、そこからも削除してください。
+
+## 必要になったときに root トークンを再生成する
+
+root を失効しても、アンシールキー（のしきい値分）があれば再発行できます。
+
+```console
+$ vault operator generate-root -init       # OTP と nonce が表示される
+$ vault operator generate-root             # アンシールキーを、しきい値の数だけ入力
+$ vault operator generate-root -decode=<encoded-token> -otp=<otp>
+```
+
+使い終わったら、すぐに `vault token revoke -self` で失効させます。
+
+## 注意点
+
+- 失効は、子トークンも道連れにします。root トークンから作った子トークンは、同時に失効します。
+- 監査ログの有効化（`vault audit enable`）や、`admin` ポリシーの作成を済ませてから失効してください。
+- `admin` ポリシーは `*` に `sudo` を許可しており、実質 root 相当です。`takara` のパスワードは強固にし、日常運用は権限を絞ったポリシーに分けることを勧めます。
+- 自動アンシールの仕組みが root トークンに依存していないか、失効前に確認してください。`vault-unseal` はアンシールキーを使うだけなので、通常は影響しません。
+
+HOWTO-1 に追記が必要なら、反映します。
