@@ -96,6 +96,11 @@ vault login   # 初期化時に表示された Root Token を入力
 | [HOWTO-5-ACME-3.md](HOWTO-5-ACME-3.md) | certbot を使わずに ACME で Nginx の証明書を更新する方法 |
 | [HOWTO-5-ACME-4.md](HOWTO-5-ACME-4.md) | Ansible で ACME 経由の Nginx 証明書を更新する |
 | [HOWTO-6-ACME-5.md](HOWTO-6-ACME-5.md) | dns-01 チャレンジに対応した Playbook |
+| [HOWTO-7-MFA-1.md](HOWTO-7-MFA-1.md) | 多要素認証（MFA）でのログイン（Enterprise の TOTP、Community の OIDC） |
+| [HOWTO-7-MFA-2.md](HOWTO-7-MFA-2.md) | Google の OIDC 認証と 2 段階認証（スマホの認証アプリ）で Vault にログイン |
+| [HOWTO-7-MFA-3.md](HOWTO-7-MFA-3.md) | GitHub を外部 IdP にして 2 段階認証で Vault にログイン（GitHub 認証、Dex 経由の OIDC） |
+| [HOWTO-7-MFA-4.md](HOWTO-7-MFA-4.md) | AWS のサービス（Cognito の OIDC、IAM ロールの MFA 条件）で Vault にログイン |
+| [HOWTO-7-MFA-5.md](HOWTO-7-MFA-5.md) | TLS 証明書認証で Vault にログインする方法と、クライアント証明書の発行 |
 
 ## 注意事項
 
