@@ -77,6 +77,26 @@ vault status
 vault login   # 初期化時に表示された Root Token を入力
 ```
 
+## HOWTO 目次
+
+| ファイル | 内容 |
+|---|---|
+| [HOWTO-1-basic-setting.md](HOWTO-1-basic-setting.md) | Vault のセットアップ、自動アンシール、ログイン |
+| [HOWTO-2-kv-store.md](HOWTO-2-kv-store.md) | KV ストアの使い方 |
+| [HOWTO-3-ssh.md](HOWTO-3-ssh.md) | SSH キーの保管、SSH エンジン（CA 署名方式）による接続 |
+| [HOWTO-4-CA-1.md](HOWTO-4-CA-1.md) | Vault を CA として使う方法（PKI シークレットエンジン）の概要 |
+| [HOWTO-4-CA-2.md](HOWTO-4-CA-2.md) | Root CA・中間CAの作成、ロール定義、証明書の発行、Nginx への設定 |
+| [HOWTO-4-CA-3.md](HOWTO-4-CA-3.md) | Root CA を Windows / Linux / macOS にインストールして信頼させる |
+| [HOWTO-4-CA-4.md](HOWTO-4-CA-4.md) | Kubernetes 運用における Root CA 信頼の考慮点 |
+| [HOWTO-4-CA-5.md](HOWTO-4-CA-5.md) | Root CA / 中間CA 証明書のリニューアル |
+| [HOWTO-4-CA-6.md](HOWTO-4-CA-6.md) | インストールした Root CA の削除 |
+| [HOWTO-5-ACME-0-sequence.md](HOWTO-5-ACME-0-sequence.md) | ACME プロトコルのシーケンス図 |
+| [HOWTO-5-ACME-1.md](HOWTO-5-ACME-1.md) | ACME で証明書を再発行する方法（Vault 側の設定） |
+| [HOWTO-5-ACME-2.md](HOWTO-5-ACME-2.md) | `app.labo.local` の証明書を ACME で更新する手順 |
+| [HOWTO-5-ACME-3.md](HOWTO-5-ACME-3.md) | certbot を使わずに ACME で Nginx の証明書を更新する方法 |
+| [HOWTO-5-ACME-4.md](HOWTO-5-ACME-4.md) | Ansible で ACME 経由の Nginx 証明書を更新する |
+| [HOWTO-6-ACME-5.md](HOWTO-6-ACME-5.md) | dns-01 チャレンジに対応した Playbook |
+
 ## 注意事項
 
 - Unsealキー・Root Tokenは初期化時の一度しか表示されません。画面出力された内容は安全な場所に保管してください。
