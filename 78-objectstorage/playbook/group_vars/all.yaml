@@ -1,0 +1,5 @@
+# ラボ用の仮値。実際に使う前に変更すること
+# rpc_secret / admin_token / metrics_token は `openssl rand -hex 32` で生成できる
+garage_rpc_secret: "4d2f0c6a9b1e8f3a7c5d2e1b0a9f8e7d6c5b4a3928170f6e5d4c3b2a19080706"
+garage_admin_token: "b7e3a1c9d5f20486ae1c3b5d7f9021436587a9cbedf01234567890abcdef1357"
+garage_metrics_token: "c1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f708192a3b4c5d6e7f80912"

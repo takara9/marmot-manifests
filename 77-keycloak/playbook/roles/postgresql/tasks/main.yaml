@@ -1,0 +1,32 @@
+- name: Install PostgreSQL packages
+  ansible.builtin.apt:
+    name:
+      - postgresql
+      - postgresql-client
+      - python3-psycopg2
+      - acl
+    state: present
+    update_cache: yes
+
+- name: Enable and start PostgreSQL service
+  ansible.builtin.systemd:
+    name: postgresql
+    enabled: true
+    state: started
+
+- name: Create Keycloak database user
+  community.postgresql.postgresql_user:
+    name: "{{ keycloak_db_user }}"
+    password: "{{ keycloak_db_password }}"
+    state: present
+  become_user: postgres
+  no_log: true
+
+- name: Create Keycloak database
+  community.postgresql.postgresql_db:
+    name: "{{ keycloak_db_name }}"
+    owner: "{{ keycloak_db_user }}"
+    encoding: UTF8
+    template: template0
+    state: present
+  become_user: postgres

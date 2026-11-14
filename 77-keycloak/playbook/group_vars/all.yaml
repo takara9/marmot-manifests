@@ -1,0 +1,7 @@
+# ラボ用の初期値。本番では ansible-vault 等で上書きすること
+keycloak_admin_user: admin
+keycloak_admin_password: admin-change-me
+
+keycloak_db_name: keycloak
+keycloak_db_user: keycloak
+keycloak_db_password: keycloak-change-me

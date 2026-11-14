@@ -1,0 +1,26 @@
+garage_version: "v2.5.0"
+garage_download_url: "https://garagehq.deuxfleurs.fr/_releases/{{ garage_version }}/x86_64-unknown-linux-musl/garage"
+
+garage_meta_dir: /var/lib/garage/meta
+garage_data_dir: /var/lib/garage/data
+
+garage_s3_region: garage
+garage_s3_port: 3900
+garage_rpc_port: 3901
+garage_web_port: 3902
+garage_admin_port: 3903
+garage_root_domain: ".s3.labo.local"
+garage_web_root_domain: ".web.labo.local"
+
+# 単一ノード構成のレイアウト設定
+garage_zone: dc1
+garage_capacity: 10G
+
+# 作成するバケットとアクセスキー。access 内のキーは read / write / owner の組み合わせ
+garage_keys:
+  - name: app-key
+garage_buckets:
+  - name: demo
+    keys:
+      - name: app-key
+        permissions: [read, write, owner]

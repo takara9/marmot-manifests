@@ -1,0 +1,26 @@
+# Garage configuration (managed by Ansible)
+metadata_dir = "{{ garage_meta_dir }}"
+data_dir = "{{ garage_data_dir }}"
+db_engine = "lmdb"
+
+# 単一ノード構成のためレプリカは1
+replication_factor = 1
+
+rpc_bind_addr = "127.0.0.1:{{ garage_rpc_port }}"
+rpc_public_addr = "127.0.0.1:{{ garage_rpc_port }}"
+rpc_secret = "{{ garage_rpc_secret }}"
+
+[s3_api]
+s3_region = "{{ garage_s3_region }}"
+api_bind_addr = "0.0.0.0:{{ garage_s3_port }}"
+root_domain = "{{ garage_root_domain }}"
+
+[s3_web]
+bind_addr = "0.0.0.0:{{ garage_web_port }}"
+root_domain = "{{ garage_web_root_domain }}"
+index = "index.html"
+
+[admin]
+api_bind_addr = "0.0.0.0:{{ garage_admin_port }}"
+admin_token = "{{ garage_admin_token }}"
+metrics_token = "{{ garage_metrics_token }}"

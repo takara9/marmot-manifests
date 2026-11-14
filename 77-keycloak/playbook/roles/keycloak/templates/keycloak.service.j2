@@ -1,0 +1,19 @@
+[Unit]
+Description=Keycloak Server
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=exec
+User=keycloak
+Group=keycloak
+EnvironmentFile=/etc/keycloak/keycloak.env
+ExecStart={{ keycloak_home }}/bin/kc.sh start --optimized
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=300
+LimitNOFILE=102642
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+- name: Install common packages
+  ansible.builtin.apt:
+    name:
+      - curl
+      - jq
+      - unzip
+      - ca-certificates
+    state: present
+    update_cache: yes
+
+- name: Set Keycloak environment variables for login users
+  ansible.builtin.copy:
+    dest: /etc/profile.d/keycloak-env.sh
+    content: |
+      export PATH=$PATH:/opt/keycloak/bin
+      export KC_URL="http://127.0.0.1:8080"
+    owner: root
+    group: root
+    mode: "0644"

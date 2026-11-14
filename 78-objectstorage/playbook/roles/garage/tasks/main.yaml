@@ -1,0 +1,190 @@
+- name: Create garage group
+  ansible.builtin.group:
+    name: garage
+    system: true
+
+- name: Create garage user
+  ansible.builtin.user:
+    name: garage
+    group: garage
+    system: true
+    home: /var/lib/garage
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Create garage directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: garage
+    group: garage
+    mode: "0750"
+  loop:
+    - /var/lib/garage
+    - "{{ garage_meta_dir }}"
+    - "{{ garage_data_dir }}"
+
+- name: Create garage binary directory
+  ansible.builtin.file:
+    path: /opt/garage
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download garage binary
+  ansible.builtin.get_url:
+    url: "{{ garage_download_url }}"
+    dest: "/opt/garage/garage-{{ garage_version }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Link garage binary into /usr/local/bin
+  ansible.builtin.file:
+    src: "/opt/garage/garage-{{ garage_version }}"
+    dest: /usr/local/bin/garage
+    state: link
+  notify: Restart garage
+
+- name: Deploy garage.toml
+  ansible.builtin.template:
+    src: garage.toml.j2
+    dest: /etc/garage.toml
+    owner: root
+    group: garage
+    mode: "0640"
+  no_log: true
+  notify: Restart garage
+
+- name: Deploy garage systemd unit
+  ansible.builtin.template:
+    src: garage.service.j2
+    dest: /etc/systemd/system/garage.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart garage
+
+- name: Apply pending handlers before starting service
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start garage service
+  ansible.builtin.systemd:
+    name: garage
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for garage RPC port
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ garage_rpc_port }}"
+    delay: 2
+    timeout: 60
+
+- name: Wait for garage admin API health
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ garage_admin_port }}/health"
+    status_code: [200, 503]
+  register: garage_health
+  retries: 15
+  delay: 2
+  until: garage_health.status is defined and garage_health.status in [200, 503]
+  changed_when: false
+
+# 単一ノードのクラスタレイアウト。ロール未割当のときだけ設定する (これが無いとバケット操作ができない)
+- name: Check cluster status
+  ansible.builtin.command:
+    cmd: garage status
+  register: garage_status
+  changed_when: false
+
+- name: Get node ID
+  ansible.builtin.command:
+    cmd: garage node id -q
+  register: garage_node_id
+  changed_when: false
+  when: "'NO ROLE ASSIGNED' in garage_status.stdout"
+
+- name: Assign role to the node
+  ansible.builtin.command:
+    cmd: "garage layout assign -z {{ garage_zone }} -c {{ garage_capacity }} {{ garage_node_id.stdout.split('@')[0] }}"
+  when: "'NO ROLE ASSIGNED' in garage_status.stdout"
+
+- name: Apply cluster layout
+  ansible.builtin.command:
+    cmd: garage layout apply --version 1
+  when: "'NO ROLE ASSIGNED' in garage_status.stdout"
+
+- name: Wait for the cluster to become healthy
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ garage_admin_port }}/health"
+    status_code: 200
+  register: garage_health_ok
+  retries: 15
+  delay: 2
+  until: garage_health_ok.status == 200
+  changed_when: false
+
+- name: Check existing access keys
+  ansible.builtin.command:
+    cmd: "garage key info {{ item.name }}"
+  loop: "{{ garage_keys }}"
+  register: garage_key_exists
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: Create access keys
+  ansible.builtin.command:
+    cmd: "garage key create {{ item.item.name }}"
+  loop: "{{ garage_key_exists.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: item.rc != 0
+
+- name: Check existing buckets
+  ansible.builtin.command:
+    cmd: "garage bucket info {{ item.name }}"
+  loop: "{{ garage_buckets }}"
+  register: garage_bucket_exists
+  changed_when: false
+  failed_when: false
+
+- name: Create buckets
+  ansible.builtin.command:
+    cmd: "garage bucket create {{ item.item.name }}"
+  loop: "{{ garage_bucket_exists.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: item.rc != 0
+
+# allow は何度実行しても同じ結果になる
+- name: Grant bucket permissions to keys
+  ansible.builtin.command:
+    cmd: >-
+      garage bucket allow {{ item.1.permissions | map('regex_replace', '^', '--') | join(' ') }}
+      {{ item.0.name }} --key {{ item.1.name }}
+  loop: "{{ garage_buckets | subelements('keys', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item.0.name }}/{{ item.1.name }}"
+  changed_when: false
+
+- name: Get access key details
+  ansible.builtin.command:
+    cmd: "garage key info {{ item.name }} --show-secret"
+  loop: "{{ garage_keys }}"
+  register: garage_key_info
+  changed_when: false
+  no_log: true
+
+# Secret key は後からも `garage key info --show-secret` で確認できるが、利便性のため表示する
+- name: Display access keys
+  ansible.builtin.debug:
+    msg: "{{ item.stdout_lines | select('match', '^(Key ID|Key name|Secret key)') | list }}"
+  loop: "{{ garage_key_info.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"

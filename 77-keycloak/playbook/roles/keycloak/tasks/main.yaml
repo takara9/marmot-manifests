@@ -1,0 +1,112 @@
+- name: Install Java runtime
+  ansible.builtin.apt:
+    name: openjdk-21-jre-headless
+    state: present
+    update_cache: yes
+
+- name: Create keycloak group
+  ansible.builtin.group:
+    name: keycloak
+    system: true
+
+- name: Create keycloak user
+  ansible.builtin.user:
+    name: keycloak
+    group: keycloak
+    system: true
+    home: "{{ keycloak_home }}"
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Create keycloak install directory
+  ansible.builtin.file:
+    path: "{{ keycloak_home }}"
+    state: directory
+    owner: keycloak
+    group: keycloak
+    mode: "0755"
+
+- name: Download and extract Keycloak
+  ansible.builtin.unarchive:
+    src: "https://github.com/keycloak/keycloak/releases/download/{{ keycloak_version }}/keycloak-{{ keycloak_version }}.tar.gz"
+    dest: "{{ keycloak_home }}"
+    remote_src: true
+    extra_opts:
+      - --strip-components=1
+    owner: keycloak
+    group: keycloak
+    creates: "{{ keycloak_home }}/bin/kc.sh"
+
+- name: Create keycloak config directory
+  ansible.builtin.file:
+    path: /etc/keycloak
+    state: directory
+    owner: root
+    group: keycloak
+    mode: "0750"
+
+- name: Deploy keycloak.conf
+  ansible.builtin.template:
+    src: keycloak.conf.j2
+    dest: "{{ keycloak_home }}/conf/keycloak.conf"
+    owner: keycloak
+    group: keycloak
+    mode: "0640"
+  register: keycloak_conf
+  no_log: true
+  notify: Restart keycloak
+
+- name: Deploy keycloak environment file
+  ansible.builtin.template:
+    src: keycloak.env.j2
+    dest: /etc/keycloak/keycloak.env
+    owner: root
+    group: keycloak
+    mode: "0640"
+  no_log: true
+  notify: Restart keycloak
+
+# db=postgres はビルド時オプションのため、設定変更時に再ビルドして --optimized で起動する
+- name: Build Keycloak (apply build-time options)
+  ansible.builtin.command:
+    cmd: "{{ keycloak_home }}/bin/kc.sh build"
+  become_user: keycloak
+  when: keycloak_conf is changed
+
+- name: Deploy keycloak systemd unit
+  ansible.builtin.template:
+    src: keycloak.service.j2
+    dest: /etc/systemd/system/keycloak.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart keycloak
+
+- name: Apply pending handlers before starting service
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start keycloak service
+  ansible.builtin.systemd:
+    name: keycloak
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for Keycloak HTTP port
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ keycloak_http_port }}"
+    delay: 5
+    timeout: 300
+
+- name: Check Keycloak OpenID configuration of master realm
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ keycloak_http_port }}/realms/master/.well-known/openid-configuration"
+    status_code: 200
+  register: keycloak_probe
+  retries: 12
+  delay: 5
+  until: keycloak_probe.status == 200
+  changed_when: false

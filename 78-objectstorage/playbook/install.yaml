@@ -1,0 +1,12 @@
+- name: setup servers
+  hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+  tasks:
+    - name: print host
+      ansible.builtin.debug:
+        msg: "Host: {{ inventory_hostname }}"
+  roles:
+    - linux
+    - garage

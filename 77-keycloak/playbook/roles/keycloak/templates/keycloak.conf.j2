@@ -1,0 +1,19 @@
+# Keycloak configuration (managed by Ansible)
+
+# Database
+db=postgres
+db-url=jdbc:postgresql://127.0.0.1:5432/{{ keycloak_db_name }}
+db-username={{ keycloak_db_user }}
+db-password={{ keycloak_db_password }}
+
+# HTTP (TLSは前段のリバースプロキシ等で終端する想定のラボ構成)
+http-enabled=true
+http-port={{ keycloak_http_port }}
+http-host=0.0.0.0
+hostname={{ keycloak_hostname }}
+hostname-strict=false
+proxy-headers=xforwarded
+
+# Health / Metrics
+health-enabled=true
+metrics-enabled=true

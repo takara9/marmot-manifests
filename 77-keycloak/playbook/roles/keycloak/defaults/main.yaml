@@ -1,0 +1,4 @@
+keycloak_version: "26.8.2"
+keycloak_home: /opt/keycloak
+keycloak_hostname: keycloak.labo.local
+keycloak_http_port: 8080

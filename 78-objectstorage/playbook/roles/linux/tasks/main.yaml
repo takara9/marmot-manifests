@@ -1,0 +1,8 @@
+- name: Install common packages
+  ansible.builtin.apt:
+    name:
+      - curl
+      - jq
+      - ca-certificates
+    state: present
+    update_cache: yes
