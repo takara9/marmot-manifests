@@ -104,6 +104,38 @@ openssl s_client -connect app.labo.local:443 -servername app.labo.local </dev/nu
 | Node.js | `export NODE_EXTRA_CA_CERTS=/path/to/root_ca.crt` |
 | Docker | `/etc/docker/certs.d/<registry>/ca.crt` に配置 |
 
+#### Chrome / Chromium（Linux）に Root CA を登録する
+
+Linux 版の Chrome / Chromium は OS の信頼ストアを使わず、ユーザーごとの NSS DB（`~/.pki/nssdb`）を参照します。`update-ca-certificates` を実行しても警告が消えない場合は、次の手順で登録します。**ブラウザを動かしているユーザーで実行してください**（`sudo` は使いません）。
+
+```bash
+sudo apt install libnss3-tools          # RHEL 系: sudo dnf install nss-tools
+
+# NSS DB がない場合のみ作成
+mkdir -p $HOME/.pki/nssdb
+certutil -d sql:$HOME/.pki/nssdb -N --empty-password
+
+# 登録（trust フラグ C,, = ウェブサイト（TLS サーバー）の識別に使う CA として信頼）
+certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "labo.local Root CA" -i root_ca.crt
+
+# 確認
+certutil -d sql:$HOME/.pki/nssdb -L
+```
+
+登録後は、**Chrome を完全に終了して**（バックグラウンドのプロセスも含む）起動し直します。`pkill` を使わず、Chrome のメニューから終了するか `chrome://restart` を開いてください。
+
+GUI で登録する場合は、`chrome://settings/certificates`（「証明書を管理」）の「認証局」タブで `root_ca.crt` をインポートし、「ウェブサイトの識別でこの認証局を信頼する」にチェックを付けます。
+
+| ブラウザの種類 | NSS DB の場所 |
+|---|---|
+| deb / rpm 版の Chrome・Chromium | `$HOME/.pki/nssdb` |
+| Snap 版の Chromium | `$HOME/snap/chromium/current/.pki/nssdb` |
+| Flatpak 版の Chromium | `$HOME/.var/app/org.chromium.Chromium/.pki/nssdb` |
+
+Snap 版や Flatpak 版では、上の `certutil` の `-d` に該当する場所を指定します。
+
+Windows と macOS の Chrome は OS の信頼ストアを使うため、「3. macOS」「4. Windows」の手順だけで足ります。Chrome で警告が出る端末は、**ブラウザを動かしている端末**に登録されているか確認してください。リモート接続先（ws1 など）に登録しても、手元の端末のブラウザには反映されません。
+
 ### 2.7 削除する場合
 
 ```bash
@@ -245,6 +277,10 @@ certutil -delstore "Root" "labo.local Root CA"
 |---|---|
 | `unable to get local issuer certificate` | Root CA が未登録、またはサーバーが中間CAを提示していない。サーバー証明書には `certificate` と `ca_chain` を連結して設定する（HOWTO-4-CA-2.md 参照） |
 | ブラウザでのみ警告が出る | ブラウザが独自ストアを使用している（Firefox、Linux の Chrome）。2.6 / 3.4 / 4.5 を参照 |
+| Chrome で `NET::ERR_CERT_AUTHORITY_INVALID` | Root CA が、ブラウザを動かしている端末の信頼ストア（Linux の Chrome は NSS DB）に未登録。2.6 の「Chrome / Chromium（Linux）に Root CA を登録する」を参照 |
+| Chrome で `NET::ERR_CERT_COMMON_NAME_INVALID` | サーバー証明書の **SAN** にアクセス先の名前がない（Chrome は CN を見ない）。IP でアクセスしている場合は `ip_sans` も必要。ホスト名でアクセスし、必要なら再発行する |
+| Chrome で `NET::ERR_CERT_DATE_INVALID` | サーバー証明書の期限切れ、または端末の時刻のずれ |
+| Vault のリスナー証明書で検証できない | リスナー証明書が自己署名のまま。[HOWTO-5-ACME-1.md](HOWTO-5-ACME-1.md) の「Vault のリスナー証明書を pki_int で発行して差し替える」を実施する |
 | `certificate has expired` | サーバー証明書の TTL 切れ。`vault write pki_int/issue/labo-local ...` で再発行する |
 | `certificate is not valid for app.labo.local` | アクセスしたホスト名が CN/SAN と不一致。ロール `labo-local` の `allowed_domains` と発行時の `common_name` / `alt_names` を確認する |
 | `update-ca-certificates` で `0 added` | 拡張子が `.crt` ではない、または `/usr/local/share/ca-certificates/` 以外に置いている |

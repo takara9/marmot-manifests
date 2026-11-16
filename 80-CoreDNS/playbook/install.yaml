@@ -1,0 +1,203 @@
+# ns3: ns1 (BIND プライマリ) のレプリカとなる CoreDNS セカンダリDNSサーバー。
+# 事前に 79-bind の playbook を ns1 に適用し、ns3 の IP からの転送を許可しておくこと。
+- name: Setup CoreDNS secondary DNS server (replica of ns1)
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    coredns_version: 1.14.1
+    coredns_sha256: 186ebc9a8025ad6661e566ae7beadba9a81063d5c30c39961d8dee16446417d5
+    coredns_url: "https://github.com/coredns/coredns/releases/download/v{{ coredns_version }}/coredns_{{ coredns_version }}_linux_amd64.tgz"
+    coredns_dir: /opt/coredns
+    coredns_conf_dir: /etc/coredns
+    dns_domain: labo.local
+    dns_primary_ip: 192.168.1.9
+    # ns1 から転送(AXFR)で複製するゾーン
+    dns_secondary_zones:
+      - labo.local
+      - 1.168.192.in-addr.arpa
+      - 0.1.10.in-addr.arpa
+      - 16.172.in-addr.arpa
+    # ns1 に無い RFC1918 の逆引きは外部に出さず NXDOMAIN を返す
+    dns_empty_reverse_zones: >-
+      {{ ['10.in-addr.arpa', '168.192.in-addr.arpa']
+         + (range(17, 32) | map('string') | map('regex_replace', '^(.*)$', '\1.172.in-addr.arpa') | list) }}
+    # ns1 と同じく別DNSへ転送するサブゾーン (79-bind/playbook/vars/zones.yaml の dns_stub_zones と同期させること)
+    dns_forward_zones:
+      - { zone: hv0.labo.local, servers: [192.168.1.8] }
+      - { zone: hv1.labo.local, servers: [10.1.0.11] }
+      - { zone: hv2.labo.local, servers: [10.1.0.12] }
+      - { zone: hv3.labo.local, servers: [10.1.0.13] }
+      - { zone: hv4.labo.local, servers: [10.1.0.14] }
+      - { zone: k8s1.labo.local, servers: [172.16.1.11] }
+      - { zone: k8s2.labo.local, servers: [172.16.2.11] }
+      - { zone: k8s3.labo.local, servers: [172.16.3.11] }
+      - { zone: k8s4.labo.local, servers: [172.16.4.11] }
+    # 問い合わせ・再帰を許可するネットワーク
+    dns_trusted_networks:
+      - 127.0.0.0/8
+      - 192.168.1.0/24
+      - 10.1.0.0/16
+      - 172.16.0.0/12
+      - 10.245.0.0/16
+    dns_forwarders:
+      - 8.8.8.8
+      - 9.9.9.9
+      - 192.168.1.1
+    # systemd-resolved のスタブ(127.0.0.53:53)と衝突しないよう、固定のアドレスで待ち受ける
+    dns_listen_addresses:
+      - 127.0.0.1
+      - "{{ ansible_host }}"
+    dns_metrics_address: ":9153"
+
+  tasks:
+    - name: Create coredns group
+      ansible.builtin.group:
+        name: coredns
+        system: true
+
+    - name: Create coredns user
+      ansible.builtin.user:
+        name: coredns
+        group: coredns
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+
+    - name: Create directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      loop:
+        - "{{ coredns_dir }}"
+        - "{{ coredns_dir }}/{{ coredns_version }}"
+        - "{{ coredns_conf_dir }}"
+
+    - name: Download CoreDNS
+      ansible.builtin.get_url:
+        url: "{{ coredns_url }}"
+        dest: "{{ coredns_dir }}/coredns_{{ coredns_version }}.tgz"
+        checksum: "sha256:{{ coredns_sha256 }}"
+        mode: '0644'
+
+    - name: Extract CoreDNS
+      ansible.builtin.unarchive:
+        src: "{{ coredns_dir }}/coredns_{{ coredns_version }}.tgz"
+        dest: "{{ coredns_dir }}/{{ coredns_version }}"
+        remote_src: true
+        creates: "{{ coredns_dir }}/{{ coredns_version }}/coredns"
+      notify: Restart coredns
+
+    - name: Link CoreDNS binary
+      ansible.builtin.file:
+        src: "{{ coredns_dir }}/{{ coredns_version }}/coredns"
+        dest: /usr/local/bin/coredns
+        state: link
+      notify: Restart coredns
+
+    - name: Deploy Corefile
+      ansible.builtin.template:
+        src: Corefile.j2
+        dest: "{{ coredns_conf_dir }}/Corefile"
+        owner: root
+        group: coredns
+        mode: '0644'
+      notify: Restart coredns
+
+    - name: Deploy systemd unit
+      ansible.builtin.template:
+        src: coredns.service.j2
+        dest: /etc/systemd/system/coredns.service
+        owner: root
+        group: root
+        mode: '0644'
+      register: unit_file
+      notify: Restart coredns
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when: unit_file.changed
+
+    - name: Ensure coredns is enabled and running
+      ansible.builtin.systemd:
+        name: coredns
+        state: started
+        enabled: true
+
+    - name: Flush handlers before verification
+      ansible.builtin.meta: flush_handlers
+
+    - name: Allow DNS through UFW (if ufw is in use)
+      community.general.ufw:
+        rule: allow
+        port: "53"
+        proto: any
+      failed_when: false
+
+    - name: Verify replication from ns1
+      block:
+        - name: Wait until the zone is transferred from ns1
+          ansible.builtin.shell: |
+            set -o pipefail
+            dig +short @{{ ansible_host }} {{ dns_domain }} SOA | awk '{print $3}'
+          args:
+            executable: /bin/bash
+          register: ns3_serial
+          changed_when: false
+          retries: 15
+          delay: 2
+          until: ns3_serial.stdout | length > 0
+
+        - name: Get zone serial from ns1
+          ansible.builtin.shell: |
+            set -o pipefail
+            dig +short @{{ dns_primary_ip }} {{ dns_domain }} SOA | awk '{print $3}'
+          args:
+            executable: /bin/bash
+          register: ns1_serial
+          changed_when: false
+
+        - name: Verify zone serial matches ns1
+          ansible.builtin.assert:
+            that: ns3_serial.stdout == ns1_serial.stdout
+            fail_msg: "ns3 serial {{ ns3_serial.stdout }} differs from ns1 serial {{ ns1_serial.stdout }}"
+
+        - name: Verify forward and reverse lookup
+          ansible.builtin.shell: |
+            set -o pipefail
+            dig +short @{{ ansible_host }} ca.{{ dns_domain }} | grep -q 192.168.1.250
+            dig +short @{{ ansible_host }} -x 192.168.1.250 | grep -q "ca.{{ dns_domain }}."
+          args:
+            executable: /bin/bash
+          changed_when: false
+
+        - name: Verify recursion for external names
+          ansible.builtin.command: dig +short @{{ ansible_host }} example.com
+          register: ext
+          changed_when: false
+          retries: 5
+          delay: 2
+          until: ext.stdout | length > 0
+      rescue:
+        - name: Collect CoreDNS log
+          ansible.builtin.shell: journalctl -u coredns --since "-5min" --no-pager | tail -15
+          register: coredns_log
+          changed_when: false
+          failed_when: false
+
+        - name: Fail with a hint
+          ansible.builtin.fail:
+            msg: |-
+              ns3 could not replicate {{ dns_domain }} from ns1 ({{ dns_primary_ip }}).
+              Check that ns1 allows zone transfer to {{ ansible_host }} (allow-transfer) and was re-applied.
+              {{ coredns_log.stdout }}
+
+  handlers:
+    - name: Restart coredns
+      ansible.builtin.systemd:
+        name: coredns
+        state: restarted

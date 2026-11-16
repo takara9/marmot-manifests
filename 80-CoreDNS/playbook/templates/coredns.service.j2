@@ -1,0 +1,21 @@
+[Unit]
+Description=CoreDNS DNS server
+Documentation=https://coredns.io
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=coredns
+Group=coredns
+ExecStart=/usr/local/bin/coredns -conf {{ coredns_conf_dir }}/Corefile
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

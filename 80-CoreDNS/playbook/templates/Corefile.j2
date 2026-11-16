@@ -1,0 +1,57 @@
+# Managed by Ansible
+# ns1 (BIND プライマリ) から labo.local と逆引きゾーンを転送で複製するセカンダリDNSサーバー
+
+# 全ブロック共通: 待ち受けアドレスと、信頼するネットワーク以外の拒否(オープンリゾルバー対策)
+(common) {
+    bind {% for a in dns_listen_addresses %}{{ a }} {% endfor %}
+
+    acl {
+        allow net {% for n in dns_trusted_networks %}{{ n }} {% endfor %}
+
+        block
+    }
+    errors
+}
+
+# 外部ドメイン
+.:53 {
+    import common
+    loop
+    cache 300
+    forward . {% for f in dns_forwarders %}{{ f }} {% endfor %}
+
+    prometheus {{ dns_metrics_address }}
+    health 127.0.0.1:8080
+    ready 127.0.0.1:8181
+    reload
+}
+
+# ns1 から転送するゾーン
+{% for z in dns_secondary_zones %}
+{{ z }}:53 {
+    import common
+    secondary {
+        transfer from {{ dns_primary_ip }}
+    }
+}
+
+{% endfor %}
+# ns1 に無い RFC1918 の逆引きは外部へ転送せず NXDOMAIN を返す
+{% for z in dns_empty_reverse_zones %}
+{{ z }}:53 {
+    import common
+    template IN ANY {
+        rcode NXDOMAIN
+    }
+}
+
+{% endfor %}
+# 別DNSへ転送するサブゾーン
+{% for s in dns_forward_zones %}
+{{ s.zone }}:53 {
+    import common
+    forward . {% for a in s.servers %}{{ a }} {% endfor %}
+
+}
+
+{% endfor %}

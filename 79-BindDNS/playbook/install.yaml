@@ -1,0 +1,304 @@
+# ns1(プライマリ)と ns2(セカンダリ)を同じ playbook で構築する。役割はインベントリの dns_role で決まる。
+#   ns1: ansible-playbook -i playbook/hosts-primary.yaml playbook/install.yaml   (CoreDNS を停止して BIND に置き換える)
+#   ns2: ansible-playbook -i playbook/hosts.yaml playbook/install.yaml
+# 必ず ns1 を先に実行すること。詳細は README.md を参照。
+
+# ゾーン転送用の TSIG 鍵をコントローラー上に生成する(未作成の場合のみ。Git 管理外)
+- name: Generate TSIG key for zone transfers
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Ensure key directory exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/files"
+        state: directory
+        mode: '0700'
+
+    - name: Generate key (kept if it already exists)
+      ansible.builtin.copy:
+        dest: "{{ playbook_dir }}/files/xfr.key"
+        content: "{{ lookup('pipe', 'openssl rand -base64 32') }}\n"
+        mode: '0600'
+        force: false
+      no_log: true
+
+- name: Setup BIND9 DNS server
+  hosts: all
+  become: true
+  gather_facts: true
+  vars_files:
+    - vars/zones.yaml
+  vars:
+    dns_domain: labo.local
+    dns_primary_ip: 192.168.1.9
+    # NS レコードに載せるネームサーバー(ns1 はプライマリ)
+    dns_ns_servers:
+      - ns1
+      - ns2
+      - ns3
+    # TSIG を使える BIND セカンダリ。NOTIFY の宛先で、ゾーン転送は TSIG 鍵で認証する
+    dns_secondary_ips:
+      - 192.168.1.244
+    # TSIG 非対応の CoreDNS セカンダリ(ns3)。NOTIFY の宛先で、ゾーン転送は IP のみで許可する
+    dns_ip_secondary_ips:
+      - 192.168.1.245
+    # レコードを変更したらシリアルを増やす（YYYYMMDDNN）。ns2/ns3 への反映に必要。
+    dns_zone_serial: 2026111701
+    dns_reverse_zones:
+      - { zone: 1.168.192.in-addr.arpa, prefix: 192.168.1 }
+      - { zone: 0.1.10.in-addr.arpa, prefix: 10.1.0 }
+      - { zone: 16.172.in-addr.arpa, prefix: "172.16" }
+    # 問い合わせ・再帰を許可するネットワーク(オープンリゾルバー対策)
+    dns_trusted_networks:
+      - 192.168.1.0/24
+      - 10.1.0.0/16
+      - 172.16.0.0/12
+      - 10.245.0.0/16
+    dns_forwarders:
+      - 8.8.8.8
+      - 9.9.9.9
+      - 192.168.1.1
+    # ns1 は 172.16.0.9 や Docker ブリッジにも応答していたため全インターフェースで待ち受ける(アクセスは ACL で制限)
+    dns_listen_addresses:
+      - any
+    dns_max_cache_size: 256m
+    dns_enable_exporter: true
+    dns_is_primary: "{{ (dns_role | default('secondary')) == 'primary' }}"
+    dns_tsig_key_name: xfr-key
+    dns_tsig_secret: "{{ lookup('file', playbook_dir ~ '/files/xfr.key') | trim }}"
+    bind_conf_dir: /etc/bind
+    bind_zone_dir: /var/lib/bind
+    bind_cache_dir: /var/cache/bind
+
+  tasks:
+    - name: Check dns_role
+      ansible.builtin.assert:
+        that: (dns_role | default('secondary')) in ['primary', 'secondary']
+        fail_msg: "dns_role must be primary or secondary"
+
+    # CoreDNS が 53 番を使用中の場合は、パッケージのインストール時に named を起動させない
+    - name: Check whether CoreDNS is running
+      ansible.builtin.command: systemctl is-active coredns
+      register: coredns_state
+      changed_when: false
+      failed_when: false
+      when: dns_is_primary | bool
+
+    - name: Block service start during package install
+      ansible.builtin.copy:
+        dest: /usr/sbin/policy-rc.d
+        content: "#!/bin/sh\nexit 101\n"
+        mode: '0755'
+      when: coredns_state.rc | default(1) == 0
+
+    - name: Install bind9 packages
+      ansible.builtin.apt:
+        name:
+          - bind9
+          - bind9utils
+          - dnsutils
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Allow service start again
+      ansible.builtin.file:
+        path: /usr/sbin/policy-rc.d
+        state: absent
+
+    - name: Deploy TSIG key
+      ansible.builtin.template:
+        src: xfr.key.j2
+        dest: "{{ bind_conf_dir }}/xfr.key"
+        owner: root
+        group: bind
+        mode: '0640'
+      no_log: true
+      register: cfg_key
+
+    - name: Deploy named.conf.options
+      ansible.builtin.template:
+        src: named.conf.options.j2
+        dest: "{{ bind_conf_dir }}/named.conf.options"
+        owner: root
+        group: bind
+        mode: '0644'
+      register: cfg_options
+
+    - name: Deploy named.conf.local
+      ansible.builtin.template:
+        src: named.conf.local.j2
+        dest: "{{ bind_conf_dir }}/named.conf.local"
+        owner: root
+        group: bind
+        mode: '0644'
+      register: cfg_local
+
+    - name: Deploy forward zone file (primary only)
+      ansible.builtin.template:
+        src: db.forward.j2
+        dest: "{{ bind_zone_dir }}/db.{{ dns_domain }}"
+        owner: bind
+        group: bind
+        mode: '0644'
+        validate: "/usr/bin/named-checkzone {{ dns_domain }} %s"
+      when: dns_is_primary | bool
+      register: cfg_forward
+
+    - name: Deploy reverse zone files (primary only)
+      ansible.builtin.template:
+        src: db.reverse.j2
+        dest: "{{ bind_zone_dir }}/db.{{ item.zone }}"
+        owner: bind
+        group: bind
+        mode: '0644'
+        validate: "/usr/bin/named-checkzone {{ item.zone }} %s"
+      loop: "{{ dns_reverse_zones }}"
+      when: dns_is_primary | bool
+      register: cfg_reverse
+
+    - name: Check named configuration (including zone data)
+      ansible.builtin.command: /usr/bin/named-checkconf -z
+      changed_when: false
+
+    # ns1: CoreDNS から BIND へ切り替える。BIND の起動に失敗したら CoreDNS に戻す。
+    - name: Replace CoreDNS with BIND
+      when: coredns_state.rc | default(1) == 0
+      block:
+        - name: Stop and disable CoreDNS
+          ansible.builtin.systemd:
+            name: coredns
+            state: stopped
+            enabled: false
+
+        - name: Start BIND
+          ansible.builtin.systemd:
+            name: named
+            state: restarted
+            enabled: true
+
+        - name: Wait for BIND to answer
+          ansible.builtin.command: dig +short @127.0.0.1 {{ dns_domain }} SOA
+          register: cutover_check
+          changed_when: false
+          retries: 10
+          delay: 1
+          until: cutover_check.stdout | length > 0
+
+        - name: Remember the cutover
+          ansible.builtin.set_fact:
+            cutover_done: true
+      rescue:
+        - name: Roll back to CoreDNS
+          ansible.builtin.systemd:
+            name: "{{ item.name }}"
+            state: "{{ item.state }}"
+            enabled: "{{ item.enabled }}"
+          loop:
+            - { name: named, state: stopped, enabled: false }
+            - { name: coredns, state: started, enabled: true }
+
+        - name: Abort after rollback
+          ansible.builtin.fail:
+            msg: "BIND did not start. CoreDNS has been restored. Check: journalctl -u named"
+
+    - name: Ensure named is enabled and running
+      ansible.builtin.systemd:
+        name: named
+        state: started
+        enabled: true
+      when: not (cutover_done | default(false))
+
+    - name: Restart named when the configuration changed
+      ansible.builtin.systemd:
+        name: named
+        state: restarted
+      when:
+        - not (cutover_done | default(false))
+        - cfg_key.changed or cfg_options.changed or cfg_local.changed or (cfg_forward.changed | default(false)) or (cfg_reverse.changed | default(false))
+
+    - name: Allow DNS through UFW (if ufw is in use)
+      community.general.ufw:
+        rule: allow
+        port: "53"
+        proto: any
+      failed_when: false
+
+    # 監視 (statistics-channels -> prometheus-bind-exporter :9119)
+    - name: Install BIND exporter
+      ansible.builtin.apt:
+        name: prometheus-bind-exporter
+        state: present
+      when: dns_enable_exporter | bool
+
+    - name: Point BIND exporter at the statistics channel
+      ansible.builtin.lineinfile:
+        path: /etc/default/prometheus-bind-exporter
+        regexp: '^ARGS='
+        line: "ARGS='--bind.stats-url=http://127.0.0.1:8053/ --web.listen-address=:9119'"
+      when: dns_enable_exporter | bool
+      register: cfg_exporter
+
+    - name: Ensure BIND exporter is running
+      ansible.builtin.systemd:
+        name: prometheus-bind-exporter
+        state: "{{ 'restarted' if cfg_exporter.changed else 'started' }}"
+        enabled: true
+      when: dns_enable_exporter | bool
+
+    # ---- 動作確認 ----
+    - name: Verify primary
+      when: dns_is_primary | bool
+      block:
+        - name: Verify zone serial
+          ansible.builtin.command: dig +short @127.0.0.1 {{ dns_domain }} SOA
+          register: soa
+          changed_when: false
+          retries: 5
+          delay: 2
+          until: (dns_zone_serial | string) in soa.stdout
+
+        - name: Verify reverse lookup
+          ansible.builtin.command: dig +short -x {{ dns_primary_ip }} @127.0.0.1
+          register: ptr
+          changed_when: false
+          failed_when: ('hmc.' ~ dns_domain ~ '.') not in ptr.stdout
+
+        - name: Verify recursion for external names
+          ansible.builtin.command: dig +short @127.0.0.1 example.com
+          register: ext
+          changed_when: false
+          retries: 5
+          delay: 2
+          until: ext.stdout | length > 0
+
+    - name: Verify secondary
+      when: not (dns_is_primary | bool)
+      block:
+        - name: Wait until the zone is transferred from ns1
+          ansible.builtin.command: dig +short @127.0.0.1 {{ dns_domain }} SOA
+          register: soa
+          changed_when: false
+          retries: 15
+          delay: 2
+          until: (dns_zone_serial | string) in soa.stdout
+
+        - name: Verify a record replicated from ns1
+          ansible.builtin.command: dig +short @127.0.0.1 ca.{{ dns_domain }}
+          register: ca
+          changed_when: false
+          failed_when: ca.stdout | length == 0
+      rescue:
+        - name: Collect transfer errors
+          ansible.builtin.shell: journalctl -u named --since "-5min" --no-pager | grep -E "{{ dns_domain }}|xfr|TSIG" | tail -10
+          register: transfer_log
+          changed_when: false
+          failed_when: false
+
+        - name: Fail with a hint
+          ansible.builtin.fail:
+            msg: |-
+              The zone was not transferred from ns1 ({{ dns_primary_ip }}).
+              Make sure ns1 was built first with the same playbook/files/xfr.key.
+              {{ transfer_log.stdout }}

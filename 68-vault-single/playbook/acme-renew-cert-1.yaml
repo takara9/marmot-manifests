@@ -1,0 +1,241 @@
+---
+- name: Renew certificate via Vault ACME (dns-01)
+  hosts: all
+  become: true
+  vars:
+    domains:                          # 複数指定すると SAN になる（先頭が CN）
+      - app.labo.local
+    primary_domain: "{{ domains[0] }}"
+    acme_directory: https://vault.labo.local:8200/v1/pki_int/roles/labo-local/acme/directory
+    acme_dir: /etc/ssl/acme
+    cert_dir: /etc/nginx/ssl
+    renew_before_days: 10
+    https_port: 443                   # 更新後の稼働確認で使うポート
+
+    dns_server: 192.168.1.9          # 動的更新を受け付ける権威 DNS
+    dns_zone: labo.local
+    tsig_key_name: acme-update
+    tsig_key_algorithm: hmac-sha256
+    tsig_key_secret: !vault |
+              $ANSIBLE_VAULT;1.1;AES256
+              39333066616231306563316130376534613265333334393534663630346134623961353535333164
+              3865653731346538646434383632373634373461356537630a336333633866656136616365646661
+              36383831663137643837313937643635306239306237656665633038626335303766343637356566
+              3166656232623264330a336635626535396465363965383837393866366666316230313937613333
+              39393666636138613737353236656139333630316661623661353862643365383731653564333963
+              6137393837313262373464653261663264386132386631623836
+    dns_propagation_wait: 10          # TXT 追加後の待ち秒数
+
+  tasks:
+    # --- 1. 前提（ルートCA、鍵、CSR） ---
+    - name: Set CA trust store settings (Debian/Ubuntu)
+      ansible.builtin.set_fact:
+        ca_trust_dir: /usr/local/share/ca-certificates
+        ca_trust_update_cmd: update-ca-certificates
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Set CA trust store settings (RedHat/Rocky)
+      ansible.builtin.set_fact:
+        ca_trust_dir: /etc/pki/ca-trust/source/anchors
+        ca_trust_update_cmd: update-ca-trust extract
+      when: ansible_facts['os_family'] == 'RedHat'
+
+    - name: Fail on unsupported OS family
+      ansible.builtin.fail:
+        msg: "Unsupported OS family: {{ ansible_facts['os_family'] }}"
+      when: ca_trust_dir is not defined
+
+    - name: Install root CA
+      ansible.builtin.copy:
+        src: root_ca.crt
+        dest: "{{ ca_trust_dir }}/labo-root-ca.crt"
+        mode: "0644"
+      register: root_ca
+
+    - name: Update CA store
+      ansible.builtin.command: "{{ ca_trust_update_cmd }}"
+      when: root_ca is changed
+
+    - name: Create certificate directory for nginx
+      ansible.builtin.file:
+        path: "{{ cert_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Create ACME directory
+      ansible.builtin.file:
+        path: "{{ acme_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: ACME account key
+      community.crypto.openssl_privatekey:
+        path: "{{ acme_dir }}/account.key"
+        type: ECC
+        curve: secp256r1
+
+    - name: Server private key
+      community.crypto.openssl_privatekey:
+        path: "{{ acme_dir }}/{{ primary_domain }}.key"
+        type: ECC
+        curve: secp256r1
+
+    - name: CSR
+      community.crypto.openssl_csr:
+        path: "{{ acme_dir }}/{{ primary_domain }}.csr"
+        privatekey_path: "{{ acme_dir }}/{{ primary_domain }}.key"
+        common_name: "{{ primary_domain }}"
+        subject_alt_name: "{{ domains | map('regex_replace', '^', 'DNS:') | list }}"
+
+    # --- 2. 第1段階: チャレンジ取得 ---
+    - name: Request certificate (step 1)
+      community.crypto.acme_certificate:
+        acme_version: 2
+        acme_directory: "{{ acme_directory }}"
+        validate_certs: true
+        account_key_src: "{{ acme_dir }}/account.key"
+        terms_agreed: true
+        challenge: dns-01
+        csr: "{{ acme_dir }}/{{ primary_domain }}.csr"
+        dest: "{{ acme_dir }}/{{ primary_domain }}.crt"
+        fullchain_dest: "{{ acme_dir }}/{{ primary_domain }}-fullchain.crt"
+        remaining_days: "{{ renew_before_days }}"
+      register: acme_challenge
+
+    # --- 3〜5. TXT 追加 → 検証 → TXT 削除（更新が必要なときだけ） ---
+    - name: Validate with dns-01
+      when: acme_challenge is changed and acme_challenge.challenge_data_dns is defined
+      block:
+        - name: Add _acme-challenge TXT records
+          community.general.nsupdate:
+            server: "{{ dns_server }}"
+            zone: "{{ dns_zone }}"
+            record: "{{ item.key[:-(dns_zone | length + 1)] }}"
+            type: TXT
+            ttl: 60
+            value: "{{ item.value }}"
+            key_name: "{{ tsig_key_name }}"
+            key_secret: "{{ tsig_key_secret }}"
+            key_algorithm: "{{ tsig_key_algorithm }}"
+            state: present
+          loop: "{{ acme_challenge.challenge_data_dns | dict2items }}"
+          delegate_to: localhost
+          become: false
+
+        - name: Wait for DNS propagation
+          ansible.builtin.pause:
+            seconds: "{{ dns_propagation_wait }}"
+
+        - name: Finish validation and fetch certificate (step 2)
+          community.crypto.acme_certificate:
+            acme_version: 2
+            acme_directory: "{{ acme_directory }}"
+            validate_certs: true
+            account_key_src: "{{ acme_dir }}/account.key"
+            terms_agreed: true
+            challenge: dns-01
+            csr: "{{ acme_dir }}/{{ primary_domain }}.csr"
+            dest: "{{ acme_dir }}/{{ primary_domain }}.crt"
+            fullchain_dest: "{{ acme_dir }}/{{ primary_domain }}-fullchain.crt"
+            data: "{{ acme_challenge }}"
+            remaining_days: "{{ renew_before_days }}"
+
+      always:
+        - name: Remove _acme-challenge TXT records
+          community.general.nsupdate:
+            server: "{{ dns_server }}"
+            zone: "{{ dns_zone }}"
+            record: "{{ item.key[:-(dns_zone | length + 1)] }}"
+            type: TXT
+            value: "{{ item.value }}"
+            key_name: "{{ tsig_key_name }}"
+            key_secret: "{{ tsig_key_secret }}"
+            key_algorithm: "{{ tsig_key_algorithm }}"
+            state: absent
+          loop: "{{ acme_challenge.challenge_data_dns | dict2items }}"
+          delegate_to: localhost
+          become: false
+
+    # --- 6. Nginx へ配置 ---
+    - name: Deploy fullchain
+      ansible.builtin.copy:
+        src: "{{ acme_dir }}/{{ primary_domain }}-fullchain.crt"
+        dest: "{{ cert_dir }}/{{ primary_domain }}.crt"
+        remote_src: true
+        mode: "0644"
+      notify: Reload nginx
+
+    - name: Deploy private key
+      ansible.builtin.copy:
+        src: "{{ acme_dir }}/{{ primary_domain }}.key"
+        dest: "{{ cert_dir }}/{{ primary_domain }}.key"
+        remote_src: true
+        owner: root
+        mode: "0600"
+      notify: Reload nginx
+
+    # --- 7. 更新後の Nginx 稼働確認 ---
+    # ハンドラーは play の最後に実行されるため、確認の前に reload を済ませる
+    - name: Run pending handlers (reload nginx) before verification
+      ansible.builtin.meta: flush_handlers
+
+    - name: Check nginx configuration syntax
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert nginx service is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['nginx.service'] is defined
+          - ansible_facts.services['nginx.service'].state == 'running'
+        fail_msg: nginx is not running after certificate renewal
+        quiet: true
+
+    - name: Wait for nginx to listen on HTTPS port
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ https_port }}"
+        timeout: 30
+
+    - name: Check HTTPS response with certificate validation
+      ansible.builtin.uri:
+        url: "https://{{ primary_domain }}:{{ https_port }}/"
+        method: GET
+        validate_certs: true
+        status_code: [200, 301, 302, 401, 403, 404]
+      register: nginx_https_check
+      retries: 3
+      delay: 5
+      until: nginx_https_check is succeeded
+
+    - name: Get certificate served by nginx
+      community.crypto.get_certificate:
+        host: 127.0.0.1
+        port: "{{ https_port }}"
+        server_name: "{{ primary_domain }}"
+      register: served_cert
+
+    - name: Get deployed certificate info
+      community.crypto.x509_certificate_info:
+        path: "{{ cert_dir }}/{{ primary_domain }}.crt"
+      register: deployed_cert
+
+    - name: Assert nginx serves the deployed, unexpired certificate
+      ansible.builtin.assert:
+        that:
+          - served_cert.serial_number == deployed_cert.serial_number
+          - not deployed_cert.expired
+        fail_msg: >-
+          nginx is serving a different certificate than {{ cert_dir }}/{{ primary_domain }}.crt,
+          or the certificate has expired
+        success_msg: >-
+          nginx serves the deployed certificate (valid until {{ served_cert.not_after }})
+
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded

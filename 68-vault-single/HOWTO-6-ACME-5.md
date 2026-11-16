@@ -33,11 +33,89 @@ zone "labo.local" {
 };
 ```
 
+**CoreDNS 側（例）: etcd プラグインで TXT を更新できるようにする**
+
+CoreDNS は RFC 2136（動的更新）にも TSIG 鍵による更新にも対応していません（`tsig` プラグインはクエリや転送の認証用です）。そのため、BIND 用の `nsupdate` は使えません。代わりに、レコードを **etcd に保存して CoreDNS が参照する構成（`etcd` プラグイン）** にし、`etcdctl` で `_acme-challenge` の TXT を追加・削除します。
+
+```
+labo.local:53 {
+    etcd {
+        path /skydns
+        endpoint https://192.168.1.10:2379
+        tls /etc/coredns/etcd-client.crt /etc/coredns/etcd-client.key /etc/coredns/etcd-ca.crt
+    }
+    log
+    errors
+}
+```
+
+`_acme-challenge.app.labo.local` の TXT は、ドメイン名を逆順にしたキーに JSON で保存します。同じ名前に複数の値を置く場合（SAN やワイルドカード）は、末尾の識別子（`x1` など）を変えて別キーにします。
+
+```bash
+export ETCDCTL_ENDPOINTS=https://192.168.1.10:2379
+
+# 追加
+etcdctl put /skydns/local/labo/app/_acme-challenge/x1 '{"text":"<TXT値>","ttl":60}'
+
+# 確認
+dig +short TXT _acme-challenge.app.labo.local @192.168.1.1
+
+# 削除
+etcdctl del --prefix /skydns/local/labo/app/_acme-challenge/
+```
+
+etcd の権限は、このキー配下だけに限定したロールを作って、コントロールノード用のユーザーに付与してください（BIND の `update-policy` に相当します）。
+
+```bash
+etcdctl role add acme-update
+etcdctl role grant-permission acme-update --prefix=true readwrite /skydns/local/labo/
+etcdctl user add acme-update
+etcdctl user grant-role acme-update acme-update
+etcdctl auth enable    # 事前に root ユーザーを作成しておくこと
+```
+
+Playbook では、3. の TXT 追加と 5. の TXT 削除の `community.general.nsupdate` を、次のタスクに置き換えます（`etcdctl` はコントロールノードに必要です）。`nsupdate` 用の `dnspython` や `tsig_*` 変数は不要になります。
+
+```yaml
+- name: Add _acme-challenge TXT records (CoreDNS + etcd)
+  ansible.builtin.command:
+    argv:
+      - etcdctl
+      - put
+      - "/skydns/{{ item.0.key.split('.') | reverse | join('/') }}/{{ (item.1 | hash('sha1'))[:12] }}"
+      - "{{ {'text': item.1, 'ttl': 60} | to_json }}"
+  environment:
+    ETCDCTL_ENDPOINTS: "{{ etcd_endpoints }}"
+  loop: "{{ acme_challenge.challenge_data_dns | dict2items | subelements('value') }}"
+  delegate_to: localhost
+  become: false
+  changed_when: true
+
+# always セクション側
+- name: Remove _acme-challenge TXT records (CoreDNS + etcd)
+  ansible.builtin.command:
+    argv:
+      - etcdctl
+      - del
+      - "/skydns/{{ item.0.key.split('.') | reverse | join('/') }}/{{ (item.1 | hash('sha1'))[:12] }}"
+  environment:
+    ETCDCTL_ENDPOINTS: "{{ etcd_endpoints }}"
+  loop: "{{ acme_challenge.challenge_data_dns | dict2items | subelements('value') }}"
+  delegate_to: localhost
+  become: false
+  changed_when: true
+```
+
+`etcd_endpoints` は vars に追加してください（例: `https://192.168.1.10:2379`）。認証を有効にした場合は、`ETCDCTL_USER` などの認証情報も `environment` に加えます。
+
+> `etcdctl put` / `del` と、CoreDNS（v1.12.1）が `dig` の TXT 問い合わせに応答することは動作確認済みです。上記の Ansible タスクそのものは未実行です。
+
 **コントロールノード側**
 
 ```bash
 ansible-galaxy collection install community.crypto community.general
-pip install dnspython                      # nsupdate モジュールに必要
+sudo apt install python3-dnspython          # 基本はこちらを利用
+#pip install dnspython                      # nsupdate モジュールに必要
 ansible-vault encrypt_string '<TSIG secret>' --name tsig_key_secret   # 出力を vars に貼る
 ```
 
@@ -75,16 +153,39 @@ vault write pki_int/config/acme enabled=true dns_resolver=192.168.1.1:53 \
 
   tasks:
     # --- 1. 前提（ルートCA、鍵、CSR） ---
+    - name: Set CA trust store settings (Debian/Ubuntu)
+      ansible.builtin.set_fact:
+        ca_trust_dir: /usr/local/share/ca-certificates
+        ca_trust_update_cmd: update-ca-certificates
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Set CA trust store settings (RedHat/Rocky)
+      ansible.builtin.set_fact:
+        ca_trust_dir: /etc/pki/ca-trust/source/anchors
+        ca_trust_update_cmd: update-ca-trust extract
+      when: ansible_facts['os_family'] == 'RedHat'
+
+    - name: Fail on unsupported OS family
+      ansible.builtin.fail:
+        msg: "Unsupported OS family: {{ ansible_facts['os_family'] }}"
+      when: ca_trust_dir is not defined
+
     - name: Install root CA
       ansible.builtin.copy:
         src: root_ca.crt
-        dest: /usr/local/share/ca-certificates/labo-root-ca.crt
+        dest: "{{ ca_trust_dir }}/labo-root-ca.crt"
         mode: "0644"
       register: root_ca
 
     - name: Update CA store
-      ansible.builtin.command: update-ca-certificates
+      ansible.builtin.command: "{{ ca_trust_update_cmd }}"
       when: root_ca is changed
+
+    - name: Create certificate directory for nginx
+      ansible.builtin.file:
+        path: "{{ cert_dir }}"
+        state: directory
+        mode: "0755"
 
     - name: Create ACME directory
       ansible.builtin.file:
@@ -205,6 +306,24 @@ vault write pki_int/config/acme enabled=true dns_resolver=192.168.1.1:53 \
         state: reloaded
 ```
 
+## root CA の証明書の取得とセット
+playbook ディレクトリの下で、認証不要の公開エンドポイントから取得
+
+```bash
+export VAULT_ADDR=https://vault.labo.local:8200
+curl -sk $VAULT_ADDR/v1/pki/ca/pem -o files/root_ca.crt
+```
+
+または、vault login が出来ていれば、以下のでも取得できる。
+```bash
+vault read -field=certificate pki/cert/ca > files/root_ca.crt
+```
+
+内容を確認するには
+```bash
+openssl x509 -in files/root_ca.crt -noout -subject -dates
+```
+
 ## 実行
 
 ```bash
@@ -230,6 +349,7 @@ ansible-playbook -i inventory renew-cert.yml --ask-vault-pass -e renew_before_da
 | Azure DNS | `azure.azcollection.azure_rm_dnsrecordset` |
 | Cloudflare | `community.general.cloudflare_dns` |
 | PowerDNS | `community.general.pdns_*` 系、または API を `ansible.builtin.uri` で直接呼ぶ |
-| 内部 DNS が dnsmasq / CoreDNS のみ | 動的更新が使えないため、ゾーンファイルを `template` で更新する方式になる |
+| CoreDNS | `etcd` プラグイン構成にして `etcdctl` で更新（「事前準備」の CoreDNS 側を参照） |
+| 内部 DNS が dnsmasq のみ | 動的更新が使えないため、ゾーンファイルを `template` で更新する方式になる |
 
 使っている DNS 製品を教えていただければ、手順3と5をその DNS 用に書き直します。

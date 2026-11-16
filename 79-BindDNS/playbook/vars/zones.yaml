@@ -1,0 +1,82 @@
+# ゾーン labo.local のデータ。ns1 (CoreDNS) の /coredns/labo.db から移行した。
+# レコードを変更したら install.yaml の dns_zone_serial を増やすこと。
+# PTR レコードは dns_reverse_zones に該当する A レコードから自動生成する。
+# 同じ IP に複数の名前がある場合は、PTR を付けない側に ptr: false を指定する。
+dns_a_records:
+  - { name: ns1, ip: 192.168.1.9, ptr: false }
+  - { name: ns2, ip: 192.168.1.244, comment: "BIND secondary name server" }
+  - { name: ns3, ip: 192.168.1.245, comment: "CoreDNS secondary name server" }
+  - { name: ns3, ip: 192.168.1.245, comment: "CoreDNS secondary name server" }
+  #- { name: mail, ip: 192.168.1.220, comment: "Mail server" }
+
+  # Hypervisors
+  - { name: hmc, ip: 192.168.1.9, comment: "Hypervisor management console" }
+  - { name: hmc-nfs, ip: 172.16.0.9, comment: "NFS for setup" }
+  - { name: ws1, ip: 192.168.1.10, comment: "new hmc and dev workstation" }  # 192.168.1.0/24  192.168.1.200 - 250
+  - { name: m0, ip: 192.168.1.8 }  # 192.168.1.0/24  192.168.1.200 - 250
+  - { name: m2, ip: 10.1.0.12 }    # 10.1.0.0/16   10.1.2.10 - 254
+  - { name: m3, ip: 10.1.0.13 }    # 10.1.10.0/16  10.1.10.10 - 250
+  - { name: m4, ip: 10.1.0.14 }    # 同上
+  - { name: m1, ip: 10.1.0.11 }    # 同上
+  #- { name: m5, ip: 172.16.234.5 } # 172.16.0.0/16 
+
+  # Raspberry Pi
+  #- { name: rp1, ip: 10.1.0.31, comment: "Raspberry Pi Model B Plus Rev 1.2" }
+  #- { name: rp2, ip: 10.1.0.32, comment: "Raspberry Pi 2 Model B Rev 1.1" }
+  #- { name: rp3, ip: 10.1.0.40, comment: "Raspberry Pi Zero W Rev 1.1" }
+  #- { name: rp4, ip: 192.168.1.221, comment: "Raspberry Pi 4 Model B Rev 1.2" }
+  #- { name: rp5, ip: 10.1.0.51, comment: "Raspberry Pi 3 Model B Rev 1.2" }
+  #- { name: rp6, ip: 10.1.0.52, comment: "Raspberry Pi 3 Model B Rev 1.2" }
+  #- { name: rp7, ip: 10.1.0.53, comment: "Raspberry Pi 3 Model B Rev 1.2" }
+  #- { name: rp8, ip: 10.1.0.54, comment: "Raspberry Pi 3 Model B Rev 1.2" }
+
+  # Infra servers
+  - { name: gw0, ip: 192.168.1.1, comment: "Internet Router" }
+  - { name: gw1, ip: 192.168.1.2, comment: "Wifi Router" }
+  - { name: gw2, ip: 192.168.1.3, comment: "Internal Router 10.x, 172.16.x" }
+  - { name: sw1, ip: 192.168.1.254, comment: "VLAN/L3 Switch" }
+  #- { name: ext1, ip: 192.168.1.5, comment: "Buffalo WEX-1800XA4EA" }
+  #- { name: nas1, ip: 192.168.1.6, comment: "Buffalo Link Station LS720D" }
+  #- { name: nas2, ip: 192.168.1.7, comment: "Buffalo Link Station LS-WVL" }
+  - { name: keycloak, ip: 192.168.1.197 }
+  - { name: s3, ip: 192.168.1.198 }
+
+  # CICD servers
+  #- { name: runner1, ip: 192.168.1.211, comment: "GitHub Action runner" }
+  #- { name: runner2, ip: 192.168.1.212, comment: "GitHub Action runner" }
+  #- { name: runner3, ip: 192.168.1.213, comment: "GitHub Action runner" }
+  #- { name: runner4, ip: 192.168.1.214, comment: "GitHub Action runner" }
+  #- { name: runner5, ip: 192.168.1.215, comment: "GitHub Action runner" }
+  #- { name: runner6, ip: 192.168.1.216, comment: "GitHub Action runner" }
+  #- { name: runner7, ip: 192.168.1.217, comment: "GitHub Action runner" }
+  #- { name: runner8, ip: 192.168.1.218, comment: "GitHub Action runner" }
+  #- { name: runner9, ip: 192.168.1.219, comment: "GitHub Action runner" }
+  - { name: runner10, ip: 192.168.1.220, comment: "GitHub Action runner" }
+  - { name: runner11, ip: 192.168.1.221, comment: "GitHub Action runner" }
+  - { name: runner12, ip: 192.168.1.222, comment: "GitHub Action runner" }
+  - { name: runner13, ip: 192.168.1.223, comment: "GitHub Action runner" }
+  - { name: runner14, ip: 192.168.1.224, comment: "GitHub Action runner" }
+  - { name: gitlab, ip: 192.168.1.241, comment: "Code Repository" }
+  - { name: w1, ip: 192.168.1.242, comment: "NGINX Web server" }
+  - { name: w2, ip: 192.168.1.243, comment: "Apache Web server" }
+  - { name: ca, ip: 192.168.1.250, comment: "CA" }
+  - { name: vault, ip: 192.168.1.251, comment: "vault Server" }
+  - { name: app, ip: 192.168.1.252, comment: "app Server" }
+
+dns_cname_records:
+  - { name: grafana, target: hmc }
+
+dns_mx_records:
+  - { priority: 10, target: mail }
+
+# ns1 の Corefile で別DNSへ forward していたサブゾーン
+dns_stub_zones:
+  - { zone: hv0.labo.local, servers: [192.168.1.8] }
+  - { zone: hv1.labo.local, servers: [10.1.0.11] }
+  - { zone: hv2.labo.local, servers: [10.1.0.12] }
+  - { zone: hv3.labo.local, servers: [10.1.0.13] }
+  - { zone: hv4.labo.local, servers: [10.1.0.14] }
+  #- { zone: k8s1.labo.local, servers: [172.16.1.11] }
+  #- { zone: k8s2.labo.local, servers: [172.16.2.11] }
+  #- { zone: k8s3.labo.local, servers: [172.16.3.11] }
+  #- { zone: k8s4.labo.local, servers: [172.16.4.11] }

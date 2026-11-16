@@ -1,0 +1,28 @@
+// Managed by Ansible
+{% set zones = [dns_domain] + (dns_reverse_zones | map(attribute='zone') | list) %}
+{% for z in zones %}
+{% if dns_is_primary | bool %}
+zone "{{ z }}" {
+    type primary;
+    file "{{ bind_zone_dir }}/db.{{ z }}";
+};
+
+{% else %}
+zone "{{ z }}" {
+    type secondary;
+    primaries { {{ dns_primary_ip }} key {{ dns_tsig_key_name }}; };
+    file "{{ bind_cache_dir }}/db.{{ z }}";
+};
+
+{% endif %}
+{% endfor %}
+// ns1 の Corefile で別DNSへ forward していたサブゾーン
+{% for s in dns_stub_zones %}
+zone "{{ s.zone }}" {
+    type static-stub;
+    server-addresses { {% for a in s.servers %}{{ a }}; {% endfor %}};
+    forward only;
+    forwarders { {% for a in s.servers %}{{ a }}; {% endfor %}};
+};
+
+{% endfor %}

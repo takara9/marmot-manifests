@@ -1,0 +1,10 @@
+# ns1 (hmc) は CoreDNS から BIND9 プライマリへ置き換える。
+# 実行すると CoreDNS を停止・無効化する (/coredns 配下のファイルは削除しない)。
+all:
+  hosts:
+    ns1:
+      ansible_host: 192.168.1.9
+      ansible_user: ubuntu
+      ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+      ansible_python_interpreter: /usr/bin/python3
+      dns_role: primary
