@@ -26,7 +26,8 @@
       executable: pip3
       extra_args: --break-system-packages
 
+  # root の ~/.ansible ではなく全ユーザーから参照できるパスへ導入する
   - name: Install ansible.eda collection
     ansible.builtin.command:
-      cmd: ansible-galaxy collection install ansible.eda
-    changed_when: true
+      cmd: ansible-galaxy collection install ansible.eda -p /usr/share/ansible/collections
+      creates: /usr/share/ansible/collections/ansible_collections/ansible/eda
