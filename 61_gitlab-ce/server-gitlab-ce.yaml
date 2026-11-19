@@ -9,7 +9,6 @@ spec:
     mmImage: ubuntu24.04 
     bootVolume:
         spec:
-            #size: 100   ## Debugログが出ているため、一時的にサイズを増やしています
             type: qcow2
     auth:
         url: https://github.com/takara9.keys
