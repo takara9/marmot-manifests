@@ -1,6 +1,6 @@
 ; Managed by Ansible
 $TTL 3600
-@   IN  SOA ns1.{{ dns_domain }}. root.{{ dns_domain }}. (
+@   IN  SOA ns1.{{ item }}. root.{{ item }}. (
             {{ dns_zone_serial }} ; serial
             1800       ; refresh
             3600       ; retry
@@ -8,10 +8,10 @@ $TTL 3600
             1800 )     ; negative cache TTL
 
 {% for ns in dns_ns_servers %}
-@   IN  NS  {{ ns }}.{{ dns_domain }}.
+@   IN  NS  {{ ns }}.{{ item }}.
 {% endfor %}
 {% for m in dns_mx_records %}
-@   IN  MX  {{ m.priority }} {{ m.target }}.{{ dns_domain }}.
+@   IN  MX  {{ m.priority }} {{ m.target }}.{{ item }}.
 {% endfor %}
 
 {% for r in dns_a_records %}
@@ -20,5 +20,5 @@ $TTL 3600
 {% endfor %}
 
 {% for r in dns_cname_records %}
-{{ r.name }}    IN  CNAME   {{ r.target }}.{{ dns_domain }}.
+{{ r.name }}    IN  CNAME   {{ r.target }}.{{ item }}.
 {% endfor %}

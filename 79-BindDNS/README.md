@@ -16,7 +16,7 @@ ns1 (hmc) で動いていた CoreDNS の設定を BIND9 に引き継いだ構成
 | [playbook/install.yaml](playbook/install.yaml) | 構築 playbook。インベントリの `dns_role` で役割が決まる |
 | [playbook/hosts.yaml](playbook/hosts.yaml) | ns2 (secondary) |
 | [playbook/hosts-primary.yaml](playbook/hosts-primary.yaml) | ns1 (primary) |
-| [playbook/vars/zones.yaml](playbook/vars/zones.yaml) | `labo.local` のレコード。旧 `/coredns/labo.db` から移行 |
+| [playbook/vars/zones.yaml](playbook/vars/zones.yaml) | `labo.local` と `lab.internal` のレコード。旧 `/coredns/labo.db` から移行 |
 | playbook/files/xfr.key | ゾーン転送用の TSIG 鍵。初回実行時に自動生成する。Git 管理外 |
 
 ## 構築手順
@@ -68,18 +68,23 @@ ns3 を追加・変更した場合は、ns1 の playbook を再実行するこ�
 ## 運用上の注意
 
 - **レコードの変更:** [playbook/vars/zones.yaml](playbook/vars/zones.yaml) を編集し、`dns_zone_serial` を増やして ns1 の playbook を再実行する。ns2 には NOTIFY で自動反映される。
+- **並行運用:** `dns_domains` の全ドメイン (`labo.local` / `lab.internal`) に、同じ A/CNAME/MX レコードを生成する。レコードは1か所の編集で両方に反映される。逆引き (PTR) は `dns_ptr_domain` のドメイン名だけを返す。
+- **lab.internal への移行完了:** クライアントが `lab.internal` に切り替わったら、`dns_ptr_domain` を `lab.internal` に変え、`dns_domains` から `labo.local` を削除し、`dns_stub_zones` を `lab.internal` 側のサブゾーンに置き換えて ns1 の playbook を再実行する。ns2 の `labo.local` は設定から外れる。ns1/ns2 の `db.labo.local` と、ns3 の `dns_secondary_zones` と確認タスク (`dns_domain`) も合わせて更新すること。
+- **サブゾーン (hv0-4):** `dns_stub_zones` は `labo.local` 配下のみ。転送先の DNS が `lab.internal` の名前を持つまで、`lab.internal` 側には追加しない。
 - **同じ IP に複数の名前:** PTR を付けない側に `ptr: false` を指定する (例: `ns1` は `hmc` と同じ IP)。
 - **逆引きゾーンの追加:** `dns_reverse_zones` に `zone` と `prefix` を追加する。
 - **クライアントの設定:** DHCP や cloud-init で DNS を 192.168.1.9 と 192.168.1.244 の 2 つ配ること。
 - **Prometheus:** ns1/ns2 の `:9119` を scrape 対象に追加する。
 - **サブゾーンの転送先:** `hv0-4`、`k8s1-4` は各 1 台のみで冗長化されていない。ns2 から `10.1.0.x` と `172.16.x.x` に届くことを確認すること。
-- **ドメイン名:** `.local` は mDNS (RFC 6762) の予約名で、systemd-resolved や avahi を使うクライアントでは DNS ではなく mDNS で解決されることがある。今回はドメインを変更していない。`home.arpa` などへの移行は別途検討すること。
+- **ドメイン名:** `.local` は mDNS (RFC 6762) の予約名で、systemd-resolved や avahi を使うクライアントでは DNS ではなく mDNS で解決されることがある。これを避けるため `lab.internal` を追加し、最終的に `lab.internal` へ一本化する。
 
 ## 確認
 
 ```
 dig @192.168.1.9   labo.local SOA +short
 dig @192.168.1.244 labo.local SOA +short     # 同じシリアルになる
+dig @192.168.1.9   lab.internal SOA +short   # lab.internal も同じシリアル
+dig @192.168.1.9   ca.lab.internal +short    # 192.168.1.250
 dig @192.168.1.9   -x 192.168.1.250 +short   # ca.labo.local.
 dig @192.168.1.9   labo.local AXFR           # 鍵なしは Transfer failed
 ```

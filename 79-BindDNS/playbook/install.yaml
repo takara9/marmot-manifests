@@ -30,7 +30,6 @@
   vars_files:
     - vars/zones.yaml
   vars:
-    dns_domain: labo.local
     dns_primary_ip: 192.168.1.9
     # NS レコードに載せるネームサーバー(ns1 はプライマリ)
     dns_ns_servers:
@@ -44,7 +43,7 @@
     dns_ip_secondary_ips:
       - 192.168.1.245
     # レコードを変更したらシリアルを増やす（YYYYMMDDNN）。ns2/ns3 への反映に必要。
-    dns_zone_serial: 2026111701
+    dns_zone_serial: 2026111901
     dns_reverse_zones:
       - { zone: 1.168.192.in-addr.arpa, prefix: 192.168.1 }
       - { zone: 0.1.10.in-addr.arpa, prefix: 10.1.0 }
@@ -92,6 +91,11 @@
         mode: '0755'
       when: coredns_state.rc | default(1) == 0
 
+    # 導入済みなら apt を実行しない(パッケージミラーの障害で設定変更が止まらないようにする)
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: apt
+
     - name: Install bind9 packages
       ansible.builtin.apt:
         name:
@@ -101,6 +105,8 @@
         state: present
         update_cache: true
         cache_valid_time: 3600
+      when: >-
+        ['bind9', 'bind9utils', 'dnsutils'] | difference(ansible_facts.packages.keys() | list) | length > 0
 
     - name: Allow service start again
       ansible.builtin.file:
@@ -135,14 +141,15 @@
         mode: '0644'
       register: cfg_local
 
-    - name: Deploy forward zone file (primary only)
+    - name: Deploy forward zone files (primary only)
       ansible.builtin.template:
         src: db.forward.j2
-        dest: "{{ bind_zone_dir }}/db.{{ dns_domain }}"
+        dest: "{{ bind_zone_dir }}/db.{{ item }}"
         owner: bind
         group: bind
         mode: '0644'
-        validate: "/usr/bin/named-checkzone {{ dns_domain }} %s"
+        validate: "/usr/bin/named-checkzone {{ item }} %s"
+      loop: "{{ dns_domains }}"
       when: dns_is_primary | bool
       register: cfg_forward
 
@@ -157,6 +164,15 @@
       loop: "{{ dns_reverse_zones }}"
       when: dns_is_primary | bool
       register: cfg_reverse
+
+    # ゾーンは Ansible が全面管理する。古いジャーナルが残るとファイルとの不整合でゾーンが読み込めなくなる
+    - name: Remove stale zone journals (primary only)
+      ansible.builtin.file:
+        path: "{{ bind_zone_dir }}/db.{{ item }}.jnl"
+        state: absent
+      loop: "{{ dns_domains + (dns_reverse_zones | map(attribute='zone') | list) }}"
+      when: dns_is_primary | bool
+      register: cfg_journal
 
     - name: Check named configuration (including zone data)
       ansible.builtin.command: /usr/bin/named-checkconf -z
@@ -179,7 +195,7 @@
             enabled: true
 
         - name: Wait for BIND to answer
-          ansible.builtin.command: dig +short @127.0.0.1 {{ dns_domain }} SOA
+          ansible.builtin.command: dig +short @127.0.0.1 {{ dns_ptr_domain }} SOA
           register: cutover_check
           changed_when: false
           retries: 10
@@ -216,7 +232,7 @@
         state: restarted
       when:
         - not (cutover_done | default(false))
-        - cfg_key.changed or cfg_options.changed or cfg_local.changed or (cfg_forward.changed | default(false)) or (cfg_reverse.changed | default(false))
+        - cfg_key.changed or cfg_options.changed or cfg_local.changed or (cfg_forward.changed | default(false)) or (cfg_reverse.changed | default(false)) or (cfg_journal.changed | default(false))
 
     - name: Allow DNS through UFW (if ufw is in use)
       community.general.ufw:
@@ -230,7 +246,9 @@
       ansible.builtin.apt:
         name: prometheus-bind-exporter
         state: present
-      when: dns_enable_exporter | bool
+      when:
+        - dns_enable_exporter | bool
+        - "'prometheus-bind-exporter' not in ansible_facts.packages"
 
     - name: Point BIND exporter at the statistics channel
       ansible.builtin.lineinfile:
@@ -252,18 +270,19 @@
       when: dns_is_primary | bool
       block:
         - name: Verify zone serial
-          ansible.builtin.command: dig +short @127.0.0.1 {{ dns_domain }} SOA
+          ansible.builtin.command: dig +short @127.0.0.1 {{ item }} SOA
           register: soa
           changed_when: false
           retries: 5
           delay: 2
           until: (dns_zone_serial | string) in soa.stdout
+          loop: "{{ dns_domains }}"
 
         - name: Verify reverse lookup
           ansible.builtin.command: dig +short -x {{ dns_primary_ip }} @127.0.0.1
           register: ptr
           changed_when: false
-          failed_when: ('hmc.' ~ dns_domain ~ '.') not in ptr.stdout
+          failed_when: ('hmc.' ~ dns_ptr_domain ~ '.') not in ptr.stdout
 
         - name: Verify recursion for external names
           ansible.builtin.command: dig +short @127.0.0.1 example.com
@@ -276,22 +295,24 @@
     - name: Verify secondary
       when: not (dns_is_primary | bool)
       block:
-        - name: Wait until the zone is transferred from ns1
-          ansible.builtin.command: dig +short @127.0.0.1 {{ dns_domain }} SOA
+        - name: Wait until the zones are transferred from ns1
+          ansible.builtin.command: dig +short @127.0.0.1 {{ item }} SOA
           register: soa
           changed_when: false
           retries: 15
           delay: 2
           until: (dns_zone_serial | string) in soa.stdout
+          loop: "{{ dns_domains }}"
 
         - name: Verify a record replicated from ns1
-          ansible.builtin.command: dig +short @127.0.0.1 ca.{{ dns_domain }}
+          ansible.builtin.command: dig +short @127.0.0.1 ca.{{ item }}
           register: ca
           changed_when: false
           failed_when: ca.stdout | length == 0
+          loop: "{{ dns_domains }}"
       rescue:
         - name: Collect transfer errors
-          ansible.builtin.shell: journalctl -u named --since "-5min" --no-pager | grep -E "{{ dns_domain }}|xfr|TSIG" | tail -10
+          ansible.builtin.shell: journalctl -u named --since "-5min" --no-pager | grep -E "{{ (dns_domains + ['xfr', 'TSIG']) | join('|') }}" | tail -10
           register: transfer_log
           changed_when: false
           failed_when: false
@@ -299,6 +320,6 @@
         - name: Fail with a hint
           ansible.builtin.fail:
             msg: |-
-              The zone was not transferred from ns1 ({{ dns_primary_ip }}).
+              The zones were not transferred from ns1 ({{ dns_primary_ip }}).
               Make sure ns1 was built first with the same playbook/files/xfr.key.
               {{ transfer_log.stdout }}

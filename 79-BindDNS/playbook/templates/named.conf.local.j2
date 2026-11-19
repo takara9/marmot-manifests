@@ -1,5 +1,5 @@
 // Managed by Ansible
-{% set zones = [dns_domain] + (dns_reverse_zones | map(attribute='zone') | list) %}
+{% set zones = dns_domains + (dns_reverse_zones | map(attribute='zone') | list) %}
 {% for z in zones %}
 {% if dns_is_primary | bool %}
 zone "{{ z }}" {

@@ -2,6 +2,19 @@
 # レコードを変更したら install.yaml の dns_zone_serial を増やすこと。
 # PTR レコードは dns_reverse_zones に該当する A レコードから自動生成する。
 # 同じ IP に複数の名前がある場合は、PTR を付けない側に ptr: false を指定する。
+
+# 並行運用するドメイン。下記のレコード(A/CNAME/MX)は全ドメインに同じ内容で作られる。
+# 最終的に lab.internal を残す。移行完了の手順:
+#   1. dns_ptr_domain を lab.internal に変更する
+#   2. dns_domains から labo.local を削除する(旧ゾーンは named.conf.local から外れる)
+#   3. dns_stub_zones を lab.internal 側のサブゾーンに置き換える
+dns_domains:
+  - labo.local
+  - lab.internal
+
+# 逆引き(PTR)と SOA/NS の逆引きゾーンが指すドメイン。1つだけ指定する
+dns_ptr_domain: labo.local
+
 dns_a_records:
   - { name: ns1, ip: 192.168.1.9, ptr: false }
   - { name: ns2, ip: 192.168.1.244, comment: "BIND secondary name server" }
@@ -70,6 +83,7 @@ dns_mx_records:
   - { priority: 10, target: mail }
 
 # ns1 の Corefile で別DNSへ forward していたサブゾーン
+# 転送先の DNS は labo.local 配下の名前だけを持つため、lab.internal 側のサブゾーンは転送先の移行後に追加する
 dns_stub_zones:
   - { zone: hv0.labo.local, servers: [192.168.1.8] }
   - { zone: hv1.labo.local, servers: [10.1.0.11] }

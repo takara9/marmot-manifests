@@ -38,7 +38,7 @@ options {
 
     dnssec-validation auto;
     // 非公開ドメインは署名されていないため検証から除外する
-    validate-except { "{{ dns_domain }}"; };
+    validate-except { {% for d in dns_domains %}"{{ d }}"; {% endfor %}};
 };
 
 {% if dns_is_primary | bool %}

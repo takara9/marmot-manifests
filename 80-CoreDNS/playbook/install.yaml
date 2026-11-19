@@ -15,6 +15,7 @@
     # ns1 から転送(AXFR)で複製するゾーン
     dns_secondary_zones:
       - labo.local
+      - lab.internal
       - 1.168.192.in-addr.arpa
       - 0.1.10.in-addr.arpa
       - 16.172.in-addr.arpa

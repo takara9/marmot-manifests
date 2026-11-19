@@ -1,6 +1,6 @@
 ; Managed by Ansible
 $TTL 3600
-@   IN  SOA ns1.{{ dns_domain }}. root.{{ dns_domain }}. (
+@   IN  SOA ns1.{{ dns_ptr_domain }}. root.{{ dns_ptr_domain }}. (
             {{ dns_zone_serial }} ; serial
             1800       ; refresh
             3600       ; retry
@@ -8,9 +8,9 @@ $TTL 3600
             1800 )     ; negative cache TTL
 
 {% for ns in dns_ns_servers %}
-@   IN  NS  {{ ns }}.{{ dns_domain }}.
+@   IN  NS  {{ ns }}.{{ dns_ptr_domain }}.
 {% endfor %}
 
 {% for r in dns_a_records if (r.ptr | default(true)) and r.ip.startswith(item.prefix ~ '.') %}
-{{ r.ip[(item.prefix | length + 1):].split('.') | reverse | join('.') }}    IN  PTR {{ r.name }}.{{ dns_domain }}.
+{{ r.ip[(item.prefix | length + 1):].split('.') | reverse | join('.') }}    IN  PTR {{ r.name }}.{{ dns_ptr_domain }}.
 {% endfor %}

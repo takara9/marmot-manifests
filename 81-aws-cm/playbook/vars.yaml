@@ -1,0 +1,20 @@
+# ACM に登録するリージョン。ALB/NLB は同一リージョン、CloudFront は us-east-1 が必要
+acm_region: ap-northeast-1
+
+# 未指定なら環境変数 (AWS_PROFILE, AWS_ACCESS_KEY_ID など) の認証情報を使用
+acm_aws_profile: ""
+
+# ACM上の Name タグ。同名の証明書があれば更新され、ARN は変わらない（更新運用向け）
+acm_cert_name: web.labo.example.com
+
+# 既存証明書を ARN で明示指定する場合のみ設定（通常は空でよい）
+acm_cert_arn: ""
+
+# Ansible実行ホスト上のPEMファイル
+acm_cert_file: "{{ playbook_dir }}/certs/server.crt"     # サーバー証明書のみ（fullchainは不可）
+acm_key_file: "{{ playbook_dir }}/certs/server.key"      # パスフレーズなしの秘密鍵
+acm_chain_file: "{{ playbook_dir }}/certs/chain.crt"     # 中間CA証明書。不要なら空文字
+
+acm_tags:
+  Name: "{{ acm_cert_name }}"
+  ManagedBy: ansible

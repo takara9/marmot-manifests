@@ -1,0 +1,43 @@
+- name: Import TLS certificate into AWS Certificate Manager
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - vars.yaml
+  tasks:
+    - name: Check certificate files exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ [acm_cert_file, acm_key_file] + ([acm_chain_file] if acm_chain_file | length > 0 else []) }}"
+      register: cert_files
+
+    - name: Fail if a certificate file is missing
+      ansible.builtin.assert:
+        that: item.stat.exists
+        fail_msg: "ファイルが見つかりません: {{ item.item }}"
+        quiet: true
+      loop: "{{ cert_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Import certificate (create new, or update in place when content changed)
+      community.aws.acm_certificate:
+        name_tag: "{{ acm_cert_name }}"
+        certificate: "{{ lookup('ansible.builtin.file', acm_cert_file) }}"
+        private_key: "{{ lookup('ansible.builtin.file', acm_key_file) }}"
+        certificate_chain: "{{ lookup('ansible.builtin.file', acm_chain_file) if acm_chain_file | length > 0 else omit }}"
+        certificate_arn: "{{ acm_cert_arn if acm_cert_arn | length > 0 else omit }}"
+        tags: "{{ acm_tags }}"
+        region: "{{ acm_region }}"
+        profile: "{{ acm_aws_profile if acm_aws_profile | length > 0 else omit }}"
+        state: present
+      register: acm_result
+      no_log: true
+
+    - name: Show certificate ARN
+      ansible.builtin.debug:
+        msg:
+          - "ARN: {{ acm_result.certificate.arn }}"
+          - "Domain: {{ acm_result.certificate.domain_name }}"
+          - "Region: {{ acm_region }}"
+          - "Changed: {{ acm_result.changed }}"

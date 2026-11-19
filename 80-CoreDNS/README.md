@@ -29,7 +29,7 @@
 
 - CoreDNS は公式リリースのバイナリをダウンロードして導入する (バージョンと SHA-256 は `install.yaml` で固定)。
 - 専用の `coredns` ユーザーで動作する (`CAP_NET_BIND_SERVICE` のみ付与)。
-- `labo.local` と、逆引きゾーン `1.168.192` / `0.1.10` / `16.172` を ns1 から AXFR で複製する。
+- `labo.local` と `lab.internal`、逆引きゾーン `1.168.192` / `0.1.10` / `16.172` を ns1 から AXFR で複製する。
 - ns1 に無い RFC1918 の逆引きは、外部に転送せず NXDOMAIN を返す。
 - `hv0-4`、`k8s1-4` のサブゾーンは、ns1 と同じ宛先へ転送する。
 - `acl` で `dns_trusted_networks` 以外からの問い合わせを拒否する (オープンリゾルバー対策)。
