@@ -1,4 +1,30 @@
 keycloak_version: "26.8.2"
 keycloak_home: /opt/keycloak
 keycloak_hostname: keycloak.labo.local
-keycloak_http_port: 8080
+keycloak_https_port: 8443
+keycloak_http_enabled: false      # true にすると平文HTTPも待ち受ける
+keycloak_http_port: 8080          # keycloak_http_enabled: true のときのみ使用
+
+# TLS証明書の入手方法
+#   selfsigned: サーバー上にプライベートCAを作成してサーバー証明書を発行する
+#   provided  : 別途用意した証明書と秘密鍵(Ansible実行マシン上のファイル)を配置する
+keycloak_tls_mode: selfsigned
+#keycloak_tls_mode: provided
+keycloak_tls_dir: /etc/keycloak/tls
+
+# selfsigned 用
+keycloak_ca_dir: /etc/keycloak/ca # CA秘密鍵 (root専用 0700)
+keycloak_ca_common_name: Keycloak Labo CA
+keycloak_ca_days: 3650
+keycloak_cert_days: 825
+keycloak_node_ip: "{{ ansible_default_ipv4.address }}"
+keycloak_extra_san: []            # 例: ["DNS:sso.labo.local"]
+keycloak_tls_san: "{{ ['DNS:' ~ keycloak_hostname, 'DNS:localhost', 'IP:127.0.0.1', 'IP:' ~ keycloak_node_ip] + keycloak_extra_san }}"
+
+# provided 用 (Ansible実行マシン上のパス)
+keycloak_tls_cert_src: ""         # サーバー証明書 (PEM、中間CAがあれば連結したフルチェーン)
+keycloak_tls_key_src: ""          # 秘密鍵 (PEM、パスフレーズなし)
+keycloak_tls_ca_src: ""           # 任意: 証明書を発行したCAの証明書。指定時はサーバーの信頼ストアに登録
+
+# 疎通確認時に証明書を検証するか (provided で公的CA以外かつ keycloak_tls_ca_src 未指定なら false)
+keycloak_tls_verify: false

@@ -45,6 +45,29 @@
     group: keycloak
     mode: "0750"
 
+- name: Validate TLS mode
+  ansible.builtin.assert:
+    that:
+      - keycloak_tls_mode in ['selfsigned', 'provided']
+      - keycloak_tls_mode != 'provided' or (keycloak_tls_cert_src | length > 0 and keycloak_tls_key_src | length > 0)
+    fail_msg: "keycloak_tls_mode は selfsigned / provided のいずれか。provided では keycloak_tls_cert_src と keycloak_tls_key_src が必須"
+
+- name: Create TLS directory
+  ansible.builtin.file:
+    path: "{{ keycloak_tls_dir }}"
+    state: directory
+    owner: root
+    group: keycloak
+    mode: "0750"
+
+- name: Create a private CA and issue the server certificate
+  ansible.builtin.import_tasks: tls_selfsigned.yaml
+  when: keycloak_tls_mode == 'selfsigned'
+
+- name: Install the provided server certificate
+  ansible.builtin.import_tasks: tls_provided.yaml
+  when: keycloak_tls_mode == 'provided'
+
 - name: Deploy keycloak.conf
   ansible.builtin.template:
     src: keycloak.conf.j2
@@ -94,16 +117,17 @@
     state: started
     daemon_reload: true
 
-- name: Wait for Keycloak HTTP port
+- name: Wait for Keycloak HTTPS port
   ansible.builtin.wait_for:
     host: 127.0.0.1
-    port: "{{ keycloak_http_port }}"
+    port: "{{ keycloak_https_port }}"
     delay: 5
     timeout: 300
 
 - name: Check Keycloak OpenID configuration of master realm
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ keycloak_http_port }}/realms/master/.well-known/openid-configuration"
+    url: "https://{{ keycloak_hostname }}:{{ keycloak_https_port }}/realms/master/.well-known/openid-configuration"
+    validate_certs: "{{ keycloak_tls_verify }}"
     status_code: 200
   register: keycloak_probe
   retries: 12

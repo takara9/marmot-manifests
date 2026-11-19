@@ -1,0 +1,111 @@
+# 同一ホスト上にプライベートCAを作成し、Keycloak のサーバー証明書を発行する
+- name: Install python3-cryptography for certificate generation
+  ansible.builtin.apt:
+    name: python3-cryptography
+    state: present
+
+- name: Create CA directory
+  ansible.builtin.file:
+    path: "{{ keycloak_ca_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Generate CA private key
+  community.crypto.openssl_privatekey:
+    path: "{{ keycloak_ca_dir }}/ca.key"
+    type: RSA
+    size: 4096
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Generate CA CSR
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ keycloak_ca_dir }}/ca.key"
+    common_name: "{{ keycloak_ca_common_name }}"
+    organization_name: System Labo
+    country_name: JP
+    basic_constraints:
+      - "CA:TRUE"
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+    key_usage_critical: true
+  register: ca_csr
+  changed_when: false
+
+- name: Issue self-signed CA certificate
+  community.crypto.x509_certificate:
+    path: "{{ keycloak_ca_dir }}/ca.crt"
+    csr_content: "{{ ca_csr.csr }}"
+    privatekey_path: "{{ keycloak_ca_dir }}/ca.key"
+    provider: selfsigned
+    selfsigned_not_after: "+{{ keycloak_ca_days }}d"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Publish CA certificate for clients
+  ansible.builtin.copy:
+    src: "{{ keycloak_ca_dir }}/ca.crt"
+    dest: "{{ keycloak_tls_dir }}/ca.crt"
+    remote_src: true
+    owner: root
+    group: keycloak
+    mode: "0644"
+
+# Java(kcadm.sh)や curl がこのサーバー上で検証できるようにシステムの信頼ストアへ登録
+- name: Trust the CA on this host
+  ansible.builtin.copy:
+    src: "{{ keycloak_ca_dir }}/ca.crt"
+    dest: /usr/local/share/ca-certificates/keycloak-labo-ca.crt
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  register: ca_trust
+
+- name: Update system CA store
+  ansible.builtin.command: update-ca-certificates
+  when: ca_trust is changed
+
+- name: Generate server private key
+  community.crypto.openssl_privatekey:
+    path: "{{ keycloak_tls_dir }}/server.key"
+    type: RSA
+    size: 2048
+    owner: keycloak
+    group: keycloak
+    mode: "0600"
+
+- name: Generate server CSR
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ keycloak_tls_dir }}/server.key"
+    common_name: "{{ keycloak_hostname }}"
+    organization_name: System Labo
+    country_name: JP
+    subject_alt_name: "{{ keycloak_tls_san }}"
+    key_usage:
+      - digitalSignature
+      - keyEncipherment
+    key_usage_critical: true
+    extended_key_usage:
+      - serverAuth
+  register: server_csr
+  changed_when: false
+
+- name: Issue server certificate signed by the CA
+  community.crypto.x509_certificate:
+    path: "{{ keycloak_tls_dir }}/server.crt"
+    csr_content: "{{ server_csr.csr }}"
+    provider: ownca
+    ownca_path: "{{ keycloak_ca_dir }}/ca.crt"
+    ownca_privatekey_path: "{{ keycloak_ca_dir }}/ca.key"
+    ownca_not_after: "+{{ keycloak_cert_days }}d"
+    owner: keycloak
+    group: keycloak
+    mode: "0644"
+  notify: Restart keycloak

@@ -1,0 +1,42 @@
+# 別途用意した証明書と秘密鍵 (Ansible実行マシン上のファイル) を配置する
+- name: Install server certificate
+  ansible.builtin.copy:
+    src: "{{ keycloak_tls_cert_src }}"
+    dest: "{{ keycloak_tls_dir }}/server.crt"
+    owner: keycloak
+    group: keycloak
+    mode: "0644"
+  notify: Restart keycloak
+
+- name: Install server private key
+  ansible.builtin.copy:
+    src: "{{ keycloak_tls_key_src }}"
+    dest: "{{ keycloak_tls_dir }}/server.key"
+    owner: keycloak
+    group: keycloak
+    mode: "0600"
+  no_log: true
+  notify: Restart keycloak
+
+- name: Install CA certificate
+  ansible.builtin.copy:
+    src: "{{ keycloak_tls_ca_src }}"
+    dest: "{{ keycloak_tls_dir }}/ca.crt"
+    owner: root
+    group: keycloak
+    mode: "0644"
+  when: keycloak_tls_ca_src | length > 0
+
+- name: Trust the CA on this host
+  ansible.builtin.copy:
+    src: "{{ keycloak_tls_ca_src }}"
+    dest: /usr/local/share/ca-certificates/keycloak-provided-ca.crt
+    owner: root
+    group: root
+    mode: "0644"
+  register: ca_trust
+  when: keycloak_tls_ca_src | length > 0
+
+- name: Update system CA store
+  ansible.builtin.command: update-ca-certificates
+  when: ca_trust is changed

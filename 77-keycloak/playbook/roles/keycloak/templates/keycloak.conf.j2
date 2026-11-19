@@ -6,13 +6,17 @@ db-url=jdbc:postgresql://127.0.0.1:5432/{{ keycloak_db_name }}
 db-username={{ keycloak_db_user }}
 db-password={{ keycloak_db_password }}
 
-# HTTP (TLSは前段のリバースプロキシ等で終端する想定のラボ構成)
-http-enabled=true
+# HTTPS (証明書は keycloak_tls_mode で作成または外部から配置: tasks/tls_*.yaml)
+https-port={{ keycloak_https_port }}
+https-certificate-file={{ keycloak_tls_dir }}/server.crt
+https-certificate-key-file={{ keycloak_tls_dir }}/server.key
+http-enabled={{ keycloak_http_enabled | lower }}
+{% if keycloak_http_enabled %}
 http-port={{ keycloak_http_port }}
+{% endif %}
 http-host=0.0.0.0
-hostname={{ keycloak_hostname }}
-hostname-strict=false
-proxy-headers=xforwarded
+hostname=https://{{ keycloak_hostname }}:{{ keycloak_https_port }}
+hostname-strict=true
 
 # Health / Metrics
 health-enabled=true

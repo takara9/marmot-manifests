@@ -13,7 +13,7 @@
     dest: /etc/profile.d/keycloak-env.sh
     content: |
       export PATH=$PATH:/opt/keycloak/bin
-      export KC_URL="http://127.0.0.1:8080"
+      export KC_URL="https://127.0.0.1:8443"
     owner: root
     group: root
     mode: "0644"
