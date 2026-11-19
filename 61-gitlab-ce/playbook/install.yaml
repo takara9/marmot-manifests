@@ -1,0 +1,66 @@
+- name: Install GitLab CE on Ubuntu 24.04
+  hosts: gitlab
+  become: true
+
+  vars:
+    gitlab_keyring: /etc/apt/keyrings/gitlab_gitlab-ce.asc
+    gitlab_package: "{{ 'gitlab-ce=' ~ gitlab_version if gitlab_version | length > 0 else 'gitlab-ce' }}"
+    gitlab_data_dev: "/dev/vdb"
+    gitlab_data_dir: "/var/opt/gitlab"
+  pre_tasks:
+    - name: Check OS is Ubuntu 24.04
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - ansible_distribution_version == "24.04"
+        fail_msg: "This playbook supports Ubuntu 24.04 only."
+      # /dev/vdb を ext4 でフォーマットし /var/opt/gitlab にマウントする
+      # ※ GitLab CE インストールより前に実行すること
+    - name: ストレージ /var/opt/gitlab 領域を追加ストレージでマウント
+      ansible.builtin.stat:
+        path: "{{ gitlab_data_dev }}"
+      register: data_dev
+
+    - name: Fail if data disk is missing
+      ansible.builtin.assert:
+        that: data_dev.stat.exists and data_dev.stat.isblk
+        fail_msg: "{{ gitlab_data_dev }} is not found or not a block device."
+
+    - name: Create ext4 filesystem (skip if already formatted)
+      community.general.filesystem:
+        fstype: ext4
+        dev: "{{ gitlab_data_dev }}"
+        opts: "-L gitlab-data"
+        force: false          # 既存 FS があれば再フォーマットしない
+
+    - name: Get filesystem UUID
+      ansible.builtin.command: blkid -s UUID -o value {{ gitlab_data_dev }}
+      register: data_uuid
+      changed_when: false
+
+    - name: Create mount point
+      ansible.builtin.file:
+        path: "{{ gitlab_data_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Mount data disk and register in /etc/fstab
+      ansible.posix.mount:
+        path: "{{ gitlab_data_dir }}"
+        src: "UUID={{ data_uuid.stdout }}"
+        fstype: ext4
+        opts: defaults,noatime
+        dump: "0"
+        passno: "2"
+        state: mounted
+
+  roles:
+    - gitlab
+  
+  handlers:
+    - name: Reconfigure GitLab
+      ansible.builtin.command: gitlab-ctl reconfigure
+      changed_when: true
+
