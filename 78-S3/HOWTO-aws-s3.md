@@ -117,7 +117,7 @@ aws s3 rb s3://work --force        # 中のオブジェクトを全削除して�
 > sudo garage key info app-key        # Permissions の確認
 > ```
 >
-> 作成したバケットに、このキーでアクセスできる権限（`--owner` が付与される）は、`mb` を実行したキー自身に自動で付きます。別のキーに許可する場合は `garage bucket allow` を使います。
+> `mb` で作ったバケットには、実行したキーに read / write / owner がすべて自動で付きます。ただし、バケット名は**そのキー専用のローカルエイリアス**として登録されます（[12. トラブルシューティング](#12-トラブルシューティング)参照）。別のキーにも見せたい場合は、グローバルエイリアスを追加して `garage bucket allow` で許可します。
 >
 > 権限を付与せずに、サーバー上でバケットを作る方法もあります。
 >
@@ -347,6 +347,48 @@ sudo garage bucket list
 ```
 
 クライアントから `aws s3 ls` で `work` が見えれば完了です。
+
+### 事例: `aws s3 mb` で作ったバケットが Garage 側の一覧に表示されない
+
+`aws s3 mb s3://work` は成功し、`aws s3 ls` でも `work` が見えるのに、Garage 側（garage-ui や `garage bucket list` の名前欄、別のキーの `aws s3 ls`）で見つからないことがあります。
+
+**原因**: Garage は、S3 API の `CreateBucket` で作ったバケットの名前を、**グローバルエイリアスではなく、作成したキー専用のローカルエイリアス**として登録します。
+
+| 種類 | 名前が見える範囲 | 作成方法 |
+|---|---|---|
+| グローバルエイリアス | 全キー共通（Garage 全体で一意） | `garage bucket create`、Playbook の `garage_buckets` |
+| ローカルエイリアス | 作成したキーだけ（キーごとに名前空間が別） | S3 API の `CreateBucket`（`aws s3 mb`） |
+
+このため、次のような現象になります。
+
+- `mb` を実行したキー（`app-key`）の `aws s3 ls` には表示される。
+- 別のキーの `aws s3 ls` には表示されず、バケット名を指定してもアクセスできない（権限も付いていない）。
+- グローバルエイリアスだけを表示する画面（garage-ui など）には名前が出ない。
+- 仮想ホスト形式（`work.s3.labo.local`）や Web 公開（`s3_web`）は、グローバルエイリアスでないと使えない。
+
+**確認方法**（サーバー上）: ローカルエイリアスは `<キーID>:<バケット名>` の形式で表示されます。
+
+```bash
+sudo garage bucket list                 # Local aliases 欄に GKxxxx:work のように出る
+sudo garage bucket info <バケットID>    # Key permissions や Aliases の確認
+```
+
+**対処1: グローバルエイリアスを追加する**（全キー共通の名前にしたい場合）
+
+```bash
+sudo garage bucket list                       # バケットID（先頭の英数字）を確認
+sudo garage bucket alias <バケットID> work    # グローバルエイリアスを追加
+sudo garage bucket allow --read --write --owner work --key <他のキー名>   # 他のキーにも許可する場合
+```
+
+**対処2: 最初からグローバルエイリアスで作る**（運用ではこちらを推奨）
+
+```bash
+sudo garage bucket create work
+sudo garage bucket allow --read --write --owner work --key app-key
+```
+
+> バケットを削除するときは、`aws s3 rb` がローカルエイリアスの削除として動作します。他にエイリアスが残っていないバケットだけが、実際に削除されます。
 
 ## 参考
 
