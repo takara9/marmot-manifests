@@ -1,0 +1,39 @@
+# 追加ボリュームを ext4 でフォーマットし、data_disk_mountpoint にマウントして /etc/fstab に登録する
+# ※ マウント先にデータを置くロール(garage)より前に実行すること
+- name: Check data disk exists
+  ansible.builtin.stat:
+    path: "{{ data_disk_dev }}"
+  register: data_disk_stat
+
+- name: Fail if data disk is missing
+  ansible.builtin.assert:
+    that: data_disk_stat.stat.exists and data_disk_stat.stat.isblk
+    fail_msg: "{{ data_disk_dev }} が見つからないか、ブロックデバイスではありません。マニフェストの spec.storage を確認してください。"
+
+- name: Create filesystem (skip if already formatted)
+  community.general.filesystem:
+    fstype: "{{ data_disk_fstype }}"
+    dev: "{{ data_disk_dev }}"
+    opts: "-L {{ data_disk_label }}"
+    force: false
+
+- name: Get filesystem UUID
+  ansible.builtin.command: "blkid -s UUID -o value {{ data_disk_dev }}"
+  register: data_disk_uuid
+  changed_when: false
+
+- name: Create mount point
+  ansible.builtin.file:
+    path: "{{ data_disk_mountpoint }}"
+    state: directory
+    mode: "0755"
+
+- name: Mount data disk and register in /etc/fstab
+  ansible.posix.mount:
+    path: "{{ data_disk_mountpoint }}"
+    src: "UUID={{ data_disk_uuid.stdout }}"
+    fstype: "{{ data_disk_fstype }}"
+    opts: defaults,noatime
+    dump: "0"
+    passno: "2"
+    state: mounted

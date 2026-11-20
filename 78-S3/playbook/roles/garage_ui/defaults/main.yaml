@@ -1,0 +1,14 @@
+# garage-ui (Garage の Web 管理 UI) を Docker コンテナで稼働させる
+garage_ui_version: "v0.14.0"
+garage_ui_image: "noooste/garage-ui:{{ garage_ui_version }}"
+garage_ui_port: 8080
+# nginx (HTTPS) で公開する場合は 127.0.0.1 に絞り、平文の 8080 を外部に開けない
+garage_ui_bind_address: "{{ '127.0.0.1' if (s3_tls_ui_enabled | default(true)) else '0.0.0.0' }}"
+garage_ui_config_dir: /etc/garage-ui
+
+# 同一ホストの Garage への接続先 (コンテナはホストネットワークで動作)
+garage_ui_garage_endpoint: "http://127.0.0.1:{{ garage_s3_port | default(3900) }}"
+garage_ui_garage_admin_endpoint: "http://127.0.0.1:{{ garage_admin_port | default(3903) }}"
+garage_ui_garage_region: "{{ garage_s3_region | default('garage') }}"
+# garage_admin_token は group_vars/all.yaml の値(garage.toml の admin_token)と同じものを使う
+# ログイン画面では、この Garage 管理トークンを入力する

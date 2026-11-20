@@ -1,0 +1,6 @@
+# 追加ボリュームのデバイス (s3-single.yaml の spec.storage で追加したディスク)
+data_disk_dev: /dev/vdb
+# マウント先
+data_disk_mountpoint: /var/lib/garage
+data_disk_fstype: ext4
+data_disk_label: garage-data

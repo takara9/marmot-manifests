@@ -1,0 +1,8 @@
+- name: Reload systemd (garage-ui)
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart garage-ui
+  ansible.builtin.systemd:
+    name: garage-ui
+    state: restarted

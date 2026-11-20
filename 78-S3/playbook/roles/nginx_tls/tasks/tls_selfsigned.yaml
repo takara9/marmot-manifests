@@ -1,0 +1,34 @@
+# 証明書と秘密鍵が無いときだけ生成する
+- name: Generate self-signed certificate
+  ansible.builtin.command:
+    argv:
+      - openssl
+      - req
+      - -x509
+      - -newkey
+      - rsa:2048
+      - -nodes
+      - -days
+      - "{{ s3_tls_selfsigned_days }}"
+      - -subj
+      - "/CN={{ s3_tls_hostname }}"
+      - -addext
+      - "subjectAltName={{ s3_tls_san }}"
+      - -keyout
+      - "{{ s3_tls_dir }}/server.key"
+      - -out
+      - "{{ s3_tls_dir }}/server.crt"
+    creates: "{{ s3_tls_dir }}/server.crt"
+  vars:
+    s3_tls_san: >-
+      {{ (['DNS:' ~ s3_tls_hostname]
+          + (s3_tls_extra_names | map('regex_replace', '^', 'DNS:') | list)
+          + ['IP:127.0.0.1', 'IP:' ~ ansible_default_ipv4.address]) | join(',') }}
+  notify: Reload nginx
+
+- name: Set private key permissions
+  ansible.builtin.file:
+    path: "{{ s3_tls_dir }}/server.key"
+    owner: root
+    group: root
+    mode: "0600"

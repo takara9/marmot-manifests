@@ -1,0 +1,29 @@
+# Garage の前段に nginx を置き、TLS を終端する (Garage 本体は TLS 非対応)
+# selfsigned: 自己署名証明書を生成 (動作確認用)
+# provided  : Vault などで発行した証明書と秘密鍵を Ansible 実行マシンから配置
+#s3_tls_mode: selfsigned
+s3_tls_mode: provided
+s3_tls_dir: /etc/nginx/tls
+s3_tls_port: 443
+
+s3_tls_hostname: s3.labo.local
+# 証明書の SAN と nginx の server_name に追加する名前。virtual-hosted style 用に Garage の root_domain をワイルドカードで含める
+s3_tls_extra_names:
+  - garage.labo.local
+  - "*{{ garage_root_domain | default('.s3.labo.local') }}"
+s3_tls_server_names: "{{ [s3_tls_hostname] + s3_tls_extra_names }}"
+
+# 同一ホストの Garage S3 API への転送先
+s3_tls_upstream: "http://127.0.0.1:{{ garage_s3_port | default(3900) }}"
+
+# garage-ui の HTTPS 化 (管理トークンを平文で流さないため)
+s3_tls_ui_enabled: true
+s3_tls_ui_port: 8443
+s3_tls_ui_upstream: "http://127.0.0.1:{{ garage_ui_port | default(8080) }}"
+
+# selfsigned のときの有効日数
+s3_tls_selfsigned_days: 825
+
+# provided のとき: Ansible 実行マシン上のファイル
+s3_tls_cert_src: "/home/ubuntu/marmot-manifests/78-S3/s3.labo.local.crt"       # サーバー証明書 (PEM、中間CAがあれば連結したフルチェーン)
+s3_tls_key_src: "/home/ubuntu/marmot-manifests/78-S3/s3.labo.local.key"        # 秘密鍵 (PEM、パスフレーズなし)

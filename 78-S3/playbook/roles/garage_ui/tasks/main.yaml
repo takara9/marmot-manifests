@@ -1,0 +1,73 @@
+- name: Install Docker
+  ansible.builtin.apt:
+    name: docker.io
+    state: present
+    update_cache: true
+
+- name: Enable and start Docker
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Create garage-ui config directory
+  ansible.builtin.file:
+    path: "{{ garage_ui_config_dir }}"
+    state: directory
+    mode: "0755"
+
+# コンテナ内のユーザー(uid 1000)が読めるようにする。Garage の admin_token を含む
+- name: Deploy garage-ui config.yaml
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ garage_ui_config_dir }}/config.yaml"
+    owner: "1000"
+    group: "1000"
+    mode: "0600"
+  notify: Restart garage-ui
+
+- name: Deploy garage-ui systemd unit
+  ansible.builtin.template:
+    src: garage-ui.service.j2
+    dest: /etc/systemd/system/garage-ui.service
+    mode: "0644"
+  notify:
+    - Reload systemd (garage-ui)
+    - Restart garage-ui
+
+- name: Check garage-ui image exists locally
+  ansible.builtin.command: "docker image inspect {{ garage_ui_image }}"
+  register: garage_ui_image_check
+  changed_when: false
+  failed_when: false
+
+- name: Pull garage-ui image
+  ansible.builtin.command: "docker pull {{ garage_ui_image }}"
+  when: garage_ui_image_check.rc != 0
+  changed_when: true
+
+- name: Apply pending handlers before starting garage-ui
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start garage-ui service
+  ansible.builtin.systemd:
+    name: garage-ui
+    enabled: true
+    state: started
+
+- name: Wait for garage-ui health endpoint
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ garage_ui_port }}/health"
+    status_code: 200
+  register: garage_ui_health
+  until: garage_ui_health.status is defined and garage_ui_health.status == 200
+  retries: 20
+  delay: 3
+
+- name: Show garage-ui URL
+  ansible.builtin.debug:
+    msg: >-
+      garage-ui: {{ 'https://' ~ (s3_tls_hostname | default('s3.labo.local')) ~ ':' ~ (s3_tls_ui_port | default(8443))
+      if (s3_tls_ui_enabled | default(true))
+      else 'http://' ~ ansible_default_ipv4.address ~ ':' ~ garage_ui_port }}
+      (ログインには Garage の admin_token を使用)

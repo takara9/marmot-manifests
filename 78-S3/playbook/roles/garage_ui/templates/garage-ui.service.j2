@@ -1,0 +1,19 @@
+[Unit]
+Description=Garage UI (web dashboard for Garage)
+After=docker.service garage.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=-/usr/bin/docker rm -f garage-ui
+ExecStart=/usr/bin/docker run --rm --name garage-ui --network host \
+  -v {{ garage_ui_config_dir }}/config.yaml:/app/config.yaml:ro \
+  -v garage-ui-data:/app/data \
+  {{ garage_ui_image }}
+ExecStop=/usr/bin/docker stop garage-ui
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,26 @@
+# 別途用意した証明書と秘密鍵 (Ansible実行マシン上のファイル) を配置する
+- name: Check provided certificate paths
+  ansible.builtin.assert:
+    that:
+      - s3_tls_cert_src | length > 0
+      - s3_tls_key_src | length > 0
+    fail_msg: "s3_tls_mode=provided では s3_tls_cert_src と s3_tls_key_src が必要です"
+
+- name: Install server certificate
+  ansible.builtin.copy:
+    src: "{{ s3_tls_cert_src }}"
+    dest: "{{ s3_tls_dir }}/server.crt"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Install server private key
+  ansible.builtin.copy:
+    src: "{{ s3_tls_key_src }}"
+    dest: "{{ s3_tls_dir }}/server.key"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Reload nginx

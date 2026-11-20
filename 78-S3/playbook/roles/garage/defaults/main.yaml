@@ -6,6 +6,8 @@ garage_data_dir: /var/lib/garage/data
 
 garage_s3_region: garage
 garage_s3_port: 3900
+# 127.0.0.1 にすると S3 API は nginx (HTTPS) 経由のみになる
+garage_s3_bind_address: "0.0.0.0"
 garage_rpc_port: 3901
 garage_web_port: 3902
 garage_admin_port: 3903

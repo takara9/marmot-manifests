@@ -1,0 +1,90 @@
+- name: Validate s3_tls_mode
+  ansible.builtin.assert:
+    that:
+      - s3_tls_mode in ['selfsigned', 'provided']
+    fail_msg: "s3_tls_mode は selfsigned か provided を指定してください"
+
+- name: Install nginx
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - openssl
+    state: present
+    update_cache: true
+
+- name: Create TLS directory
+  ansible.builtin.file:
+    path: "{{ s3_tls_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Include selfsigned certificate tasks
+  ansible.builtin.include_tasks: tls_selfsigned.yaml
+  when: s3_tls_mode == 'selfsigned'
+
+- name: Include provided certificate tasks
+  ansible.builtin.include_tasks: tls_provided.yaml
+  when: s3_tls_mode == 'provided'
+
+- name: Remove default nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+- name: Deploy nginx config for Garage S3
+  ansible.builtin.template:
+    src: garage-s3.conf.j2
+    dest: /etc/nginx/conf.d/garage-s3.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Test nginx config
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Enable and start nginx
+  ansible.builtin.systemd:
+    name: nginx
+    enabled: true
+    state: started
+
+- name: Apply pending handlers before health check
+  ansible.builtin.meta: flush_handlers
+
+# 認証なしのため Garage からは 403 が返る。TLS 経由で Garage に到達できれば成功
+- name: Check S3 API over HTTPS
+  ansible.builtin.uri:
+    url: "https://127.0.0.1:{{ s3_tls_port }}/"
+    headers:
+      Host: "{{ s3_tls_hostname }}"
+    validate_certs: false
+    status_code: [200, 403]
+  register: s3_tls_check
+  until: s3_tls_check.status is defined and s3_tls_check.status in [200, 403]
+  retries: 10
+  delay: 3
+
+- name: Check garage-ui over HTTPS
+  ansible.builtin.uri:
+    url: "https://127.0.0.1:{{ s3_tls_ui_port }}/health"
+    headers:
+      Host: "{{ s3_tls_hostname }}"
+    validate_certs: false
+    status_code: 200
+  register: s3_tls_ui_check
+  until: s3_tls_ui_check.status is defined and s3_tls_ui_check.status == 200
+  retries: 10
+  delay: 3
+  when: s3_tls_ui_enabled
+
+- name: Show S3 HTTPS endpoint
+  ansible.builtin.debug:
+    msg: >-
+      S3 API: https://{{ s3_tls_hostname }}:{{ s3_tls_port }}
+      {{ '/ garage-ui: https://' ~ s3_tls_hostname ~ ':' ~ s3_tls_ui_port if s3_tls_ui_enabled else '' }}
+      (証明書モード: {{ s3_tls_mode }})

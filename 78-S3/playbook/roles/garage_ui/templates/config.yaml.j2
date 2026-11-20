@@ -1,0 +1,20 @@
+# garage-ui configuration (managed by Ansible)
+server:
+  host: "{{ garage_ui_bind_address }}"
+  port: {{ garage_ui_port }}
+  environment: "production"
+
+garage:
+  endpoint: "{{ garage_ui_garage_endpoint }}"
+  region: "{{ garage_ui_garage_region }}"
+  admin_endpoint: "{{ garage_ui_garage_admin_endpoint }}"
+  admin_token: "{{ garage_admin_token }}"
+
+# Garage 管理トークンでログインする
+auth:
+  token:
+    enabled: true
+
+logging:
+  level: "info"
+  format: "text"

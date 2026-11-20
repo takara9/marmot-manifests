@@ -9,4 +9,7 @@
         msg: "Host: {{ inventory_hostname }}"
   roles:
     - linux
+    - data_disk
     - garage
+    - garage_ui
+    - nginx_tls
