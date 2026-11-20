@@ -148,6 +148,8 @@ aws s3 cp ./file.txt s3://demo/
 aws s3 ls s3://demo/
 ```
 
+`aws s3` コマンドの詳しい使い方は [HOWTO-aws-s3.md](HOWTO-aws-s3.md) を参照してください。
+
 ## garage-ui へのログイン
 
 ブラウザで `https://s3.labo.local:8443` を開き、ログイン画面で Garage の管理トークン（[group_vars/all.yaml](playbook/group_vars/all.yaml) の `garage_admin_token`）を入力します。トークンを持つ人は全操作が可能です。既定は自己署名証明書のため、ブラウザの警告が出ます。garage-ui 本体は `127.0.0.1:8080` のみで待ち受けるため、`http://…:8080` では開けません。
