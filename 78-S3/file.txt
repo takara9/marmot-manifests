@@ -1,7 +1,0 @@
-README.md
-file.txt
-playbook
-root_ca.crt
-s3-single.yaml
-s3.labo.local.crt
-s3.labo.local.key
