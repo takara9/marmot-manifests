@@ -1,0 +1,51 @@
+# 各プロダクトを inventory のグループに割り当てて導入する。
+# 1台に全部入れる場合も、複数台に分ける場合も hosts.yaml のグループ定義だけで切り替えられる。
+- name: Install Loki
+  hosts: loki
+  become: true
+  gather_facts: true
+  roles:
+    - role: data_disk
+      vars:
+        data_disk_dev: "{{ loki_data_device }}"
+        data_disk_mountpoint: "{{ loki_data_dir }}"
+        data_disk_service_name: "{{ loki_service_name }}"
+      tags: loki
+    - role: loki
+      tags: loki
+
+- name: Install Tempo
+  hosts: tempo
+  become: true
+  gather_facts: true
+  roles:
+    - role: data_disk
+      vars:
+        data_disk_dev: "{{ tempo_data_device }}"
+        data_disk_mountpoint: "{{ tempo_data_dir }}"
+        data_disk_service_name: "{{ tempo_service_name }}"
+      tags: tempo
+    - role: tempo
+      tags: tempo
+
+- name: Install Prometheus
+  hosts: prometheus
+  become: true
+  gather_facts: true
+  roles:
+    - role: data_disk
+      vars:
+        data_disk_dev: "{{ prometheus_data_device }}"
+        data_disk_mountpoint: "{{ prometheus_data_dir }}"
+        data_disk_service_name: "{{ prometheus_service_name }}"
+      tags: prometheus
+    - role: prometheus
+      tags: prometheus
+
+- name: Install Grafana
+  hosts: grafana
+  become: true
+  gather_facts: true
+  roles:
+    - role: grafana
+      tags: grafana

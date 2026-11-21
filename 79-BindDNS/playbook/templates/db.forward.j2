@@ -19,6 +19,6 @@ $TTL 3600
 
 {% endfor %}
 
-{% for r in dns_cname_records %}
+{% for r in dns_cname_records | default([]) %}
 {{ r.name }}    IN  CNAME   {{ r.target }}.{{ item }}.
 {% endfor %}

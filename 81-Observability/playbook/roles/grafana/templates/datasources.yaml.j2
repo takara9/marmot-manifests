@@ -1,0 +1,53 @@
+# Ansible managed
+apiVersion: 1
+
+datasources:
+{% if grafana_prometheus_url %}
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: {{ grafana_prometheus_url }}
+    isDefault: {{ (grafana_default_datasource == 'prometheus') | lower }}
+    jsonData:
+{% if grafana_tempo_url %}
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+{% else %}
+      timeInterval: 15s
+{% endif %}
+{% endif %}
+{% if grafana_loki_url %}
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: {{ grafana_loki_url }}
+    isDefault: {{ (grafana_default_datasource == 'loki') | lower }}
+{% endif %}
+{% if grafana_tempo_url %}
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: {{ grafana_tempo_url }}
+    isDefault: {{ (grafana_default_datasource == 'tempo') | lower }}
+    jsonData:
+      nodeGraph:
+        enabled: true
+{% if grafana_loki_url %}
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: -1h
+        spanEndTimeShift: 1h
+        filterByTraceID: true
+        filterBySpanID: false
+{% endif %}
+{% if grafana_prometheus_url %}
+      tracesToMetrics:
+        datasourceUid: prometheus
+      serviceMap:
+        datasourceUid: prometheus
+{% endif %}
+{% endif %}

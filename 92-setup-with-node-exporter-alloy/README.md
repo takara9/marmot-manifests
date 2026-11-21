@@ -141,7 +141,7 @@ $ ansible-playbook -i playbook/hosts.yaml playbook/setup.yaml
 
 | コンポーネント | 動作 |
 |---|---|
-| `loki.source.journal` → `loki.write` | systemd ジャーナルを、ラベル `job=systemd-journal`、`host=<ホスト名>` を付けて Loki へ送信 |
+| `loki.source.journal` → `loki.write` | systemd journal グループの権限でジャーナルを読み、`job=systemd-journal`、`host=<ホスト名>`、`unit=<systemd unit>` のラベルを付けて Loki へ送信 |
 | `prometheus.exporter.unix` → `prometheus.scrape` | Alloy 内蔵のホストメトリクスを 10 秒間隔で収集 |
 | `prometheus.relabel` | ラベル `env` が `dev` のメトリクスを破棄 |
 | `prometheus.remote_write` | メトリクスを Prometheus へ送信 |
@@ -181,6 +181,7 @@ journalctl -u alloy -n 20 --no-pager
 
 - Prometheus で `up` や `node_uname_info` を検索し、対象ホストのメトリクスが届いていること
 - Grafana の Explore で、Loki に対して `{job="systemd-journal"}` を検索し、ログが届いていること
+- Marmot のログだけを見るには `{job="systemd-journal", unit="marmot.service"}` を検索する（`journalctl -u marmot -f` と同じユニットのログ）
 
 ## 6. 一部だけ実行する・確認する
 

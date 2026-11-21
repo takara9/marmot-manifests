@@ -1,0 +1,46 @@
+- name: Install tempo package
+  ansible.builtin.apt:
+    name: "{{ tempo_package_name }}"
+    state: "{{ tempo_package_state }}"
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Look up tempo service account
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ tempo_user }}"
+
+- name: Create tempo data directory
+  ansible.builtin.file:
+    path: "{{ tempo_data_dir }}"
+    state: directory
+    owner: "{{ tempo_user }}"
+    group: "{{ ansible_facts.getent_passwd[tempo_user][2] }}"
+    mode: "0750"
+
+- name: Install tempo configuration
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ tempo_config_path }}"
+    owner: root
+    group: "{{ ansible_facts.getent_passwd[tempo_user][2] }}"
+    mode: "0640"
+  notify: Restart tempo
+
+- name: Flush handlers before starting the service
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start tempo service
+  ansible.builtin.systemd:
+    name: "{{ tempo_service_name }}"
+    enabled: true
+    state: started
+
+- name: Wait until tempo is ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ tempo_http_port }}/ready"
+    status_code: 200
+  register: tempo_ready
+  retries: 18
+  delay: 5
+  until: tempo_ready.status == 200

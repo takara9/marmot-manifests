@@ -1,0 +1,22 @@
+all:
+  vars:
+    ansible_user: ubuntu
+    ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+    ansible_python_interpreter: /usr/bin/python3
+  hosts:
+    observability:
+      ansible_host: 192.168.1.11    # grafana.labo.local
+  children:
+    # 1台構成。複数台に分ける場合は、各グループに別のホストを割り当てる
+    prometheus:
+      hosts:
+        observability:
+    loki:
+      hosts:
+        observability:
+    tempo:
+      hosts:
+        observability:
+    grafana:
+      hosts:
+        observability:

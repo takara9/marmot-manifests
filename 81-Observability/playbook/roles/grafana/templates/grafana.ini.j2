@@ -1,0 +1,24 @@
+# Ansible managed
+{% set base_settings = {
+  'server': {
+    'http_addr': grafana_http_addr,
+    'http_port': grafana_http_port,
+    'domain': grafana_domain,
+    'root_url': grafana_root_url,
+  },
+  'security': {
+    'admin_user': grafana_admin_user,
+    'admin_password': '"""' ~ grafana_admin_password ~ '"""',
+  },
+  'analytics': {
+    'reporting_enabled': false,
+    'check_for_updates': false,
+  },
+} %}
+{% for section, values in (base_settings | combine(grafana_ini_settings, recursive=True)).items() %}
+[{{ section }}]
+{% for key, value in values.items() %}
+{{ key }} = {{ value | string | lower if value is boolean else value }}
+{% endfor %}
+
+{% endfor %}

@@ -68,6 +68,7 @@ ns3 を追加・変更した場合は、ns1 の playbook を再実行するこ�
 ## 運用上の注意
 
 - **レコードの変更:** [playbook/vars/zones.yaml](playbook/vars/zones.yaml) を編集し、`dns_zone_serial` を増やして ns1 の playbook を再実行する。ns2 には NOTIFY で自動反映される。
+- **CNAME が不要な場合:** `dns_cname_records: []` とするか、変数を省略する。
 - **並行運用:** `dns_domains` の全ドメイン (`labo.local` / `lab.internal`) に、同じ A/CNAME/MX レコードを生成する。レコードは1か所の編集で両方に反映される。逆引き (PTR) は `dns_ptr_domain` のドメイン名だけを返す。
 - **lab.internal への移行完了:** クライアントが `lab.internal` に切り替わったら、`dns_ptr_domain` を `lab.internal` に変え、`dns_domains` から `labo.local` を削除し、`dns_stub_zones` を `lab.internal` 側のサブゾーンに置き換えて ns1 の playbook を再実行する。ns2 の `labo.local` は設定から外れる。ns1/ns2 の `db.labo.local` と、ns3 の `dns_secondary_zones` と確認タスク (`dns_domain`) も合わせて更新すること。
 - **サブゾーン (hv0-4):** `dns_stub_zones` は `labo.local` 配下のみ。転送先の DNS が `lab.internal` の名前を持つまで、`lab.internal` 側には追加しない。

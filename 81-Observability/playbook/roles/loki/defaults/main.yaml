@@ -1,0 +1,13 @@
+loki_package_name: loki
+loki_package_state: present
+loki_service_name: loki
+loki_user: loki
+loki_config_path: /etc/loki/config.yml
+loki_data_dir: /var/lib/loki
+
+loki_listen_address: 0.0.0.0
+loki_http_port: 3100
+loki_grpc_port: 9096
+loki_log_level: info
+# ログの保持期間。0s で無期限
+loki_retention_period: 336h

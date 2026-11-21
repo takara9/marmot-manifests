@@ -26,6 +26,13 @@
     state: present
     update_cache: yes
 
+- name: Add alloy to the systemd journal group
+  ansible.builtin.user:
+    name: alloy
+    groups: systemd-journal
+    append: yes
+  notify: Restart alloy service
+
 - name: Configure alloy to forward logs to Loki
   ansible.builtin.copy:
     dest: /etc/alloy/config.alloy
@@ -39,8 +46,18 @@
         }
       }
 
+      loki.relabel "journal" {
+        forward_to = []
+
+        rule {
+          source_labels = ["__journal__systemd_unit"]
+          target_label  = "unit"
+        }
+      }
+
       loki.source.journal "systemd" {
-        forward_to = [loki.write.default.receiver]
+        forward_to    = [loki.write.default.receiver]
+        relabel_rules = loki.relabel.journal.rules
         labels = {
           job = "systemd-journal",
           host = constants.hostname,

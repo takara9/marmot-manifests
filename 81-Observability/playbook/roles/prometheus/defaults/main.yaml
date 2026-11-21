@@ -1,0 +1,31 @@
+prometheus_version: "3.16.0"
+prometheus_arch_map:
+  x86_64: amd64
+  aarch64: arm64
+prometheus_arch: "{{ prometheus_arch_map[ansible_facts.architecture] }}"
+prometheus_archive_name: "prometheus-{{ prometheus_version }}.linux-{{ prometheus_arch }}"
+prometheus_download_base_url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}"
+prometheus_install_dir: "/opt/{{ prometheus_archive_name }}"
+
+prometheus_user: prometheus
+prometheus_group: prometheus
+prometheus_config_dir: /etc/prometheus
+prometheus_data_dir: /var/lib/prometheus
+prometheus_service_name: prometheus
+
+prometheus_listen_address: 0.0.0.0
+prometheus_port: 9090
+prometheus_retention_time: 15d
+# Alloy / Tempo からの remote write を受け付ける
+prometheus_enable_remote_write_receiver: true
+prometheus_enable_features:
+  - exemplar-storage
+prometheus_extra_args: []
+
+prometheus_global_scrape_interval: 15s
+prometheus_global_evaluation_interval: 15s
+prometheus_scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - "localhost:{{ prometheus_port }}"

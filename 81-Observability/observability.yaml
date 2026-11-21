@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: grafana
+    comment: Grafanaサーバー
+    labels:
+        app: grafana
+spec:
+    cpu: 2
+    memory: 4096
+    mmImage: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+        users:
+          - ubuntu
+          - keycloak
+    ansible:
+        playbook: playbook/install.yaml
+        inventory: playbook/hosts.yaml
+    networkInterface:
+        - networkname: host-bridge
+          address: 192.168.1.11    # 内部DNSに登録済のIPアドレス grafana.labo.local
+          nameservers:              
+            addresses:
+                - 192.168.1.9       # 内部DNSのアドレス
+            search:                 # ドメイン名を省略可能なドメインをセット
+                - labo.local
+          netmasklen: 24            # ネットマスク
+          routes:                   # デフォルトGW ルーターのアドレスを指定
+            - to: default
+              via: 192.168.1.1
+    storage:
+        - metadata:
+            name: /var/lib/prometheus
+            comment: Prometheusの保存エリアとして利用
+          spec:
+            size: 10
+            type: lvm
+            kind: data
+        - metadata:
+            name: /var/lib/loki
+            comment: Lokiの保存エリアとして利用
+          spec:
+            size: 20
+            type: lvm
+            kind: data
+        - metadata:
+            name: /var/lib/tempo
+            comment: Tempoの保存エリアとして利用
+          spec:
+            size: 10
+            type: lvm
+            kind: data

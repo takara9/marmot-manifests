@@ -1,0 +1,50 @@
+- name: Install grafana package
+  ansible.builtin.apt:
+    name: "{{ grafana_package_name }}"
+    state: "{{ grafana_package_state }}"
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create grafana data directory
+  ansible.builtin.file:
+    path: "{{ grafana_data_dir }}"
+    state: directory
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: "0750"
+
+- name: Install grafana.ini
+  ansible.builtin.template:
+    src: grafana.ini.j2
+    dest: /etc/grafana/grafana.ini
+    owner: root
+    group: "{{ grafana_user }}"
+    mode: "0640"
+  notify: Restart grafana
+
+- name: Provision datasources
+  ansible.builtin.template:
+    src: datasources.yaml.j2
+    dest: /etc/grafana/provisioning/datasources/observability.yaml
+    owner: root
+    group: "{{ grafana_user }}"
+    mode: "0640"
+  notify: Restart grafana
+
+- name: Flush handlers before starting the service
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start grafana service
+  ansible.builtin.systemd:
+    name: "{{ grafana_service_name }}"
+    enabled: true
+    state: started
+
+- name: Wait until grafana is healthy
+  ansible.builtin.uri:
+    url: "http://localhost:{{ grafana_http_port }}/api/health"
+    status_code: 200
+  register: grafana_health
+  retries: 18
+  delay: 5
+  until: grafana_health.status == 200

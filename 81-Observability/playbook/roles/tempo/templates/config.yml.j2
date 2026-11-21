@@ -1,0 +1,58 @@
+# Ansible managed
+stream_over_http_enabled: true
+
+server:
+  http_listen_address: {{ tempo_listen_address }}
+  http_listen_port: {{ tempo_http_port }}
+  log_level: {{ tempo_log_level }}
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "{{ tempo_listen_address }}:{{ tempo_otlp_grpc_port }}"
+        http:
+          endpoint: "{{ tempo_listen_address }}:{{ tempo_otlp_http_port }}"
+
+{% if tempo_prometheus_remote_write_url %}
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+  storage:
+    path: {{ tempo_data_dir }}/generator/wal
+    remote_write:
+      - url: {{ tempo_prometheus_remote_write_url }}
+        send_exemplars: true
+{% endif %}
+
+# Tempo 3.x の単一バイナリ構成では、これらの既定値が /var/tempo 配下になるため明示する
+live_store:
+  shutdown_marker_dir: {{ tempo_data_dir }}/live-store/shutdown-marker
+  wal:
+    path: {{ tempo_data_dir }}/live-store/traces
+
+backend_scheduler:
+  local_work_path: {{ tempo_data_dir }}
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: {{ tempo_data_dir }}/wal
+    local:
+      path: {{ tempo_data_dir }}/blocks
+
+overrides:
+  defaults:
+    compaction:
+      block_retention: {{ tempo_block_retention }}
+{% if tempo_prometheus_remote_write_url %}
+    metrics_generator:
+      processors: [service-graphs, span-metrics]
+{% endif %}
+
+usage_report:
+  reporting_enabled: false

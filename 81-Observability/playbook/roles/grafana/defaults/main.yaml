@@ -1,0 +1,25 @@
+grafana_package_name: grafana
+grafana_package_state: present
+grafana_service_name: grafana-server
+grafana_data_dir: /var/lib/grafana
+grafana_user: grafana
+
+grafana_http_addr: 0.0.0.0
+grafana_http_port: 3000
+grafana_domain: localhost
+grafana_root_url: "http://{{ grafana_domain }}:{{ grafana_http_port }}/"
+
+# ラボ用の初期値。本番では ansible-vault 等で上書きすること
+# 初回起動時のみ有効 (以降の変更は Grafana 側で行う)
+grafana_admin_user: admin
+grafana_admin_password: admin-change-me
+
+# grafana.ini に追加・上書きする設定 (セクション名: {キー: 値})
+# 例: auth.generic_oauth で Keycloak と連携する (../../77-keycloak/HOWTO-3-grafana.md)
+grafana_ini_settings: {}
+
+# データソースの URL。空文字にするとそのデータソースを登録しない
+grafana_prometheus_url: http://localhost:9090
+grafana_loki_url: http://localhost:3100
+grafana_tempo_url: http://localhost:3200
+grafana_default_datasource: prometheus

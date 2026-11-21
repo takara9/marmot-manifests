@@ -1,0 +1,38 @@
+# observability.yaml の追加ボリュームに対応する VM 内のデバイス
+prometheus_data_device: /dev/vdb
+loki_data_device: /dev/vdc
+tempo_data_device: /dev/vdd
+
+# プロダクト間の接続先を inventory のグループから導出する。
+# 別々のホストに分けても、hosts.yaml のグループ定義を変えるだけで接続先が追従する。
+observability_prometheus_host: "{{ hostvars[groups['prometheus'][0]].ansible_host | default(groups['prometheus'][0]) }}"
+observability_loki_host: "{{ hostvars[groups['loki'][0]].ansible_host | default(groups['loki'][0]) }}"
+observability_tempo_host: "{{ hostvars[groups['tempo'][0]].ansible_host | default(groups['tempo'][0]) }}"
+
+# Grafana のデータソース
+grafana_prometheus_url: "http://{{ observability_prometheus_host }}:9090"
+grafana_loki_url: "http://{{ observability_loki_host }}:3100"
+grafana_tempo_url: "http://{{ observability_tempo_host }}:3200"
+grafana_domain: grafana.labo.local
+grafana_root_url: "http://{{ grafana_domain }}:3000/"
+
+# Tempo が生成する span-metrics / service-graphs の書き込み先
+tempo_prometheus_remote_write_url: "http://{{ observability_prometheus_host }}:9090/api/v1/write"
+
+# Prometheus のスクレイプ対象 (各プロダクトのメトリクス)
+prometheus_scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - "localhost:9090"
+          - "hmc.labo.local:9100"
+          - "m0.labo.local:9100"
+  - job_name: lokik
+    static_configs:
+      - targets: "{{ groups['loki'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '$', ':3100') | list }}"
+  - job_name: tempo
+    static_configs:
+      - targets: "{{ groups['tempo'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '$', ':3200') | list }}"
+  - job_name: grafana
+    static_configs:
+      - targets: "{{ groups['grafana'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '$', ':3000') | list }}"

@@ -1,0 +1,145 @@
+- name: Check data disk exists
+  ansible.builtin.stat:
+    path: "{{ data_disk_dev }}"
+    follow: true
+  register: data_disk_stat
+
+- name: Require a block device
+  ansible.builtin.assert:
+    that:
+      - data_disk_stat.stat.exists
+      - data_disk_stat.stat.isblk | default(false)
+    fail_msg: "{{ data_disk_dev }} is not a block device. Check the VM disk assignments."
+
+- name: Inspect disk partitions and mounts
+  ansible.builtin.command:
+    argv:
+      - lsblk
+      - --json
+      - --output
+      - TYPE,MOUNTPOINTS
+      - "{{ data_disk_dev }}"
+  register: data_disk_layout
+  changed_when: false
+  check_mode: false
+
+- name: Require a dedicated data disk
+  ansible.builtin.assert:
+    that:
+      - (data_disk_layout.stdout | from_json).blockdevices | length == 1
+      - (data_disk_layout.stdout | from_json).blockdevices[0].type == 'disk'
+      - (data_disk_layout.stdout | from_json).blockdevices[0].children | default([]) | length == 0
+      - (data_disk_layout.stdout | from_json).blockdevices[0].mountpoints | reject('equalto', none) | difference([data_disk_mountpoint]) | length == 0
+    fail_msg: "{{ data_disk_dev }} must be an unpartitioned disk, unmounted or mounted only at {{ data_disk_mountpoint }}."
+
+- name: Check whether the mount point is already mounted
+  ansible.builtin.command:
+    argv:
+      - findmnt
+      - --noheadings
+      - --mountpoint
+      - "{{ data_disk_mountpoint }}"
+      - --output
+      - SOURCE
+  register: data_disk_mount
+  changed_when: false
+  failed_when: data_disk_mount.rc not in [0, 1]
+  check_mode: false
+
+- name: Refuse a different disk at the mount point
+  ansible.builtin.assert:
+    that:
+      - data_disk_mount.rc == 1 or data_disk_mountpoint in (data_disk_layout.stdout | from_json).blockdevices[0].mountpoints
+    fail_msg: "{{ data_disk_mountpoint }} is already mounted from a different device."
+
+- name: Inspect service state before a new mount
+  ansible.builtin.service_facts:
+  when:
+    - data_disk_mount.rc == 1
+    - data_disk_service_name | default('') | length > 0
+
+- name: Refuse to mount beneath a running service
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.services.get(data_disk_service_name ~ '.service', {}).get('state', '') != 'running'
+      - ansible_facts.services.get(data_disk_service_name, {}).get('state', '') != 'running'
+    fail_msg: "Stop {{ data_disk_service_name }} before mounting {{ data_disk_mountpoint }}."
+  when:
+    - data_disk_mount.rc == 1
+    - data_disk_service_name | default('') | length > 0
+
+- name: Check mount point directory
+  ansible.builtin.stat:
+    path: "{{ data_disk_mountpoint }}"
+    follow: false
+  register: data_disk_directory
+
+- name: Require a real directory as the mount point
+  ansible.builtin.assert:
+    that:
+      - not data_disk_directory.stat.exists or (data_disk_directory.stat.isdir | default(false) and not data_disk_directory.stat.islnk | default(false))
+    fail_msg: "{{ data_disk_mountpoint }} must be a directory, not a file or symlink."
+
+- name: Check for existing unmounted data
+  ansible.builtin.find:
+    paths: "{{ data_disk_mountpoint }}"
+    recurse: false
+    hidden: true
+    file_type: any
+  register: data_disk_existing_data
+  when:
+    - data_disk_mount.rc == 1
+    - data_disk_directory.stat.exists
+
+- name: Refuse to hide existing data
+  ansible.builtin.assert:
+    that:
+      - data_disk_existing_data.matched == 0
+    fail_msg: "{{ data_disk_mountpoint }} contains existing data. Stop the service and migrate the data before mounting the volume."
+  when:
+    - data_disk_mount.rc == 1
+    - data_disk_directory.stat.exists
+
+- name: Create ext4 filesystem without overwriting an existing filesystem
+  community.general.filesystem:
+    fstype: ext4
+    dev: "{{ data_disk_dev }}"
+    force: false
+
+- name: Get filesystem UUID
+  ansible.builtin.command:
+    argv:
+      - blkid
+      - -s
+      - UUID
+      - -o
+      - value
+      - "{{ data_disk_dev }}"
+  register: data_disk_uuid
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Require a filesystem UUID
+  ansible.builtin.assert:
+    that:
+      - data_disk_uuid.stdout | trim | length > 0
+    fail_msg: "No filesystem UUID found on {{ data_disk_dev }}."
+  when: not ansible_check_mode
+
+- name: Create mount point
+  ansible.builtin.file:
+    path: "{{ data_disk_mountpoint }}"
+    state: directory
+    mode: "0755"
+  when: data_disk_mount.rc == 1
+
+- name: Mount data disk and register in /etc/fstab
+  ansible.posix.mount:
+    path: "{{ data_disk_mountpoint }}"
+    src: "UUID={{ data_disk_uuid.stdout | trim }}"
+    fstype: ext4
+    opts: defaults,noatime
+    dump: "0"
+    passno: "2"
+    state: mounted
+  when: not ansible_check_mode

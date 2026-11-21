@@ -1,0 +1,22 @@
+- name: Ensure keyring directory exists
+  ansible.builtin.file:
+    path: "{{ grafana_apt_keyring_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download Grafana apt signing key
+  ansible.builtin.get_url:
+    url: "{{ grafana_apt_gpg_key_url }}"
+    dest: "{{ grafana_apt_keyring_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Add Grafana apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by={{ grafana_apt_keyring_path }}] {{ grafana_apt_repo_url }} {{ grafana_apt_repo_dist }} {{ grafana_apt_repo_component }}"
+    filename: grafana
+    state: present
+    update_cache: true

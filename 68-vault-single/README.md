@@ -102,6 +102,7 @@ vault login   # 初期化時に表示された Root Token を入力
 | [HOWTO-7-MFA-4.md](HOWTO-7-MFA-4.md) | AWS のサービス（Cognito の OIDC、IAM ロールの MFA 条件）で Vault にログイン |
 | [HOWTO-7-MFA-5.md](HOWTO-7-MFA-5.md) | TLS 証明書認証で Vault にログインする方法と、クライアント証明書の発行 |
 | [HOWTO-8-CERT-1.md](HOWTO-8-CERT-1.md) | GitLab (`gitlab.labo.local`) の TLS 証明書を Vault で発行して設定する |
+| [HOWTO-8-CERT-4.md](HOWTO-8-CERT-4.md) | Grafana (`grafana.labo.local`) の TLS 証明書を Vault で発行して設定する |
 
 ## 注意事項
 

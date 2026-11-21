@@ -1,0 +1,17 @@
+tempo_package_name: tempo
+tempo_package_state: present
+tempo_service_name: tempo
+tempo_user: tempo
+tempo_config_path: /etc/tempo/config.yml
+tempo_data_dir: /var/lib/tempo
+
+tempo_listen_address: 0.0.0.0
+tempo_http_port: 3200
+tempo_otlp_grpc_port: 4317
+tempo_otlp_http_port: 4318
+tempo_log_level: info
+# トレースの保持期間
+tempo_block_retention: 336h
+
+# span-metrics / service-graphs を Prometheus に remote write する。空文字で無効化
+tempo_prometheus_remote_write_url: http://localhost:9090/api/v1/write

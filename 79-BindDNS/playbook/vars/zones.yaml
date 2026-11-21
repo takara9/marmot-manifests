@@ -26,6 +26,7 @@ dns_a_records:
   - { name: hmc, ip: 192.168.1.9, comment: "Hypervisor management console" }
   - { name: hmc-nfs, ip: 172.16.0.9, comment: "NFS for setup" }
   - { name: ws1, ip: 192.168.1.10, comment: "new hmc and dev workstation" }  # 192.168.1.0/24  192.168.1.200 - 250
+  - { name: grafana, ip: 192.168.1.11, comment: "Grafana WebUI" }
   - { name: m0, ip: 192.168.1.8 }  # 192.168.1.0/24  192.168.1.200 - 250
   - { name: m2, ip: 10.1.0.12 }    # 10.1.0.0/16   10.1.2.10 - 254
   - { name: m3, ip: 10.1.0.13 }    # 10.1.10.0/16  10.1.10.10 - 250
@@ -76,8 +77,8 @@ dns_a_records:
   - { name: vault, ip: 192.168.1.251, comment: "vault Server" }
   - { name: app, ip: 192.168.1.252, comment: "app Server" }
 
-dns_cname_records:
-  - { name: grafana, target: hmc }
+#dns_cname_records:
+#  - { name: grafana, target: hmc }
 
 dns_mx_records:
   - { priority: 10, target: mail }

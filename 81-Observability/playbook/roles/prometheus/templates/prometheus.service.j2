@@ -1,0 +1,29 @@
+# Ansible managed
+[Unit]
+Description=Prometheus
+Documentation=https://prometheus.io/docs/introduction/overview/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ prometheus_user }}
+Group={{ prometheus_group }}
+ExecStart=/usr/local/bin/prometheus \
+  --config.file={{ prometheus_config_dir }}/prometheus.yml \
+  --storage.tsdb.path={{ prometheus_data_dir }} \
+  --storage.tsdb.retention.time={{ prometheus_retention_time }} \
+  --web.listen-address={{ prometheus_listen_address }}:{{ prometheus_port }}{% if prometheus_enable_remote_write_receiver %} \
+  --web.enable-remote-write-receiver{% endif %}{% for feature in prometheus_enable_features %} \
+  --enable-feature={{ feature }}{% endfor %}{% for arg in prometheus_extra_args %} \
+  {{ arg }}{% endfor %}
+
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
