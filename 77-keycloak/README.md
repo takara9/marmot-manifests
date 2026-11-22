@@ -192,6 +192,11 @@ openssl s_client -connect keycloak.labo.local:8443 -servername keycloak.labo.loc
 
 ## Keycloak の利用方法
 
+アプリケーションとの連携手順:
+
+- [Grafana のログインを Keycloak で認証する](./HOWTO-3-grafana.md)
+- [GitLab の認証を Keycloak に委任する](./HOWTO-3-GitLab.md)
+
 ブラウザで管理コンソールを開き、管理者でログインします。
 
 - 管理コンソール: https://keycloak.labo.local:8443/admin/

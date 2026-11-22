@@ -18,7 +18,7 @@ Grafana の **Generic OAuth** 認証を使い、Keycloak を IdP（OpenID Provid
 
 ## 1. Keycloak 側の設定
 
-1. Realm `labo` を作成し、ユーザーを登録します（作成済みなら不要）。
+1. Realm `labo` を作成し、ユーザーを登録します（作成済みなら不要。詳細は下記「Realm とユーザーの作成手順」を参照）。
 2. **Clients → Create client**
    - Client type: `OpenID Connect`
    - Client ID: `grafana`
@@ -43,6 +43,59 @@ Grafana の **Generic OAuth** 認証を使い、Keycloak を IdP（OpenID Provid
    | `grafana-admins` | Admin |
    | `grafana-editors` | Editor |
    | （どちらにも属さない） | Viewer |
+
+### Realm とユーザーの作成手順
+
+Realm は、ユーザーやアプリの認証設定をまとめる領域です。以下は、上記の手順 1 の詳細です。
+
+#### `labo` realm を作成する
+
+1. 管理コンソール `https://keycloak.labo.local:8443/admin/` を開き、Keycloak の管理者アカウントでログインします。
+2. 左上の realm 選択メニュー（最初は通常 `master`）を開きます。
+3. **Create realm** をクリックします。
+4. 以下を設定し、**Create** をクリックします。
+
+   | 項目 | 設定値 |
+   |---|---|
+   | Realm name | `labo` |
+   | Enabled | On |
+
+すでに `labo` が一覧にあれば、作成せず選択してください。
+
+表示名を `LABO` にしたい場合は、作成後の **Realm settings → General → Display name** で設定します。認証 URL に使われるのは表示名ではなく、Realm name の `labo` です。
+
+#### ログイン用ユーザーを登録する
+
+1. 選択中の realm が `labo` であることを確認します。
+2. 左メニューの **Users → Add user** を開きます。
+3. 以下を入力します。
+
+   | 項目 | 入力例 |
+   |---|---|
+   | Username | `grafana-user` |
+   | Email | 利用者のメールアドレス |
+   | First name / Last name | 利用者の名前 |
+
+4. **Create** をクリックします。
+5. 作成したユーザーの **Credentials** タブを開きます。
+6. **Set password** でパスワードと確認用パスワードを入力します。
+   - **Temporary: On**: 初回ログイン時にパスワード変更を要求します。
+   - **Temporary: Off**: 設定したパスワードでそのまま利用できます。
+7. **Save** をクリックし、確認画面でも保存します。
+
+管理者アカウントとは別に、`labo` 内に作成したこのユーザーで Grafana にログインします。ユーザーが作成済みなら、再作成は不要です。
+
+#### ユーザーのログインを確認する
+
+次の URL を開き、作成したユーザーでログインします。
+
+```text
+https://keycloak.labo.local:8443/realms/labo/account/
+```
+
+ログインできれば、realm とユーザーの準備は完了です。
+
+**Realm とユーザーを作るだけでは「Client not found」は解消しません。** 続けて、同じ `labo` realm で上記の手順 2（**Clients → Create client**）から Client ID `grafana` を登録し、クライアント設定とグループ連携を行ってください。
 
 ## 2. Grafana 側の設定（パッケージ / 手動インストール）
 
@@ -180,7 +233,64 @@ helm upgrade grafana -n prometheus -f values.yaml grafana/grafana
 
 > Pod から `keycloak.labo.local` が名前解決できる必要があります。社内 DNS を参照できない場合は、`hostAliases` などで解決してください。
 
+## 7. Keycloak で MFA（2 要素認証）を必須にする（任意）
+
+Grafana と GitLab は Keycloak で認証するため、`labo` realm で MFA を有効にすれば、どちらのログインにも適用されます。アプリごとの 2FA 設定は不要です。この手順は、Keycloak の認証アプリ（TOTP）を前提にします。画面名は Keycloak のバージョンにより異なることがあります。
+
+### 前提
+
+- ユーザーが、Google Authenticator や Microsoft Authenticator などの TOTP 対応アプリを利用できること。
+- 管理者が、MFA を設定しても **ローカル管理者（Grafana の `admin`、GitLab の `root`）のパスワードログインは MFA の対象外**であることを理解していること。
+
+### 手順 1: 認証ポリシーを確認する
+
+1. 管理コンソールで realm `labo` を選びます。
+2. **Authentication → Policies → OTP Policy** を開きます。
+3. 標準の `Time based`、6 桁、30 秒などの値を確認します。変更する場合は、すでに登録済みの認証アプリに影響しないか確認してください。
+
+### 手順 2: Configure OTP を必須にする
+
+Keycloak の Browser フローは、既定では OTP を登録済みのユーザーだけに入力を求めます。全員に求めるには、OTP の登録を必須アクションにします。
+
+**新規ユーザーにも自動で適用する**
+
+1. **Authentication → Required actions** を開きます。
+2. **Configure OTP** が **Enabled** であることを確認します。
+3. **Set as default action** を On にします。
+
+この設定は、設定後に作成するユーザーに適用されます。既存ユーザーには適用されません。
+
+**既存ユーザーに適用する**
+
+1. **Users → 対象ユーザー → Details** を開きます。
+2. **Required user actions** で **Configure OTP** を選びます。
+3. **Save** をクリックします。
+
+ユーザーが OTP を登録すると、この必須アクションは完了します。以降のログインでは、パスワードの後に OTP の入力が求められます。
+
+### 手順 3: ログインを確認する
+
+1. テスト用ユーザーの Keycloak セッションをログアウトします。ログアウトについては、[GitLab の「ログアウトとユーザーの切り替え」](./HOWTO-3-GitLab.md#8-ログアウトとユーザーの切り替え) を参照してください。
+2. `https://<grafana>/login` を開き、**Sign in with Keycloak** をクリックします。
+3. ユーザー名とパスワードを入力します。
+4. **Configure OTP** の画面で QR コードを認証アプリで読み取り、表示されたコードを入力します。
+5. Grafana に戻り、ログインできることを確認します。
+6. 再度ログアウトして Keycloak にログインし、今度は OTP の入力画面が表示されることを確認します。
+
+### 管理者と復旧
+
+- Keycloak の管理者は `master` realm のユーザーです。`labo` の設定だけでは保護されないため、管理者アカウントにも OTP を設定してください。
+- ユーザーが認証アプリを失った場合は、**Users → 対象ユーザー → Credentials** で OTP を削除し、**Required user actions** に **Configure OTP** を再設定します。本人確認のうえで実施してください。
+- 認証アプリの交換に備え、管理者の復旧手順を事前に決めておきます。
+- セキュリティキーなどを使う場合は、Keycloak の **Required actions** と **Authentication flows** で WebAuthn / Passkeys を設定します。運用方法は、使用している Keycloak のバージョンのドキュメントで確認してください。
+
+### 注意
+
+- MFA は、Keycloak を経由するログインだけに適用されます。Grafana のローカル `admin` ユーザーのログインフォームは別です。必要に応じて、[4. パスワードログインを無効化する](#4-パスワードログインを無効化する任意) を検討してください。ただし、障害時の復旧手順を確認してから設定してください。
+- Grafana OSS には、ここで使えるアプリ側の 2FA 設定は確認していません。Keycloak 側の MFA を使用してください。
+
 ## 注意点
+- **Client not found**: 「Sign in with Keycloak」が表示されても、Keycloak 側のクライアント登録が完了しているとは限りません。ボタンを押した後のブラウザの URL で `/realms/<realm名>/` と `client_id` を確認し、管理コンソールでその realm の **Clients** に同じ Client ID があることを確認してください。この例では realm は `labo`、Client ID は `grafana` です。画面の `LABO` は表示名の場合があるため、URL の realm 名で判断します。`master` や別の realm に作成したクライアントは利用できません。未登録なら「1. Keycloak 側の設定」の手順で作成します（Keycloak のインストール用 Playbook は realm / クライアントを作成しません）。登録済みなら Grafana の `client_id` と `auth_url` を修正し、`token_url` / `api_url` も同じ realm に揃えて Grafana を再起動します。環境変数 `GF_AUTH_GENERIC_OAUTH_CLIENT_ID` / `GF_AUTH_GENERIC_OAUTH_AUTH_URL` による上書きも確認してください。Client secret や Redirect URI の不一致は、このエラーとは別の段階で確認します。
 - **TLS**: Grafana のサーバーが Keycloak の証明書を検証できないと、ログイン後に `x509: certificate signed by unknown authority` のエラーになります。`keycloak_tls_mode: selfsigned` で作成したプライベート CA を、次のどちらかで信頼させます。
   - OS の信頼ストアに追加する: `sudo cp keycloak-ca.pem /usr/local/share/ca-certificates/keycloak-ca.crt && sudo update-ca-certificates` の後、`grafana-server` を再起動
   - `[auth.generic_oauth]` の `tls_client_ca` に CA ファイルのパスを指定する
@@ -189,7 +299,7 @@ helm upgrade grafana -n prometheus -f values.yaml grafana/grafana
 - **ロールの同期タイミング**: ロールはログインのたびに更新されます。Keycloak 側でグループを変更した場合は、Grafana から一度ログアウトして再ログインします。
 - **既存ユーザーとの突合**: Grafana は E メールまたはログイン名でユーザーを突合します。既存のローカルユーザーと同じメールアドレスの場合、そのユーザーに紐付きます。
 - **ログアウト**: `signout_redirect_url` を設定しないと、Grafana からログアウトしても Keycloak のセッションが残り、再度クリックするだけでログインされます。
-- **MFA**: Keycloak 側で TOTP/WebAuthn を必須にすれば、Grafana ログインにも適用されます。
+- **MFA**: Keycloak 側で TOTP/WebAuthn を必須にすれば、Grafana ログインにも適用されます。手順は「7. Keycloak で MFA（2 要素認証）を必須にする」を参照してください。
 - **管理者の備え**: 障害時の備えとして、Grafana のローカル `admin` ユーザーは残しておきます。
 
 ## 関連

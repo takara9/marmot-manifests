@@ -99,6 +99,8 @@ $ sudo gitlab-rake "gitlab:password:reset[root]"
 
 ## 動作確認
 
+Keycloak にブラウザログインの認証を委任する場合は、[GitLab の Keycloak 認証手順](../77-keycloak/HOWTO-3-GitLab.md) を参照してください。
+
 ```console
 $ curl -s http://gitlab.labo.local/-/readiness
 $ ssh ubuntu@gitlab sudo gitlab-ctl status
