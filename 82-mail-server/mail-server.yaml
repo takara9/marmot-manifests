@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Server
+metadata:
+    name: mail
+    comment: Mailサーバー
+    labels:
+        unit: 22
+        roles:
+          - mail
+spec:
+    cpu: 1
+    memory: 1024
+    mmImage: ubuntu24.04
+    auth:
+        url: https://github.com/takara9.keys
+        users:
+         - ubuntu
+    ansible:
+        playbook: playbook/install.yaml
+        inventory: playbook/hosts.yaml
+    networkInterface:
+        - networkname: host-bridge
+          address: 192.168.1.12     # 内部DNSに登録済のIPアドレス mail.labo.local (MX レコードの宛先)
+          nameservers:
+            addresses:
+                - 192.168.1.9       # 内部DNSのアドレス。MX レコードの参照に必要
+            search:                 # ドメイン名を省略可能なドメインをセット
+                - labo.local
+          netmasklen: 24            # ネットマスク
+          routes:                   # デフォルトGW ルーターのアドレスを指定
+            - to: default
+              via: 192.168.1.1
+

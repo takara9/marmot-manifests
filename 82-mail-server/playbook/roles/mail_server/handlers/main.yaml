@@ -1,0 +1,9 @@
+- name: Restart postfix
+  ansible.builtin.systemd:
+    name: postfix
+    state: restarted
+
+- name: Restart dovecot
+  ansible.builtin.systemd:
+    name: dovecot
+    state: restarted

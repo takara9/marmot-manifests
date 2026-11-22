@@ -1,0 +1,81 @@
+# Ansible managed
+protocols = imap lmtp
+listen = {{ mail_listen }}
+hostname = {{ mail_hostname }}
+postmaster_address = postmaster@{{ mail_domain }}
+
+# ---------- 認証 ----------
+# ログイン名にドメインがなければ {{ mail_domain }} を補う (admin → admin@{{ mail_domain }})
+auth_default_realm = {{ mail_domain }}
+auth_mechanisms = plain login
+disable_plaintext_auth = yes
+
+passdb {
+  driver = passwd-file
+  args = username_format=%u /etc/dovecot/users
+}
+
+userdb {
+  driver = static
+  args = uid={{ mail_vmail_user }} gid={{ mail_vmail_user }} home={{ mail_vmail_home }}/%d/%n
+}
+
+# ---------- メールボックス ----------
+mail_location = maildir:~/Maildir
+first_valid_uid = {{ mail_vmail_uid }}
+last_valid_uid = {{ mail_vmail_uid }}
+
+namespace inbox {
+  inbox = yes
+  mailbox Drafts {
+    special_use = \Drafts
+    auto = subscribe
+  }
+  mailbox Sent {
+    special_use = \Sent
+    auto = subscribe
+  }
+  mailbox Trash {
+    special_use = \Trash
+    auto = subscribe
+  }
+  mailbox Junk {
+    special_use = \Junk
+    auto = subscribe
+  }
+}
+
+# ---------- TLS (平文のログインは受け付けない) ----------
+ssl = required
+ssl_cert = <{{ mail_tls_dir }}/server.crt
+ssl_key = <{{ mail_tls_dir }}/server.key
+ssl_min_protocol = TLSv1.2
+
+# ---------- サービス ----------
+service imap-login {
+  inet_listener imap {
+    port = {{ mail_imap_port }}
+  }
+  inet_listener imaps {
+    port = {{ mail_imaps_port }}
+    ssl = yes
+  }
+}
+
+# Postfix からの配送 (LMTP)
+service lmtp {
+  unix_listener /var/spool/postfix/private/dovecot-lmtp {
+    mode = 0600
+    user = postfix
+    group = postfix
+  }
+}
+
+# Postfix の SMTP 認証 (submission)
+service auth {
+  unix_listener /var/spool/postfix/private/auth {
+    mode = 0660
+    user = postfix
+    group = postfix
+  }
+}

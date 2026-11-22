@@ -1,0 +1,57 @@
+- name: Preseed postfix (non-interactive)
+  ansible.builtin.debconf:
+    name: postfix
+    question: "{{ item.q }}"
+    value: "{{ item.v }}"
+    vtype: "{{ item.t }}"
+  loop:
+    - { q: "postfix/main_mailer_type", v: "Internet Site", t: "select" }
+    - { q: "postfix/mailname", v: "{{ mail_domain }}", t: "string" }
+
+- name: Install mail client packages
+  ansible.builtin.apt:
+    name: "{{ mail_client_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Set mailname
+  ansible.builtin.copy:
+    dest: /etc/mailname
+    content: "{{ mail_domain }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart postfix
+
+- name: Deploy postfix main.cf
+  ansible.builtin.template:
+    src: main.cf.j2
+    dest: /etc/postfix/main.cf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart postfix
+
+- name: Check postfix configuration
+  ansible.builtin.command: postfix check
+  changed_when: false
+
+- name: Apply pending handlers before starting service
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start postfix
+  ansible.builtin.systemd:
+    name: postfix
+    enabled: true
+    state: started
+
+- name: Query MX records of the mail domain
+  ansible.builtin.command: "dig +short MX {{ mail_domain }}"
+  register: mail_mx
+  changed_when: false
+  failed_when: mail_mx.stdout | trim | length == 0
+
+- name: Show MX records
+  ansible.builtin.debug:
+    msg: "MX {{ mail_domain }}: {{ mail_mx.stdout_lines }}"

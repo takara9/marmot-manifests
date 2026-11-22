@@ -1,0 +1,8 @@
+# Ansible managed
+{% for u in mail_users %}
+{% if u.password_hash is defined %}
+{{ u.name }}@{{ mail_domain }}:{{ u.password_hash }}
+{% else %}
+{{ u.name }}@{{ mail_domain }}:{SHA512-CRYPT}{{ u.password | password_hash('sha512', (u.name ~ '@' ~ mail_domain) | hash('sha256') | truncate(16, True, '')) }}
+{% endif %}
+{% endfor %}

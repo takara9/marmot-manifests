@@ -1,0 +1,99 @@
+# 同一ホスト上にプライベートCAを作成し、メールサーバーの証明書を発行する
+- name: Install python3-cryptography for certificate generation
+  ansible.builtin.apt:
+    name: python3-cryptography
+    state: present
+
+- name: Create CA directory
+  ansible.builtin.file:
+    path: "{{ mail_ca_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Generate CA private key
+  community.crypto.openssl_privatekey:
+    path: "{{ mail_ca_dir }}/ca.key"
+    type: RSA
+    size: 4096
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Generate CA CSR
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ mail_ca_dir }}/ca.key"
+    common_name: "{{ mail_ca_common_name }}"
+    organization_name: System Labo
+    country_name: JP
+    basic_constraints:
+      - "CA:TRUE"
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+    key_usage_critical: true
+  register: ca_csr
+  changed_when: false
+
+- name: Issue self-signed CA certificate
+  community.crypto.x509_certificate:
+    path: "{{ mail_ca_dir }}/ca.crt"
+    csr_content: "{{ ca_csr.csr }}"
+    privatekey_path: "{{ mail_ca_dir }}/ca.key"
+    provider: selfsigned
+    selfsigned_not_after: "+{{ mail_ca_days }}d"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Publish CA certificate for clients
+  ansible.builtin.copy:
+    src: "{{ mail_ca_dir }}/ca.crt"
+    dest: "{{ mail_tls_dir }}/ca.crt"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+
+# 秘密鍵は Postfix / Dovecot が root 権限で起動時に読み込む
+- name: Generate server private key
+  community.crypto.openssl_privatekey:
+    path: "{{ mail_tls_dir }}/server.key"
+    type: RSA
+    size: 2048
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Generate server CSR
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ mail_tls_dir }}/server.key"
+    common_name: "{{ mail_hostname }}"
+    organization_name: System Labo
+    country_name: JP
+    subject_alt_name: "{{ mail_tls_san }}"
+    key_usage:
+      - digitalSignature
+      - keyEncipherment
+    key_usage_critical: true
+    extended_key_usage:
+      - serverAuth
+  register: server_csr
+  changed_when: false
+
+- name: Issue server certificate signed by the CA
+  community.crypto.x509_certificate:
+    path: "{{ mail_tls_dir }}/server.crt"
+    csr_content: "{{ server_csr.csr }}"
+    provider: ownca
+    ownca_path: "{{ mail_ca_dir }}/ca.crt"
+    ownca_privatekey_path: "{{ mail_ca_dir }}/ca.key"
+    ownca_not_after: "+{{ mail_cert_days }}d"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Restart postfix
+    - Restart dovecot

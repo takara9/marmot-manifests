@@ -1,0 +1,60 @@
+mail_packages:
+  - postfix
+  - dovecot-core
+  - dovecot-imapd
+  - dovecot-lmtpd
+
+# 動作確認用のツール (swaks: SMTP テスト、dig: MX 確認)
+mail_tools:
+  - swaks
+  - bind9-dnsutils
+
+# ポート
+mail_imap_port: 143               # STARTTLS 必須
+mail_imaps_port: 993              # TLS
+mail_submission_port: 587         # STARTTLS + 認証必須
+mail_enable_smtps: true           # true で 465 (TLS + 認証必須) も待ち受ける
+
+# 待ち受けアドレス。IPv6 を使う場合は "*, ::"
+mail_listen: "*"
+mail_inet_protocols: ipv4
+
+# 認証なしでメールの中継を許可するネットワーク。通常は変更しない
+# labo.local 宛のメールは、このリストになくても全サーバーから受け付ける
+mail_mynetworks:
+  - 127.0.0.0/8
+  - "[::1]/128"
+
+# 1通のメールの最大サイズ (バイト)
+mail_message_size_limit: 26214400
+
+# メールボックス用のユーザー
+mail_vmail_user: vmail
+mail_vmail_uid: 5000
+mail_vmail_home: /var/mail/vhosts
+
+# DNS の MX レコードがこのサーバーを指しているか、実行の最後に確認する
+mail_check_mx: true
+
+# UFW で SMTP/IMAP 関連のポートを開放するか
+mail_configure_ufw: false
+
+# TLS証明書の入手方法
+#   selfsigned: サーバー上にプライベートCAを作成してサーバー証明書を発行する
+#   provided  : 別途用意した証明書と秘密鍵(Ansible実行マシン上のファイル)を配置する
+mail_tls_mode: selfsigned
+mail_tls_dir: /etc/mail-server/tls
+
+# selfsigned 用
+mail_ca_dir: /etc/mail-server/ca  # CA秘密鍵 (root専用 0700)
+mail_ca_common_name: Mail Labo CA
+mail_ca_days: 3650
+mail_cert_days: 825
+mail_node_ip: "{{ ansible_default_ipv4.address }}"
+mail_extra_san: []                # 例: ["DNS:imap.labo.local"]
+mail_tls_san: "{{ ['DNS:' ~ mail_hostname, 'DNS:localhost', 'IP:127.0.0.1', 'IP:' ~ mail_node_ip] + mail_extra_san }}"
+
+# provided 用 (Ansible実行マシン上のパス)
+mail_tls_cert_src: ""             # サーバー証明書 (PEM、中間CAがあれば連結したフルチェーン)
+mail_tls_key_src: ""              # 秘密鍵 (PEM、パスフレーズなし)
+mail_tls_ca_src: ""               # 任意: 証明書を発行したCAの証明書。クライアント配布用に配置する

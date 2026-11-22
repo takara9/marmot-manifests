@@ -1,0 +1,4 @@
+# Ansible managed
+{% for u in mail_users %}
+{{ u.name }}@{{ mail_domain }} {{ mail_domain }}/{{ u.name }}/
+{% endfor %}

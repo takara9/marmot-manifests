@@ -1,0 +1,11 @@
+# Ansible managed
+{% for alias, target in mail_aliases.items() %}
+{{ alias }}@{{ mail_domain }} {{ target }}@{{ mail_domain }}
+{% endfor %}
+{# メールサーバー自身のホスト名宛 (root@mail.labo.local 等) も同じ宛先へ配送する #}
+{% for alias, target in mail_aliases.items() %}
+{{ alias }}@{{ mail_hostname }} {{ target }}@{{ mail_domain }}
+{% endfor %}
+{% for d in mail_alias_domains %}
+@{{ d }} @{{ mail_domain }}
+{% endfor %}

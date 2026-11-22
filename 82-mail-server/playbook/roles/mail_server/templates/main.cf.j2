@@ -1,0 +1,53 @@
+# Ansible managed
+compatibility_level = 3.8
+smtpd_banner = $myhostname ESMTP
+biff = no
+append_dot_mydomain = no
+readme_directory = no
+
+# ---------- ホスト・ドメイン ----------
+myhostname = {{ mail_hostname }}
+mydomain = {{ mail_domain }}
+myorigin = $mydomain
+# $mydomain は含めない。{{ mail_domain }} 宛は仮想ドメインとして Dovecot (LMTP) へ配送する
+mydestination = $myhostname, localhost
+mynetworks = {{ mail_mynetworks | join(' ') }}
+inet_interfaces = all
+inet_protocols = {{ mail_inet_protocols }}
+message_size_limit = {{ mail_message_size_limit }}
+mailbox_size_limit = 0
+recipient_delimiter = +
+disable_vrfy_command = yes
+smtpd_helo_required = yes
+
+# ---------- 送信: DNS の MX レコードを参照して配送する ----------
+# relayhost を設定せず、宛先ドメインの MX レコード (なければ A レコード) へ直接配送する
+relayhost =
+smtp_host_lookup = dns
+disable_dns_lookups = no
+
+# ---------- 仮想メールボックス (Dovecot LMTP へ配送) ----------
+virtual_mailbox_domains = {{ mail_domain }}
+virtual_mailbox_maps = texthash:/etc/postfix/vmailbox
+{% if mail_alias_domains | length > 0 %}
+virtual_alias_domains = {{ mail_alias_domains | join(' ') }}
+{% endif %}
+virtual_alias_maps = texthash:/etc/postfix/virtual
+virtual_transport = lmtp:unix:private/dovecot-lmtp
+
+# ---------- 受信の制限 ----------
+# 自ドメイン宛は誰からでも受け付け、他ドメイン宛の中継は認証済み(submission)だけに許可する
+smtpd_relay_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination
+
+# ---------- TLS ----------
+smtpd_tls_cert_file = {{ mail_tls_dir }}/server.crt
+smtpd_tls_key_file = {{ mail_tls_dir }}/server.key
+smtpd_tls_security_level = may
+smtpd_tls_protocols = >=TLSv1.2
+smtpd_tls_loglevel = 1
+smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache
+smtp_tls_security_level = may
+smtp_tls_protocols = >=TLSv1.2
+smtp_tls_CApath = /etc/ssl/certs
+smtp_tls_loglevel = 1
+smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache

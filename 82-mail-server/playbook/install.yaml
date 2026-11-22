@@ -1,0 +1,13 @@
+- name: Setup mail server
+  hosts: mail_servers
+  become: true
+  gather_facts: true
+  roles:
+    - mail_server
+
+- name: Setup mail clients
+  hosts: mail_clients
+  become: true
+  gather_facts: true
+  roles:
+    - mail_client

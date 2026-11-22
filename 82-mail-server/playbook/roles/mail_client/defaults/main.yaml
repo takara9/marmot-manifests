@@ -1,0 +1,10 @@
+mail_client_packages:
+  - postfix
+  - bsd-mailx
+  - swaks
+  - bind9-dnsutils
+
+# このサーバーの FQDN (Postfix の myhostname)
+mail_client_hostname: "{{ ansible_hostname }}.{{ mail_domain }}"
+
+mail_client_inet_protocols: ipv4

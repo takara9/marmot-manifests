@@ -1,0 +1,187 @@
+- name: Validate mail settings
+  ansible.builtin.assert:
+    that:
+      - mail_tls_mode in ['selfsigned', 'provided']
+      - mail_tls_mode != 'provided' or (mail_tls_cert_src | length > 0 and mail_tls_key_src | length > 0)
+      - mail_hostname.endswith('.' ~ mail_domain)
+      - mail_users | length > 0
+      - mail_users | map(attribute='name') | select('match', '^[a-z0-9][a-z0-9._-]*$') | list | length == mail_users | length
+      - mail_users | selectattr('password', 'undefined') | selectattr('password_hash', 'undefined') | list | length == 0
+      - mail_aliases.values() | select('in', mail_users | map(attribute='name') | list) | list | length == mail_aliases | length
+    fail_msg: >-
+      mail_tls_mode は selfsigned / provided のいずれか(provided では mail_tls_cert_src と mail_tls_key_src が必須)。
+      mail_hostname は mail_domain 配下の名前、mail_users の name は小文字英数字と . _ - のみ、
+      各ユーザーに password または password_hash が必要、mail_aliases の宛先は mail_users に存在すること。
+
+# Postfix の設定は後で上書きするため、パッケージ導入時の質問は既定のまま回答する
+- name: Preseed postfix (non-interactive)
+  ansible.builtin.debconf:
+    name: postfix
+    question: "{{ item.q }}"
+    value: "{{ item.v }}"
+    vtype: "{{ item.t }}"
+  loop:
+    - { q: "postfix/main_mailer_type", v: "Internet Site", t: "select" }
+    - { q: "postfix/mailname", v: "{{ mail_domain }}", t: "string" }
+
+- name: Install mail packages
+  ansible.builtin.apt:
+    name: "{{ mail_packages + mail_tools }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Set mailname
+  ansible.builtin.copy:
+    dest: /etc/mailname
+    content: "{{ mail_domain }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart postfix
+
+# ---------- メールボックス用ユーザー ----------
+- name: Create vmail group
+  ansible.builtin.group:
+    name: "{{ mail_vmail_user }}"
+    gid: "{{ mail_vmail_uid }}"
+    system: true
+
+- name: Create vmail user
+  ansible.builtin.user:
+    name: "{{ mail_vmail_user }}"
+    uid: "{{ mail_vmail_uid }}"
+    group: "{{ mail_vmail_user }}"
+    system: true
+    home: "{{ mail_vmail_home }}"
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Create mailbox directory
+  ansible.builtin.file:
+    path: "{{ mail_vmail_home }}"
+    state: directory
+    owner: "{{ mail_vmail_user }}"
+    group: "{{ mail_vmail_user }}"
+    mode: "0770"
+
+# ---------- TLS ----------
+- name: Create TLS directory
+  ansible.builtin.file:
+    path: "{{ mail_tls_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create a private CA and issue the server certificate
+  ansible.builtin.import_tasks: tls_selfsigned.yaml
+  when: mail_tls_mode == 'selfsigned'
+
+- name: Install the provided server certificate
+  ansible.builtin.import_tasks: tls_provided.yaml
+  when: mail_tls_mode == 'provided'
+
+# ---------- Dovecot (IMAP / LMTP / 認証) ----------
+- name: Deploy dovecot user database
+  ansible.builtin.template:
+    src: dovecot-users.j2
+    dest: /etc/dovecot/users
+    owner: root
+    group: dovecot
+    mode: "0640"
+  no_log: true
+
+- name: Deploy dovecot.conf
+  ansible.builtin.template:
+    src: dovecot.conf.j2
+    dest: /etc/dovecot/dovecot.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/bin/doveconf -c %s -n
+  notify: Restart dovecot
+
+# ---------- Postfix (SMTP) ----------
+- name: Deploy postfix main.cf
+  ansible.builtin.template:
+    src: main.cf.j2
+    dest: /etc/postfix/main.cf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart postfix
+
+- name: Deploy virtual mailbox map
+  ansible.builtin.template:
+    src: vmailbox.j2
+    dest: /etc/postfix/vmailbox
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart postfix
+
+- name: Deploy virtual alias map
+  ansible.builtin.template:
+    src: virtual.j2
+    dest: /etc/postfix/virtual
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart postfix
+
+- name: Add submission and smtps services to master.cf
+  ansible.builtin.blockinfile:
+    path: /etc/postfix/master.cf
+    marker: "# {mark} ANSIBLE MANAGED MAIL SUBMISSION"
+    block: "{{ lookup('ansible.builtin.template', 'master-submission.cf.j2') }}"
+  notify: Restart postfix
+
+- name: Check postfix configuration
+  ansible.builtin.command: postfix check
+  changed_when: false
+
+# ---------- ファイアウォール ----------
+- name: Allow mail ports on UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ ['25', mail_submission_port, mail_imap_port, mail_imaps_port] + (['465'] if mail_enable_smtps else []) }}"
+  when: mail_configure_ufw
+
+- name: Apply pending handlers before starting services
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start mail services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - dovecot
+    - postfix
+
+# ---------- 動作確認 ----------
+- name: Wait for mail ports
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ item }}"
+    timeout: 60
+  loop: "{{ [25, mail_submission_port, mail_imap_port, mail_imaps_port] + ([465] if mail_enable_smtps else []) }}"
+
+- name: Query MX records of the mail domain
+  ansible.builtin.command: "dig +short MX {{ mail_domain }}"
+  register: mail_mx
+  changed_when: false
+  when: mail_check_mx
+
+- name: Check that the MX record points to this mail server
+  ansible.builtin.assert:
+    that:
+      - mail_mx.stdout_lines | select('search', '(?i)\s' ~ (mail_hostname | regex_escape) ~ '\.?$') | list | length > 0
+    fail_msg: >-
+      DNS の {{ mail_domain }} の MX レコードが {{ mail_hostname }} を指していません (dig の結果: {{ mail_mx.stdout_lines }})。
+      DNS に MX レコードと {{ mail_hostname }} の A レコードを登録してください。
+    success_msg: "MX {{ mail_domain }} -> {{ mail_hostname }}"
+  when: mail_check_mx

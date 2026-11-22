@@ -1,0 +1,32 @@
+# 別途用意した証明書と秘密鍵 (Ansible実行マシン上のファイル) を配置する
+- name: Install server certificate
+  ansible.builtin.copy:
+    src: "{{ mail_tls_cert_src }}"
+    dest: "{{ mail_tls_dir }}/server.crt"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Restart postfix
+    - Restart dovecot
+
+- name: Install server private key
+  ansible.builtin.copy:
+    src: "{{ mail_tls_key_src }}"
+    dest: "{{ mail_tls_dir }}/server.key"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify:
+    - Restart postfix
+    - Restart dovecot
+
+- name: Install CA certificate
+  ansible.builtin.copy:
+    src: "{{ mail_tls_ca_src }}"
+    dest: "{{ mail_tls_dir }}/ca.crt"
+    owner: root
+    group: root
+    mode: "0644"
+  when: mail_tls_ca_src | length > 0

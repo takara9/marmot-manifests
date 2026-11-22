@@ -1,0 +1,24 @@
+# Ansible managed
+# 受信しない送信専用の構成。宛先ドメインの MX レコードを DNS で引いて直接配送する
+compatibility_level = 3.8
+biff = no
+append_dot_mydomain = no
+readme_directory = no
+
+myhostname = {{ mail_client_hostname }}
+mydomain = {{ mail_domain }}
+# 宛先のないユーザー名 (root 等) は <ユーザー>@{{ mail_domain }} として MX 宛に配送する
+myorigin = $mydomain
+mydestination = localhost
+inet_interfaces = loopback-only
+inet_protocols = {{ mail_client_inet_protocols }}
+mynetworks_style = host
+
+relayhost =
+smtp_host_lookup = dns
+disable_dns_lookups = no
+
+smtp_tls_security_level = may
+smtp_tls_protocols = >=TLSv1.2
+smtp_tls_CApath = /etc/ssl/certs
+smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
