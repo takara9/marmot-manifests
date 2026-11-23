@@ -1,0 +1,78 @@
+- name: Preseed Roundcube database and web server setup
+  ansible.builtin.debconf:
+    name: roundcube-core
+    question: "{{ item.q }}"
+    value: "{{ item.v }}"
+    vtype: "{{ item.t }}"
+  loop:
+    - { q: "roundcube/dbconfig-install", v: "true", t: "boolean" }
+    - { q: "roundcube/database-type", v: "sqlite3", t: "select" }
+    - { q: "roundcube/reconfigure-webserver", v: "", t: "multiselect" }
+    - { q: "roundcube/restart-webserver", v: "false", t: "boolean" }
+
+- name: Install Roundcube with SQLite and Apache PHP
+  ansible.builtin.apt:
+    name:
+      - apache2
+      - libapache2-mod-php
+      - php-cli
+      - dbconfig-sqlite3
+      - roundcube-core
+      - roundcube-sqlite3
+    state: present
+
+- name: Deploy Roundcube mail configuration
+  ansible.builtin.template:
+    src: roundcube-config.inc.php.j2
+    dest: /etc/roundcube/mail-server.inc.php
+    owner: root
+    group: www-data
+    mode: "0640"
+    validate: /usr/bin/php -l %s
+  notify: Restart apache2
+
+# パッケージが生成した暗号化キーと DB 設定は維持する
+- name: Include managed settings in Roundcube configuration
+  ansible.builtin.blockinfile:
+    path: /etc/roundcube/config.inc.php
+    marker: "// {mark} ANSIBLE MANAGED MAIL SETTINGS"
+    block: "require __DIR__ . '/mail-server.inc.php';"
+    owner: root
+    group: www-data
+    mode: "0640"
+    validate: /usr/bin/php -l %s
+  notify: Restart apache2
+
+- name: Enable Apache SSL and rewrite modules
+  ansible.builtin.command: "a2enmod {{ item }}"
+  args:
+    creates: "/etc/apache2/mods-enabled/{{ item }}.load"
+  loop:
+    - ssl
+    - rewrite
+  notify: Restart apache2
+
+- name: Deploy Roundcube HTTPS site
+  ansible.builtin.template:
+    src: roundcube-apache.conf.j2
+    dest: /etc/apache2/sites-available/roundcube-mail.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart apache2
+
+- name: Disable default Apache HTTP site
+  ansible.builtin.command: a2dissite 000-default
+  args:
+    removes: /etc/apache2/sites-enabled/000-default.conf
+  notify: Restart apache2
+
+- name: Enable Roundcube HTTPS site
+  ansible.builtin.command: a2ensite roundcube-mail
+  args:
+    creates: /etc/apache2/sites-enabled/roundcube-mail.conf
+  notify: Restart apache2
+
+- name: Check Apache configuration
+  ansible.builtin.command: apache2ctl configtest
+  changed_when: false

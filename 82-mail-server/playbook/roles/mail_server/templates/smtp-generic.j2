@@ -1,0 +1,4 @@
+# Ansible managed
+{% for domain in ([mail_domain, mail_hostname] + mail_alias_domains) | unique %}
+@{{ domain }} @{{ mail_outbound_domain }}
+{% endfor %}

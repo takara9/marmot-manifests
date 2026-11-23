@@ -7,3 +7,9 @@
   ansible.builtin.systemd:
     name: dovecot
     state: restarted
+
+- name: Restart apache2
+  ansible.builtin.systemd:
+    name: apache2
+    state: restarted
+  when: mail_roundcube_enabled

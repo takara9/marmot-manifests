@@ -7,5 +7,10 @@
 {{ alias }}@{{ mail_hostname }} {{ target }}@{{ mail_domain }}
 {% endfor %}
 {% for d in mail_alias_domains %}
-@{{ d }} @{{ mail_domain }}
+{% for alias, target in mail_aliases.items() %}
+{{ alias }}@{{ d }} {{ target }}@{{ mail_domain }}
+{% endfor %}
+{% for u in mail_users if u.name not in mail_aliases %}
+{{ u.name }}@{{ d }} {{ u.name }}@{{ mail_domain }}
+{% endfor %}
 {% endfor %}

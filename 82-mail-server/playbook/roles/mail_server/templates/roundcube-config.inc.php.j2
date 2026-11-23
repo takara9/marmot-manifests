@@ -1,0 +1,24 @@
+<?php
+// Ansible managed
+$config['imap_host'] = 'ssl://{{ mail_hostname }}:{{ mail_imaps_port }}';
+$config['smtp_host'] = 'tls://{{ mail_hostname }}:{{ mail_submission_port }}';
+$config['smtp_user'] = '%u';
+$config['smtp_pass'] = '%p';
+$config['smtp_timeout'] = 10;
+$config['username_domain'] = '{{ mail_domain }}';
+$config['mail_domain'] = '{{ mail_domain }}';
+$config['product_name'] = 'Labo Webmail';
+$config['language'] = 'ja_JP';
+$config['force_https'] = true;
+$config['enable_installer'] = false;
+$config['imap_conn_options'] = [
+    'ssl' => [
+        'verify_peer' => true,
+        'verify_peer_name' => true,
+        'allow_self_signed' => false,
+{% if mail_tls_mode == 'selfsigned' or mail_tls_ca_src | length > 0 %}
+        'cafile' => '{{ mail_tls_dir }}/ca.crt',
+{% endif %}
+    ],
+];
+$config['smtp_conn_options'] = $config['imap_conn_options'];

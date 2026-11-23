@@ -1,0 +1,21 @@
+# TLS 証明書
+#   cert と key の両方が空: 自己署名証明書をサーバー上で作成して使用する
+#   cert と key の両方を指定: CA が発行した証明書を使用する
+# 値は Ansible 実行マシン上のパス。相対パスは roles/web-nginx/files/ から探す
+nginx_tls_cert_src: ""        # サーバー証明書 (PEM。中間 CA があれば連結したフルチェーン)
+nginx_tls_key_src: ""         # 秘密鍵 (PEM、パスフレーズなし)
+
+nginx_server_name: web1.labo.local
+nginx_cert_dir: /etc/nginx/ssl
+nginx_tls_cert_path: "{{ nginx_cert_dir }}/{{ nginx_server_name }}.crt"
+nginx_tls_key_path: "{{ nginx_cert_dir }}/{{ nginx_server_name }}.key"
+
+nginx_tls_mode: "{{ 'provided' if (nginx_tls_cert_src | length > 0 and nginx_tls_key_src | length > 0) else 'selfsigned' }}"
+
+# 自己署名証明書用
+nginx_tls_days: 825
+nginx_tls_extra_san: []       # 例: ["DNS:www.labo.local", "IP:192.168.1.242"]
+nginx_tls_san: >-
+  {{ ['DNS:' ~ nginx_server_name]
+     + (['IP:' ~ ansible_default_ipv4.address] if ansible_default_ipv4.address is defined else [])
+     + nginx_tls_extra_san }}

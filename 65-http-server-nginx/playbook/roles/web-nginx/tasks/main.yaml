@@ -1,36 +1,66 @@
+- name: TLS 証明書の指定を検証
+  ansible.builtin.assert:
+    that:
+      - (nginx_tls_cert_src | length > 0) == (nginx_tls_key_src | length > 0)
+    fail_msg: >-
+      nginx_tls_cert_src と nginx_tls_key_src は、両方を指定するか両方を空にしてください。
+      両方を指定すると CA が発行した証明書を使用し、両方が空なら自己署名証明書を作成します。
+
+#- name: Update apt cache
+#  ansible.builtin.apt:
+#    update_cache: true
+#    cache_valid_time: 3600
+
+- name: Install nginx
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - openssl
+    state: present
+
 - name: NGINXのTLS証明書を配置するディレクトリ
   ansible.builtin.file:
     path: "{{ nginx_cert_dir }}"
     state: directory
     owner: root
     group: root
-    mode: '0600'
+    mode: "0755"
 
-- name: TLS証明書をリモートサーバーへコピー
-  ansible.builtin.copy:
-    src: web1.labo.local.crt    # コントロールノード側のファイルパス（相対パスまたは絶対パス）
-    dest: "{{ nginx_cert_dir }}/web1.labo.local.crt" # 管理対象ノード側のコピー先パス
+- name: 自己署名証明書を作成して使用
+  ansible.builtin.import_tasks: tls_selfsigned.yaml
+  when: nginx_tls_mode == 'selfsigned'
+
+- name: CA が発行した証明書を使用
+  ansible.builtin.import_tasks: tls_provided.yaml
+  when: nginx_tls_mode == 'provided'
+
+- name: Deploy default in /etc/nginx/sites-available
+  ansible.builtin.template:
+    src: default.j2
+    dest: /etc/nginx/sites-available/default
     owner: root
     group: root
     mode: '0644'
+  notify: Reload nginx
 
-- name: TLS証明書秘密鍵をリモートサーバーへコピー
-  ansible.builtin.copy:
-    src: web1.labo.local.key    # コントロールノード側のファイルパス（相対パスまたは絶対パス）
-    dest: "{{ nginx_cert_dir }}/web1.labo.local.key" # 管理対象ノード側のコピー先パス
-    owner: root
-    group: root
+- name: シンボリックリンクの作成
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/default
+    path: /etc/nginx/sites-enabled/default
+    state: link
+
+- name: Deploy index.html showing hostname
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: "{{ nginx_doc_root }}/index.html"
+    owner: www-data
+    group: www-data
     mode: '0644'
+  notify: Reload nginx
 
-- name: Update apt cache
-  ansible.builtin.apt:
-    update_cache: true
-    cache_valid_time: 3600
-
-- name: Install nginx
-  ansible.builtin.apt:
-    name: nginx
-    state: present
+- name: Check nginx configuration
+  ansible.builtin.command: nginx -t
+  changed_when: false
 
 - name: Ensure nginx is enabled and running
   ansible.builtin.service:
@@ -45,60 +75,52 @@
   when: ansible_facts.services is defined
   ignore_errors: true  # ufw未導入環境でも止まらないように
 
-- name: Verify nginx is responding
+- name: Apply configuration before verification
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify HTTP redirects to HTTPS
   ansible.builtin.uri:
     url: "http://localhost"
-    status_code: 200
-  register: result
+    follow_redirects: none
+    status_code: 301
+  register: nginx_http_check
   retries: 3
   delay: 2
-  until: result.status == 200
+  until: nginx_http_check.status == 301
+  when: nginx_service_state == 'started'
 
-- name: Update apt cache
-  ansible.builtin.apt:
-    update_cache: true
-    cache_valid_time: 3600
-
-- name: Install nginx
-  ansible.builtin.apt:
-    name: nginx
-    state: present
-
-- name: Deploy default in /etc/nginx/sites-available
-  ansible.builtin.template:
-    src: default.j2
-    dest: /etc/nginx/sites-available/default
-    owner: root
-    group: root
-    mode: '0644'
-
-- name: シンボリックリンクの作成
-  ansible.builtin.file:
-    src: /etc/nginx/sites-available/default
-    path: /etc/nginx/sites-enabled/default
-    state: link
-
-- name: Ensure nginx is enabled and running
-  ansible.builtin.service:
-    name: nginx
-    state: started
-    #state: stopped
-    enabled: true
-
-- name: Deploy index.html showing hostname
-  ansible.builtin.template:
-    src: index.html.j2
-    dest: "{{ nginx_doc_root }}/index.html"
-    owner: www-data
-    group: www-data
-    mode: '0644'
-  notify: Reload nginx
-
-- name: Verify page is responding
+# 自己署名証明書はクライアントが信頼しないため、ここでは応答のみを確認する
+- name: Verify HTTPS page is responding
   ansible.builtin.uri:
-    url: "http://localhost"
+    url: "https://localhost"
+    validate_certs: false
     status_code: 200
-  register: result
+  register: nginx_https_check
   retries: 3
   delay: 2
-  until: result.status == 200
+  until: nginx_https_check.status == 200
+  when: nginx_service_state == 'started'
+
+- name: Get the certificate served by nginx
+  ansible.builtin.shell: |
+    set -o pipefail
+    openssl s_client -connect 127.0.0.1:443 -servername {{ nginx_server_name }} </dev/null 2>/dev/null \
+      | openssl x509 -noout -fingerprint -sha256
+  args:
+    executable: /bin/bash
+  register: nginx_served_cert
+  changed_when: false
+  when: nginx_service_state == 'started'
+
+- name: Get the fingerprint of the configured certificate
+  ansible.builtin.command: openssl x509 -in {{ nginx_tls_cert_path }} -noout -fingerprint -sha256
+  register: nginx_configured_cert
+  changed_when: false
+  when: nginx_service_state == 'started'
+
+- name: Verify nginx serves the configured certificate
+  ansible.builtin.assert:
+    that:
+      - nginx_served_cert.stdout == nginx_configured_cert.stdout
+    success_msg: "TLS 証明書 ({{ nginx_tls_mode }}): {{ nginx_configured_cert.stdout }}"
+  when: nginx_service_state == 'started'

@@ -1,0 +1,43 @@
+# 証明書が指定されていない場合、サーバー上で自己署名証明書を作成する
+- name: 自己署名証明書の作成に必要なパッケージをインストール
+  ansible.builtin.apt:
+    name: python3-cryptography
+    state: present
+
+- name: サーバー秘密鍵を作成
+  community.crypto.openssl_privatekey:
+    path: "{{ nginx_tls_key_path }}"
+    type: RSA
+    size: 2048
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Reload nginx
+
+- name: 自己署名証明書の CSR を作成
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ nginx_tls_key_path }}"
+    common_name: "{{ nginx_server_name }}"
+    subject_alt_name: "{{ nginx_tls_san }}"
+    basic_constraints:
+      - "CA:FALSE"
+    key_usage:
+      - digitalSignature
+      - keyEncipherment
+    key_usage_critical: true
+    extended_key_usage:
+      - serverAuth
+  register: nginx_tls_csr
+  changed_when: false
+
+- name: 自己署名証明書を発行
+  community.crypto.x509_certificate:
+    path: "{{ nginx_tls_cert_path }}"
+    csr_content: "{{ nginx_tls_csr.csr }}"
+    privatekey_path: "{{ nginx_tls_key_path }}"
+    provider: selfsigned
+    selfsigned_not_after: "+{{ nginx_tls_days }}d"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx

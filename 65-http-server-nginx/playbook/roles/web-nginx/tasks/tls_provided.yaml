@@ -1,0 +1,19 @@
+# CA が発行した証明書と秘密鍵 (Ansible 実行マシン上のファイル) を配置する
+- name: CA が発行したサーバー証明書を配置
+  ansible.builtin.copy:
+    src: "{{ nginx_tls_cert_src }}"
+    dest: "{{ nginx_tls_cert_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+
+- name: サーバー秘密鍵を配置
+  ansible.builtin.copy:
+    src: "{{ nginx_tls_key_src }}"
+    dest: "{{ nginx_tls_key_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Reload nginx

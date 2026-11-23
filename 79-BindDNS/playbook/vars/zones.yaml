@@ -71,7 +71,7 @@ dns_a_records:
   - { name: runner13, ip: 192.168.1.223, comment: "GitHub Action runner" }
   - { name: runner14, ip: 192.168.1.224, comment: "GitHub Action runner" }
   - { name: gitlab, ip: 192.168.1.241, comment: "Code Repository" }
-  - { name: w1, ip: 192.168.1.242, comment: "NGINX Web server" }
+  - { name: w1, ip: 192.168.1.13, comment: "NGINX Web server" }
   - { name: w2, ip: 192.168.1.243, comment: "Apache Web server" }
   - { name: ca, ip: 192.168.1.250, comment: "CA" }
   - { name: vault, ip: 192.168.1.251, comment: "vault Server" }

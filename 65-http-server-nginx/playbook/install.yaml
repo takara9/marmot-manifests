@@ -7,6 +7,11 @@
     nginx_service_enabled: true
     nginx_doc_root: /var/www/html
     nginx_cert_dir: /etc/nginx/ssl
+    # TLS 証明書。両方を空のままにすると、自己署名証明書を作成して使用する。
+    # CA が発行した証明書を使う場合は、両方に Ansible 実行マシン上のパスを指定する。
+    #   相対パスは roles/web-nginx/files/ から探す (*.crt / *.key は Git に含めない)
+    # nginx_tls_cert_src: web1.labo.local.crt
+    # nginx_tls_key_src: web1.labo.local.key
   tasks:
   roles:
     - web-nginx

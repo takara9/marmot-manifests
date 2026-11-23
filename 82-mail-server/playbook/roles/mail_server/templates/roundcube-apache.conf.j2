@@ -1,0 +1,24 @@
+# Ansible managed
+<VirtualHost *:80>
+    ServerName {{ mail_hostname }}
+    Redirect permanent / https://{{ mail_hostname }}/
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName {{ mail_hostname }}
+    DocumentRoot /var/lib/roundcube/public_html
+
+    SSLEngine on
+    SSLProtocol all -SSLv3 -TLSv1 -TLSv1.1
+    SSLCertificateFile {{ mail_tls_dir }}/server.crt
+    SSLCertificateKeyFile {{ mail_tls_dir }}/server.key
+
+    <Directory /var/lib/roundcube/public_html>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/roundcube-error.log
+    CustomLog ${APACHE_LOG_DIR}/roundcube-access.log combined
+</VirtualHost>

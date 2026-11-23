@@ -28,6 +28,9 @@ mail_mynetworks:
 # 1通のメールの最大サイズ (バイト)
 mail_message_size_limit: 26214400
 
+# 空なら内部用のアドレスを維持。指定すると SMTP 配送時に公開ドメインへ変換する
+mail_outbound_domain: ""
+
 # メールボックス用のユーザー
 mail_vmail_user: vmail
 mail_vmail_uid: 5000
@@ -38,6 +41,9 @@ mail_check_mx: true
 
 # UFW で SMTP/IMAP 関連のポートを開放するか
 mail_configure_ufw: false
+
+# Roundcube Webmail (HTTPS、既存のメールユーザーでログイン)
+mail_roundcube_enabled: true
 
 # TLS証明書の入手方法
 #   selfsigned: サーバー上にプライベートCAを作成してサーバー証明書を発行する

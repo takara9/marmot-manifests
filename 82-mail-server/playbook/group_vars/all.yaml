@@ -4,6 +4,10 @@ mail_domain: labo.local
 # メールサーバーの FQDN。DNS の A レコードと MX レコードの宛先に一致させる
 mail_hostname: mail.labo.local
 
+# 外向き SMTP 配送時だけアドレスと EHLO 名を公開ドメインにする
+# 内部メールボックスとログイン名は labo.local のまま維持する
+mail_outbound_domain: marmot.mydns.jp
+
 # メールボックスを持つユーザー。アドレスは <name>@<mail_domain>
 # password はラボ用の仮値。ansible-vault 等で上書きすること
 # 作成済みのハッシュを使う場合は password の代わりに password_hash を指定する
@@ -20,6 +24,6 @@ mail_aliases:
   hostmaster: admin
 
 # mail_domain の別名ドメイン。<user>@<別名ドメイン> 宛を <user>@<mail_domain> へ配送する
-# 例: DNS が lab.internal も並行運用している場合
-mail_alias_domains: []
-#  - lab.internal
+# 公開ドメイン宛を既存の内部メールボックスへ配送する
+mail_alias_domains:
+  - marmot.mydns.jp

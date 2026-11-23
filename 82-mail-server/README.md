@@ -1,9 +1,12 @@
 # 82-mail-server
 
-`labo.local` ドメインのメールサーバー（Postfix + Dovecot）を、Marmot 仮想サーバー上に Ansible で構築します。
+`labo.local` ドメインのメールサーバー（Postfix + Dovecot + Roundcube）を、Marmot 仮想サーバー上に Ansible で構築します。
 
 - サーバー間のメール交換: 宛先ドメインの **DNS の MX レコードを参照して配送**します。
 - メールクライアント: **IMAP4**（STARTTLS / IMAPS）でメールを受信し、**SMTP submission**（587 / 465、認証必須）で送信します。IMAP にはメールを送る機能がないため、クライアントには受信（IMAP）と送信（SMTP）の両方を設定します。
+- Web メール: **Roundcube** を `https://mail.labo.local/` に配置し、ブラウザから既存のメールユーザーで読み書きできます。
+- 外向き SMTP ゲートウェイ: 認証済みの送信を宛先ドメインの MX へ直接配送し、SMTP 配送時の内部アドレスを `marmot.mydns.jp` に変換します。
+- 公開ドメインの受信: `user@marmot.mydns.jp` 宛を既存の `user@labo.local` のメールボックスへ配送します。公開 DNS と外部からの TCP 25 番への到達性が必要です。
 
 ## 仮想サーバー構成
 
@@ -60,7 +63,7 @@ Playbook は、実行の最後に **DNS の MX レコードがこのサーバー
 | [playbook/install.yaml](playbook/install.yaml) | エントリーポイント。`mail_servers` に `mail_server`、`mail_clients` に `mail_client` を適用 |
 | [playbook/hosts.yaml](playbook/hosts.yaml) | インベントリ。`mactl-ssh` 経由で SSH 接続 |
 | [playbook/group_vars/all.yaml](playbook/group_vars/all.yaml) | ドメイン、ユーザー、別名 |
-| [playbook/roles/mail_server](playbook/roles/mail_server) | Postfix + Dovecot の構築（変数は `defaults/main.yaml`） |
+| [playbook/roles/mail_server](playbook/roles/mail_server) | Postfix + Dovecot + Roundcube の構築（変数は `defaults/main.yaml`） |
 | [playbook/roles/mail_client](playbook/roles/mail_client) | 送信専用の Postfix（他のサーバー用、任意） |
 
 ### メールサーバー（mail_server）
@@ -70,25 +73,30 @@ Playbook は、実行の最後に **DNS の MX レコードがこのサーバー
 3. TLS 証明書を用意（`mail_tls_mode`。後述）
 4. Dovecot を設定: IMAP（143 は STARTTLS 必須、993 は TLS）、パスワードファイル認証、Postfix への LMTP 配送、Postfix への SMTP 認証の提供
 5. Postfix を設定: 受信、MX 参照による送信、`submission`（587）と `smtps`（465）の追加
-6. ポートの待ち受けと、MX レコードを確認
+6. Roundcube、Apache + PHP、SQLite をインストールし、既存の証明書で HTTPS を設定。Roundcube は IMAPS と SMTP STARTTLS で接続し、サーバー証明書を検証
+7. ポートの待ち受け、Roundcube のログインページ、MX レコードを確認
 
 メールボックスは Linux のアカウントを作らない仮想ユーザーです。ログインやシェルは使えません。
 
 | ポート | 用途 | 認証 |
 |---|---|---|
-| 25 | サーバー間のメール配送（受信） | 不要。**`labo.local` 宛のみ受け付け、他ドメインへの中継は拒否** |
+| 25 | サーバー間のメール配送（受信） | 不要。**`labo.local` と `marmot.mydns.jp` の登録済み宛先を受け付け、他ドメインへの未認証中継は拒否** |
 | 587 | メールクライアントの送信（STARTTLS） | 必須 |
 | 465 | メールクライアントの送信（TLS）。`mail_enable_smtps: false` で無効化 | 必須 |
 | 143 | IMAP（STARTTLS 必須。平文ログインは拒否） | 必須 |
 | 993 | IMAPS（TLS） | 必須 |
+| 443 | Roundcube（HTTPS） | メールユーザーでログイン |
+| 80 | HTTPS へのリダイレクト | メールの読み書きには使用しない |
 
 ### メールの流れ
 
 | 経路 | 動作 |
 |---|---|
 | 他のサーバー → `user@labo.local` | 送信側が MX レコードで `mail.labo.local` を引き、25 番ポートへ配送。Postfix が Dovecot（LMTP）経由でメールボックスに保存 |
-| クライアント → 他ドメイン | 587 / 465 で認証して送信。Postfix が宛先ドメインの MX レコードを引いて配送（`relayhost` は使用しない） |
+| 外部 → `user@marmot.mydns.jp` | 公開 MX 経由で受信し、`user@labo.local` の既存メールボックスへ配送 |
+| クライアント → 他ドメイン | 587 / 465 で認証して送信。内部アドレスを公開ドメインへ変換し、宛先ドメインの MX レコードを引いて配送（`relayhost` は使用しない） |
 | クライアント ← メールボックス | IMAP で受信 |
+| ブラウザ ↔ Roundcube | HTTPS で操作。Roundcube が 993 で受信、587 で認証して送信 |
 
 外部のインターネットへ配送するには、仮想サーバーから外部への SMTP（25 番ポート）が通る必要があります。
 
@@ -113,9 +121,10 @@ Playbook は、実行の最後に **DNS の MX レコードがこのサーバー
 |---|---|---|
 | `mail_domain` | `labo.local` | メールドメイン |
 | `mail_hostname` | `mail.labo.local` | メールサーバーの FQDN。DNS の MX の宛先と一致させる |
+| `mail_outbound_domain` | `marmot.mydns.jp` | SMTP 配送時の公開ドメインと EHLO 名。空文字列なら変換しない（ロール単体の既定値は空） |
 | `mail_users` | `admin`、`user1` | メールボックスを持つユーザー。**パスワードは仮値** |
 | `mail_aliases` | `postmaster`、`root`、`abuse`、`hostmaster` → `admin` | 別名 |
-| `mail_alias_domains` | `[]` | 別名ドメイン。例: `lab.internal`（`user@lab.internal` を `user@labo.local` へ配送） |
+| `mail_alias_domains` | `[marmot.mydns.jp]` | 登録済みユーザーと別名宛を内部メールボックスへ配送する受信用ドメイン。未登録の宛先は拒否 |
 
 [roles/mail_server/defaults/main.yaml](playbook/roles/mail_server/defaults/main.yaml) の主な変数です。
 
@@ -126,6 +135,7 @@ Playbook は、実行の最後に **DNS の MX レコードがこのサーバー
 | `mail_message_size_limit` | 26214400 | 1通の最大サイズ（バイト） |
 | `mail_check_mx` | `true` | 実行の最後に MX レコードを確認する |
 | `mail_configure_ufw` | `false` | UFW でメール関連のポートを開放する |
+| `mail_roundcube_enabled` | `true` | Roundcube を導入する。`mail_configure_ufw: true` の場合は 80 / 443 も開放 |
 | `mail_tls_mode` | `selfsigned` | TLS 証明書の入手方法（後述） |
 
 ### ユーザーの追加・パスワード変更
@@ -176,6 +186,33 @@ scp ubuntu@mail.labo.local:/etc/mail-server/tls/ca.crt ./mail-labo-ca.crt
 
 接続先は IP アドレスではなく、証明書の名前（`mail.labo.local`）にしてください。
 
+## Web ブラウザでの利用（Roundcube）
+
+既存のサーバーにも、通常の Playbook 再実行で追加できます。既存の `mail_users` のパスワードやハッシュを維持して実行してください。
+
+```bash
+ansible-playbook -i playbook/hosts.yaml playbook/install.yaml
+```
+
+1. `selfsigned` 構成の場合は、「TLS 証明書」の手順で取得した `mail-labo-ca.crt` を、ブラウザまたは OS の信頼する CA に登録します。HTTPS の証明書エラーを無視せず、`https://mail.labo.local/` を開いてください。
+2. ユーザー名に `admin@labo.local` または `user1@labo.local`、パスワードに `mail_users` で設定した値を入力してログインします。`admin`、`user1` の省略形も使えます。別名の `postmaster` などはログイン用アカウントではありません。
+3. **メール**画面の受信箱でメッセージを選び、内容を読みます。**作成**から宛先・件名・本文を入力し、**送信**します。添付は作成画面から追加できます（既定の PHP 設定では 1 ファイル最大 2 MB）。
+4. **返信**・**全員に返信**・**転送**で返信や転送ができます。送信済みメールは **Sent**、下書きは **Drafts** に保存されます（表示名は言語設定によって異なります）。
+5. 利用後は **ログアウト**します。Roundcube 専用のユーザー登録は不要で、既存の Dovecot / SMTP 認証を使います。Keycloak SSO はこの構成には含みません。
+
+動作確認には `user1` でログインし、`admin@labo.local` にテストメールを送ります。一度ログアウトし、`admin` でログインして受信・返信を確認してください。同じメールボックスを通常の IMAP クライアントでも参照できます。
+
+Roundcube の設定は [roundcube.yaml](playbook/roles/mail_server/tasks/roundcube.yaml) と [roundcube-config.inc.php.j2](playbook/roles/mail_server/templates/roundcube-config.inc.php.j2) が管理します。パッケージが生成するセッション暗号化キーと DB 設定はそのまま維持します。SQLite は連絡先・ユーザー設定・セッション用で、メール本体は引き続き `/var/mail/vhosts` に保存されます。
+
+- Roundcube DB: `/var/lib/dbconfig-common/sqlite3/roundcube/roundcube`（バックアップ対象）
+- Roundcube 設定: `/etc/roundcube/`（暗号化キーも含むため、バックアップは秘密情報として保護）
+- Roundcube ログ: `/var/log/roundcube/`
+- Apache ログ: `/var/log/apache2/roundcube-error.log`、`roundcube-access.log`
+
+ログインや送信に失敗する場合は、ユーザー名・パスワード、`mail.labo.local` の名前解決、証明書の信頼を確認し、上記のログと Postfix / Dovecot のログを調べてください。`provided` でプライベート CA を使う場合は `mail_tls_ca_src` に CA 証明書を指定します。証明書検証は無効にしません。
+
+新規構築時に Web メールを不要とする場合は `mail_roundcube_enabled: false` を設定します。導入済みのパッケージやサイトを削除・停止する設定ではありません。
+
 ## 動作確認
 
 DNS と MX レコード:
@@ -220,11 +257,122 @@ sudo postqueue -p
 sudo journalctl -t postfix/smtp --no-pager | tail
 ```
 
+## MX 直接配送の SMTP ゲートウェイ
+
+この構成では外部 SMTP リレーサービスは使いません。`mail.labo.local` の Postfix が送信キューを管理し、**宛先ドメインの MX** を検索して、宛先メールサーバーの TCP 25 番へ直接配送します。
+
+```text
+内部サーバー／Roundcube
+  → mail.labo.local:587（認証 + STARTTLS）
+  → Postfix の送信キュー
+  → 宛先ドメインの MX
+  → 外部メールサーバー:25
+```
+
+### 適用とアドレス変換
+
+[group_vars/all.yaml](playbook/group_vars/all.yaml) に次の設定を追加しています。既存のユーザー・パスワード設定を維持して、通常の Playbook を再実行してください。
+
+```yaml
+mail_domain: labo.local
+mail_hostname: mail.labo.local
+mail_outbound_domain: marmot.mydns.jp
+```
+
+```bash
+cd 82-mail-server
+ansible-playbook -i playbook/hosts.yaml playbook/install.yaml
+```
+
+内部のログイン名、Roundcube の URL、メールボックスの保存先は変わりません。SMTP 配送時のみ、Postfix の `smtp_generic_maps` で以下のように変換します。
+
+| 内部のアドレス | 外向き SMTP 配送時のアドレス |
+|---|---|
+| `admin@labo.local` | `admin@marmot.mydns.jp` |
+| `user1@labo.local` | `user1@marmot.mydns.jp` |
+| `root@mail.labo.local` | `root@marmot.mydns.jp` |
+
+ローカル配送は Dovecot の LMTP を使用するため、この変換を行いません。SMTP 変換はエンベロープと `From`・`Reply-To` などのヘッダー内のアドレスに適用されます。Postfix の仕様上、送信者だけでなく該当する受信者アドレスにも適用されます。内部宛と外部宛に同時送信した場合、内部のコピーは変換前、外部のコピーは変換後になります。公開ドメイン以外の送信元をすべて置き換える設定ではありません。
+
+変換を無効にする場合は `mail_outbound_domain: ""` にして再実行します。`smtp_generic_maps` が空になり、EHLO は内部ホスト名へ戻ります。
+
+### 内部サーバーからゲートウェイへ送信する
+
+送信側のアプリケーションには、SMTP サーバー `mail.labo.local`、ポート `587`、STARTTLS、既存のメールユーザーによる認証を設定します。Roundcube は既にこの経路を使用します。
+
+この Playbook の `mail_client` ロールは、従来どおり宛先 MX への直接配送用です。外部宛もこのゲートウェイを経由させる場合は、アプリケーションで上記の認証付き submission を使ってください。**内部ネットワーク全体を `mail_mynetworks` に追加して、認証なしの外部中継を開放する必要はありません。**
+
+### MyDNS と回線の準備
+
+- MyDNS の `marmot.mydns.jp` の A レコードを、実際の送信元グローバル IPv4 アドレスへ更新します。Postfix の外向き EHLO 名にもこの名前を使います。MyDNS アカウントや IP 更新処理を Playbook に保存・追加するものではありません。
+- 回線から外向き TCP 25 番へ接続できる必要があります。**OP25B のある回線では直接配送できず、認証付き SMTP リレーなど別の配送経路が必要です。** ポートを 587 に変えるだけでは宛先 MX へ配送できません。
+- MyDNS の MX は、`marmot.mydns.jp` **宛の受信先**です。外向き配送先を指定するものではありません。公開ドメイン宛の受信については次の「公開ドメイン宛のメールを受信する」を参照してください。
+- SPF は送信元 IP に合うように設定し、DKIM・DMARC、可能なら PTR を整備してください。DKIM 署名はこの Playbook には含まれません。動的 IP、PTR 不一致、IP の評判などにより、直接配送が拒否される場合があります。
+
+### 外向き配送を確認する
+
+メールサーバー上で設定と宛先の MX を確認します。
+
+```bash
+postconf relayhost smtp_host_lookup smtp_helo_name smtp_generic_maps
+postmap -q @labo.local texthash:/etc/postfix/smtp-generic
+dig +short A marmot.mydns.jp
+dig +short MX <宛先ドメイン>
+```
+
+`relayhost` は空、`smtp_helo_name` は `marmot.mydns.jp`、マップの問い合わせ結果は `@marmot.mydns.jp` になります。
+
+内部端末で、CA 証明書を指定してテスト送信します。`--auth-password` の値は省略して対話入力し、パスワードを履歴に残さないようにします。`--protect-prompt` と `--auth-hide-password` で入力と通信ログへのパスワード表示も抑止します。宛先には自分が管理する外部アドレスを指定してください。
+
+```bash
+swaks --server mail.labo.local --port 587 --tls --tls-verify \
+  --tls-ca-path ./mail-labo-ca.crt \
+  --auth LOGIN --auth-user user1 --auth-password \
+  --protect-prompt --auth-hide-password \
+  --from user1@labo.local --to '<自分の外部メールアドレス>'
+```
+
+submission が受け付けた時点では、外部への配送完了とは限りません。`sudo postqueue -p` と `sudo journalctl -t postfix/smtp --no-pager` で、実際の宛先 MX に配送され、`status=sent` になったことを確認します。さらに外部の受信箱で `From` と `Return-Path` が `user1@marmot.mydns.jp` になっていることを確認してください。接続タイムアウトでキューに残る場合は、OP25B・宛先への接続・DNS を調べてください。
+
+## 公開ドメイン宛のメールを受信する
+
+`mail_alias_domains` に `marmot.mydns.jp` を設定しているため、通常の Playbook 再実行で受信を有効にします。メールボックスやログイン名は変更しません。
+
+```bash
+cd 82-mail-server
+ansible-playbook -i playbook/hosts.yaml playbook/install.yaml
+```
+
+| 公開アドレス | 配送先 |
+|---|---|
+| `admin@marmot.mydns.jp` | `admin@labo.local` |
+| `user1@marmot.mydns.jp` | `user1@labo.local` |
+| `postmaster@marmot.mydns.jp`、`root@marmot.mydns.jp` などの別名 | `admin@labo.local` |
+
+別名ドメインのアドレスは `mail_users` と `mail_aliases` にある宛先だけを明示的にマッピングします。未登録の宛先は SMTP で拒否し、全アドレスを受け付ける catch-all にはしません。Roundcube では引き続き `admin@labo.local` などでログインして受信箱を確認します。
+
+外部からの受信には次の設定も必要です。Playbook は MyDNS やルーターを変更しません。
+
+- 公開 MX の宛先ホストの A レコードが、ルーターのグローバル IPv4 アドレスを指していること。
+- ルーターの **外部 TCP 25 → `192.168.1.12:25`** のポート転送と、回線・ファイアウォール側の許可。外向き25番の開放とは別です。
+- この Playbook の Postfix は既定で IPv4 のみです。MX ホストに AAAA がある場合は、IPv6 SMTP も到達可能にするか、メール用 MX ホストを IPv4 のみにしてください。同じ名前の AAAA を変更する場合は他サービスへの影響も確認してください。
+
+メールサーバー上で設定を確認します。
+
+```bash
+sudo postconf virtual_alias_domains virtual_alias_maps
+sudo postmap -q admin@marmot.mydns.jp texthash:/etc/postfix/virtual
+sudo postmap -q postmaster@marmot.mydns.jp texthash:/etc/postfix/virtual
+sudo journalctl -t postfix/smtpd -t postfix/lmtp --since "30 minutes ago" --no-pager
+```
+
+マップの問い合わせ結果は、どちらも `admin@labo.local` です。Gmail など外部から `admin@marmot.mydns.jp` へテスト送信し、LMTP の `status=sent` と Roundcube の受信箱を確認してください。`Relay access denied` なら受信ドメインの反映、`User unknown` なら登録済み宛先、接続ログ自体がなければ公開 DNS・IPv4 ポート転送・IPv6 経路を確認します。
+
 ## 注意事項
 
 - `mail_users` のパスワードは**ラボ用の仮値**です。実際に使う前に変更するか、`ansible-vault` で上書きしてください。
 - 受信用の 25 番ポートは認証なしで開いていますが、受け付けるのは `labo.local`（と別名ドメイン）宛のみで、他ドメインへの中継（オープンリレー）はしません。
-- 外部のインターネットへの送信は、仮想サーバーの送信元 IP に対する逆引き（PTR）、SPF、DKIM などがないと、受信側に拒否または迷惑メール扱いされる場合があります。この構成は、`labo.local` 内のメール交換を目的としています。
+- 外部のインターネットへの送信は、仮想サーバーの送信元 IP に対する逆引き（PTR）、SPF、DKIM などがないと、受信側に拒否または迷惑メール扱いされる場合があります。公開ドメインへの変換だけで到達性や到達率が保証されるものではありません。
 - `.local` は mDNS の予約名です。systemd-resolved や avahi を使うクライアントでは、DNS ではなく mDNS で解決されることがあります。MX レコードを参照できない場合は、[79-BindDNS](../79-BindDNS/README.md) の「ドメイン名」の注意を確認してください。
 - DNS のレコードを変更したら、[79-BindDNS](../79-BindDNS/README.md) の手順に従って DNS を更新し、メールサーバーの Playbook を再実行して MX レコードを確認してください。
 - メールボックスは `/var/mail/vhosts` に保存されます。サーバーのルートディスク上にあるため、大量のメールを保存する場合は、別ディスクをマウントしてください。バックアップも別途検討してください。

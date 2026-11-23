@@ -9,6 +9,7 @@
   notify:
     - Restart postfix
     - Restart dovecot
+    - Restart apache2
 
 - name: Install server private key
   ansible.builtin.copy:
@@ -21,6 +22,7 @@
   notify:
     - Restart postfix
     - Restart dovecot
+    - Restart apache2
 
 - name: Install CA certificate
   ansible.builtin.copy:

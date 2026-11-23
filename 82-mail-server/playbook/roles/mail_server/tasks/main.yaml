@@ -13,6 +13,17 @@
       mail_hostname は mail_domain 配下の名前、mail_users の name は小文字英数字と . _ - のみ、
       各ユーザーに password または password_hash が必要、mail_aliases の宛先は mail_users に存在すること。
 
+- name: Validate outbound mail domain
+  ansible.builtin.assert:
+    that:
+      - mail_outbound_domain is match('^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$')
+      - mail_outbound_domain | length <= 253
+      - not mail_outbound_domain.endswith('.local')
+      - mail_outbound_domain != mail_domain
+      - mail_outbound_domain != mail_hostname
+    fail_msg: "mail_outbound_domain は内部ドメインとは別の公開 FQDN を小文字で指定してください (.local は使用不可)。"
+  when: mail_outbound_domain | length > 0
+
 # Postfix の設定は後で上書きするため、パッケージ導入時の質問は既定のまま回答する
 - name: Preseed postfix (non-interactive)
   ansible.builtin.debconf:
@@ -103,6 +114,16 @@
   notify: Restart dovecot
 
 # ---------- Postfix (SMTP) ----------
+- name: Deploy outbound SMTP address map
+  ansible.builtin.template:
+    src: smtp-generic.j2
+    dest: /etc/postfix/smtp-generic
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart postfix
+  when: mail_outbound_domain | length > 0
+
 - name: Deploy postfix main.cf
   ansible.builtin.template:
     src: main.cf.j2
@@ -141,13 +162,17 @@
   ansible.builtin.command: postfix check
   changed_when: false
 
+- name: Configure Roundcube webmail
+  ansible.builtin.import_tasks: roundcube.yaml
+  when: mail_roundcube_enabled
+
 # ---------- ファイアウォール ----------
 - name: Allow mail ports on UFW
   community.general.ufw:
     rule: allow
     port: "{{ item }}"
     proto: tcp
-  loop: "{{ ['25', mail_submission_port, mail_imap_port, mail_imaps_port] + (['465'] if mail_enable_smtps else []) }}"
+  loop: "{{ ['25', mail_submission_port, mail_imap_port, mail_imaps_port] + (['465'] if mail_enable_smtps else []) + (['80', '443'] if mail_roundcube_enabled else []) }}"
   when: mail_configure_ufw
 
 - name: Apply pending handlers before starting services
@@ -162,6 +187,13 @@
     - dovecot
     - postfix
 
+- name: Enable and start Roundcube web server
+  ansible.builtin.systemd:
+    name: apache2
+    enabled: true
+    state: started
+  when: mail_roundcube_enabled
+
 # ---------- 動作確認 ----------
 - name: Wait for mail ports
   ansible.builtin.wait_for:
@@ -169,6 +201,19 @@
     port: "{{ item }}"
     timeout: 60
   loop: "{{ [25, mail_submission_port, mail_imap_port, mail_imaps_port] + ([465] if mail_enable_smtps else []) }}"
+
+- name: Verify Roundcube HTTPS login page
+  ansible.builtin.uri:
+    url: "https://{{ mail_hostname }}/"
+    ca_path: "{{ mail_tls_dir ~ '/ca.crt' if (mail_tls_mode == 'selfsigned' or mail_tls_ca_src | length > 0) else omit }}"
+    validate_certs: true
+    return_content: true
+    status_code: 200
+  register: mail_roundcube_check
+  failed_when: >-
+    mail_roundcube_check.status != 200 or
+    'name="_user"' not in (mail_roundcube_check.content | default(''))
+  when: mail_roundcube_enabled
 
 - name: Query MX records of the mail domain
   ansible.builtin.command: "dig +short MX {{ mail_domain }}"
