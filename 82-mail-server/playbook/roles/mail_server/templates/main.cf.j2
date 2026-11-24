@@ -20,9 +20,22 @@ recipient_delimiter = +
 disable_vrfy_command = yes
 smtpd_helo_required = yes
 
-# ---------- 送信: DNS の MX レコードを参照して配送する ----------
-# relayhost を設定せず、宛先ドメインの MX レコード (なければ A レコード) へ直接配送する
+# ---------- 送信: 外部 SMTP リレー ----------
+{% if mail_relay_enabled %}
+relayhost = [{{ mail_relay_host }}]:{{ mail_relay_port }}
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+smtp_sasl_security_options = noanonymous
+smtp_sasl_tls_security_options = noanonymous
+smtp_tls_security_level = encrypt
+{% else %}
 relayhost =
+smtp_sasl_auth_enable = no
+smtp_sasl_password_maps =
+smtp_sasl_security_options = noplaintext, noanonymous
+smtp_sasl_tls_security_options = $smtp_sasl_security_options
+smtp_tls_security_level = may
+{% endif %}
 smtp_host_lookup = dns
 disable_dns_lookups = no
 smtp_helo_name = {{ mail_outbound_domain if mail_outbound_domain | length > 0 else mail_hostname }}
@@ -53,7 +66,6 @@ smtpd_tls_security_level = may
 smtpd_tls_protocols = >=TLSv1.2
 smtpd_tls_loglevel = 1
 smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache
-smtp_tls_security_level = may
 smtp_tls_protocols = >=TLSv1.2
 smtp_tls_CApath = /etc/ssl/certs
 smtp_tls_loglevel = 1

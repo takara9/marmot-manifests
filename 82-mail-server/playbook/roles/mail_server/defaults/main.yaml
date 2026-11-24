@@ -1,5 +1,6 @@
 mail_packages:
   - postfix
+  - libsasl2-modules
   - dovecot-core
   - dovecot-imapd
   - dovecot-lmtpd
@@ -30,6 +31,16 @@ mail_message_size_limit: 26214400
 
 # 空なら内部用のアドレスを維持。指定すると SMTP 配送時に公開ドメインへ変換する
 mail_outbound_domain: ""
+
+# 外部 SMTP リレー (既定は Brevo)。外向きの配送は認証付き TLS でこのホストへ送る
+# mail_relay_username は Brevo アカウント固有の SMTP ログイン名
+# mail_relay_password は Brevo で発行した SMTP key。Ansible Vault 等で渡し、平文で保存しない
+# false にすると relayhost を使わず、宛先ドメインの MX へ直接配送する
+mail_relay_enabled: true
+mail_relay_host: smtp-relay.brevo.com
+mail_relay_port: 587
+mail_relay_username: ""
+mail_relay_password: ""
 
 # メールボックス用のユーザー
 mail_vmail_user: vmail

@@ -5,7 +5,7 @@
 - サーバー間のメール交換: 宛先ドメインの **DNS の MX レコードを参照して配送**します。
 - メールクライアント: **IMAP4**（STARTTLS / IMAPS）でメールを受信し、**SMTP submission**（587 / 465、認証必須）で送信します。IMAP にはメールを送る機能がないため、クライアントには受信（IMAP）と送信（SMTP）の両方を設定します。
 - Web メール: **Roundcube** を `https://mail.labo.local/` に配置し、ブラウザから既存のメールユーザーで読み書きできます。
-- 外向き SMTP ゲートウェイ: 認証済みの送信を宛先ドメインの MX へ直接配送し、SMTP 配送時の内部アドレスを `marmot.mydns.jp` に変換します。
+- 外向き SMTP ゲートウェイ: SMTP 配送時の内部アドレスを `marmot.mydns.jp` に変換し、認証付きで Brevo の SMTP リレーへ配送します。
 - 公開ドメインの受信: `user@marmot.mydns.jp` 宛を既存の `user@labo.local` のメールボックスへ配送します。公開 DNS と外部からの TCP 25 番への到達性が必要です。
 
 ## 仮想サーバー構成
@@ -54,6 +54,8 @@ mactl create -f mail-server.yaml
 ansible-playbook -i playbook/hosts.yaml playbook/install.yaml
 ```
 
+外向き SMTP は既定で Brevo のリレーを使います。Playbook は Vault で暗号化した SMTP key（`mail_relay_password`）を必要とするため、先に「[SMTP key を Ansible Vault で保存する](#smtp-key-を-ansible-vault-で保存する)」の手順で `secrets.yaml` を作成し、上記のコマンドに `--ask-vault-pass -e @secrets.yaml` を付けて実行してください。`mactl create` の自動実行は Vault のパスワードを渡せないため、SMTP key の検証で失敗します。その場合も仮想サーバーは作成済みなので、手動で実行してください。
+
 Playbook は、実行の最後に **DNS の MX レコードがこのサーバー（`mail_hostname`）を指していること**を確認します。指していない場合は失敗するため、DNS を修正して再実行してください。
 
 ## 構成
@@ -94,7 +96,7 @@ Playbook は、実行の最後に **DNS の MX レコードがこのサーバー
 |---|---|
 | 他のサーバー → `user@labo.local` | 送信側が MX レコードで `mail.labo.local` を引き、25 番ポートへ配送。Postfix が Dovecot（LMTP）経由でメールボックスに保存 |
 | 外部 → `user@marmot.mydns.jp` | 公開 MX 経由で受信し、`user@labo.local` の既存メールボックスへ配送 |
-| クライアント → 他ドメイン | 587 / 465 で認証して送信。内部アドレスを公開ドメインへ変換し、宛先ドメインの MX レコードを引いて配送（`relayhost` は使用しない） |
+| クライアント → 他ドメイン | 587 / 465 で認証して送信。内部アドレスを公開ドメインへ変換し、Brevo の SMTP リレー経由で配送 |
 | クライアント ← メールボックス | IMAP で受信 |
 | ブラウザ ↔ Roundcube | HTTPS で操作。Roundcube が 993 で受信、587 で認証して送信 |
 
@@ -122,6 +124,11 @@ Playbook は、実行の最後に **DNS の MX レコードがこのサーバー
 | `mail_domain` | `labo.local` | メールドメイン |
 | `mail_hostname` | `mail.labo.local` | メールサーバーの FQDN。DNS の MX の宛先と一致させる |
 | `mail_outbound_domain` | `marmot.mydns.jp` | SMTP 配送時の公開ドメインと EHLO 名。空文字列なら変換しない（ロール単体の既定値は空） |
+| `mail_relay_enabled` | `true` | 外部 SMTP リレーを使う。`false` なら宛先 MX へ直接配送（外向き TCP 25 番が必要） |
+| `mail_relay_host` | `smtp-relay.brevo.com` | 外部 SMTP リレーのホスト名（既定は Brevo） |
+| `mail_relay_port` | `587` | 外部 SMTP リレーのポート（STARTTLS） |
+| `mail_relay_username` | `c4d180001@smtp-brevo.com` | SMTP リレーのログイン名（Brevo アカウント固有） |
+| `mail_relay_password` | なし（必須） | Brevo の SMTP key。**Vault で渡す**。Web ログイン用パスワードではない |
 | `mail_users` | `admin`、`user1` | メールボックスを持つユーザー。**パスワードは仮値** |
 | `mail_aliases` | `postmaster`、`root`、`abuse`、`hostmaster` → `admin` | 別名 |
 | `mail_alias_domains` | `[marmot.mydns.jp]` | 登録済みユーザーと別名宛を内部メールボックスへ配送する受信用ドメイン。未登録の宛先は拒否 |
@@ -257,32 +264,59 @@ sudo postqueue -p
 sudo journalctl -t postfix/smtp --no-pager | tail
 ```
 
-## MX 直接配送の SMTP ゲートウェイ
+## Brevo SMTP リレー
 
-この構成では外部 SMTP リレーサービスは使いません。`mail.labo.local` の Postfix が送信キューを管理し、**宛先ドメインの MX** を検索して、宛先メールサーバーの TCP 25 番へ直接配送します。
+`mail.labo.local` の Postfix が送信キューを管理し、認証付き TLS で Brevo の SMTP リレーへ送信します。宛先 MX の検索と外部への配送は Brevo が行います。
 
 ```text
 内部サーバー／Roundcube
   → mail.labo.local:587（認証 + STARTTLS）
   → Postfix の送信キュー
-  → 宛先ドメインの MX
-  → 外部メールサーバー:25
+  → smtp-relay.brevo.com:587（認証 + TLS）
+  → 宛先メールサーバー
 ```
 
-### 適用とアドレス変換
+仮想サーバーから外部へ TCP 587 番で接続できる必要があります。外向き TCP 25 番の開放は不要です。
 
-[group_vars/all.yaml](playbook/group_vars/all.yaml) に次の設定を追加しています。既存のユーザー・パスワード設定を維持して、通常の Playbook を再実行してください。
+### SMTP key を Ansible Vault で保存する
 
-```yaml
-mail_domain: labo.local
-mail_hostname: mail.labo.local
-mail_outbound_domain: marmot.mydns.jp
-```
+SMTP key は秘密情報です。リポジトリに平文で保存せず、Ansible Vault で暗号化して `mail_relay_password` として渡します。
+
+1. Brevo の管理画面で SMTP key を発行します（SMTP & API の SMTP）。ログイン名は `mail_relay_username` に設定した SMTP ログイン名です。**Brevo アカウントの Web ログインパスワードではなく、発行した SMTP key** を使います。
+2. 暗号化ファイルを作成します。Vault のパスワード（SMTP key とは別のもの）の入力が求められ、続けてエディタが開きます。
+
+   ```bash
+   cd 82-mail-server
+   ansible-vault create secrets.yaml
+   ```
+
+3. エディタに次の1行だけを書いて保存します。`キー: 値` の形式にしないと、実行時に `could not be made into a dictionary` になります。
+
+   ```yaml
+   mail_relay_password: "Brevo の SMTP key"
+   ```
+
+4. Playbook を実行します。
+
+   ```bash
+   ansible-playbook -i playbook/hosts.yaml playbook/install.yaml \
+     --ask-vault-pass -e @secrets.yaml
+   ```
+
+書式の確認と SMTP key の更新は次のとおりです。確認コマンドは値を伏せて表示します。
 
 ```bash
-cd 82-mail-server
-ansible-playbook -i playbook/hosts.yaml playbook/install.yaml
+ansible-vault view secrets.yaml | sed 's/:.*/: ***/'   # mail_relay_password: *** と表示されること
+ansible-vault edit secrets.yaml                         # SMTP key を再発行したときに更新する
 ```
+
+Vault のパスワードをファイルに保存して使う場合は、リポジトリの外に置き、権限を `0600` にします。`--ask-vault-pass` の代わりに `--vault-password-file ~/.vault_pass` を指定します。
+
+`secrets.yaml` は暗号化されていますが、[.gitignore](.gitignore) でコミット対象から除外しています。Vault のパスワードは紛失すると復元できないため、パスワードマネージャーなどで管理してください。
+
+Playbook は、認証情報を `/etc/postfix/sasl_passwd` に root のみ読み取り可能な権限で配置し、Postfix 用のマップを作成します。`mail_relay_password` が空のまま実行すると、設定の検証で失敗します。
+
+### アドレス変換と確認
 
 内部のログイン名、Roundcube の URL、メールボックスの保存先は変わりません。SMTP 配送時のみ、Postfix の `smtp_generic_maps` で以下のように変換します。
 
@@ -302,25 +336,24 @@ ansible-playbook -i playbook/hosts.yaml playbook/install.yaml
 
 この Playbook の `mail_client` ロールは、従来どおり宛先 MX への直接配送用です。外部宛もこのゲートウェイを経由させる場合は、アプリケーションで上記の認証付き submission を使ってください。**内部ネットワーク全体を `mail_mynetworks` に追加して、認証なしの外部中継を開放する必要はありません。**
 
-### MyDNS と回線の準備
+### DNS とリレーの確認
 
-- MyDNS の `marmot.mydns.jp` の A レコードを、実際の送信元グローバル IPv4 アドレスへ更新します。Postfix の外向き EHLO 名にもこの名前を使います。MyDNS アカウントや IP 更新処理を Playbook に保存・追加するものではありません。
-- 回線から外向き TCP 25 番へ接続できる必要があります。**OP25B のある回線では直接配送できず、認証付き SMTP リレーなど別の配送経路が必要です。** ポートを 587 に変えるだけでは宛先 MX へ配送できません。
+- `marmot.mydns.jp` の A レコードは引き続き EHLO 名などに使います。MyDNS アカウントや IP 更新処理を Playbook に保存・追加するものではありません。
+- 仮想サーバーから `smtp-relay.brevo.com:587` への接続が必要です。外向き TCP 25 番への接続は使いません。
 - MyDNS の MX は、`marmot.mydns.jp` **宛の受信先**です。外向き配送先を指定するものではありません。公開ドメイン宛の受信については次の「公開ドメイン宛のメールを受信する」を参照してください。
-- SPF は送信元 IP に合うように設定し、DKIM・DMARC、可能なら PTR を整備してください。DKIM 署名はこの Playbook には含まれません。動的 IP、PTR 不一致、IP の評判などにより、直接配送が拒否される場合があります。
+- Brevo 側のドメイン認証（DKIM/SPF）も設定してください。中継先を変更しただけでは、送信ドメインの認証設定は完了しません。
 
 ### 外向き配送を確認する
 
-メールサーバー上で設定と宛先の MX を確認します。
+メールサーバー上でリレー設定を確認します。
 
 ```bash
 postconf relayhost smtp_host_lookup smtp_helo_name smtp_generic_maps
 postmap -q @labo.local texthash:/etc/postfix/smtp-generic
 dig +short A marmot.mydns.jp
-dig +short MX <宛先ドメイン>
 ```
 
-`relayhost` は空、`smtp_helo_name` は `marmot.mydns.jp`、マップの問い合わせ結果は `@marmot.mydns.jp` になります。
+`relayhost` が `[smtp-relay.brevo.com]:587`、`smtp_helo_name` が `marmot.mydns.jp`、マップの問い合わせ結果が `@marmot.mydns.jp` であることを確認します。SMTP 認証情報は `postconf` の出力に含まれません。
 
 内部端末で、CA 証明書を指定してテスト送信します。`--auth-password` の値は省略して対話入力し、パスワードを履歴に残さないようにします。`--protect-prompt` と `--auth-hide-password` で入力と通信ログへのパスワード表示も抑止します。宛先には自分が管理する外部アドレスを指定してください。
 
@@ -332,7 +365,7 @@ swaks --server mail.labo.local --port 587 --tls --tls-verify \
   --from user1@labo.local --to '<自分の外部メールアドレス>'
 ```
 
-submission が受け付けた時点では、外部への配送完了とは限りません。`sudo postqueue -p` と `sudo journalctl -t postfix/smtp --no-pager` で、実際の宛先 MX に配送され、`status=sent` になったことを確認します。さらに外部の受信箱で `From` と `Return-Path` が `user1@marmot.mydns.jp` になっていることを確認してください。接続タイムアウトでキューに残る場合は、OP25B・宛先への接続・DNS を調べてください。
+submission が受け付けた時点では、外部への配送完了とは限りません。`sudo postqueue -p` と `sudo journalctl -t postfix/smtp --no-pager` で、Brevo リレーへの配送が `status=sent` になったことを確認します。さらに外部の受信箱で `From` と `Return-Path` が `user1@marmot.mydns.jp` になっていることを確認してください。接続できない場合は TCP 587 番の疎通、Vault から渡した SMTP key、Brevo の送信ドメイン認証を確認してください。
 
 ## 公開ドメイン宛のメールを受信する
 

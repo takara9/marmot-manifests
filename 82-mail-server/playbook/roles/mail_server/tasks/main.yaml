@@ -24,6 +24,17 @@
     fail_msg: "mail_outbound_domain は内部ドメインとは別の公開 FQDN を小文字で指定してください (.local は使用不可)。"
   when: mail_outbound_domain | length > 0
 
+- name: Validate SMTP relay settings
+  ansible.builtin.assert:
+    that:
+      - not mail_relay_enabled or mail_relay_host is match('^[A-Za-z0-9.-]+$')
+      - not mail_relay_enabled or (mail_relay_port | int > 0 and mail_relay_port | int < 65536)
+      - not mail_relay_enabled or mail_relay_username | length > 0
+      - not mail_relay_enabled or mail_relay_password | length > 0
+    fail_msg: >-
+      SMTP リレーを有効にする場合は mail_relay_host / mail_relay_port /
+      mail_relay_username と、Ansible Vault 等で渡す mail_relay_password が必要です。
+
 # Postfix の設定は後で上書きするため、パッケージ導入時の質問は既定のまま回答する
 - name: Preseed postfix (non-interactive)
   ansible.builtin.debconf:
@@ -123,6 +134,30 @@
     mode: "0644"
   notify: Restart postfix
   when: mail_outbound_domain | length > 0
+
+- name: Deploy outbound SMTP relay credentials
+  ansible.builtin.template:
+    src: sasl_passwd.j2
+    dest: /etc/postfix/sasl_passwd
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart postfix
+  when: mail_relay_enabled
+
+- name: Compile outbound SMTP relay credentials
+  ansible.builtin.command: postmap hash:/etc/postfix/sasl_passwd
+  changed_when: false
+  when: mail_relay_enabled
+
+- name: Restrict compiled SMTP relay credentials
+  ansible.builtin.file:
+    path: /etc/postfix/sasl_passwd.db
+    owner: root
+    group: root
+    mode: "0600"
+  when: mail_relay_enabled
 
 - name: Deploy postfix main.cf
   ansible.builtin.template:
