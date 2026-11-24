@@ -11,7 +11,7 @@ mail_outbound_domain: marmot.mydns.jp
 # 外向き SMTP は既定の Brevo リレー (smtp-relay.brevo.com:587) へ認証して配送する
 # ホストとポートの既定値は roles/mail_server/defaults/main.yaml
 # SMTP key (mail_relay_password) は Ansible Vault で渡す。README の「Brevo SMTP リレー」を参照
-mail_relay_username: c4d180001@smtp-brevo.com
+mail_relay_username: change_id@smtp-brevo.com
 
 # メールボックスを持つユーザー。アドレスは <name>@<mail_domain>
 # password はラボ用の仮値。ansible-vault 等で上書きすること

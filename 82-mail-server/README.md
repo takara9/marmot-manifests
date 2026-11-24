@@ -20,6 +20,27 @@
 | IPアドレス | `192.168.1.12`（`mail.labo.local`） |
 | DNS | `192.168.1.9`、検索ドメイン `labo.local`（MX レコードの参照に必要） |
 
+## ソフトウェア構成
+
+Ubuntu 24.04 の標準パッケージ（apt）を、Ansible で導入・設定します。バージョンはパッケージのものに従い、Playbook では固定していません。
+
+| 役割 | ソフトウェア | パッケージ | 用途 |
+|---|---|---|---|
+| MTA（SMTP） | Postfix | `postfix`、`libsasl2-modules` | 25 番での受信、587 / 465 での認証付き送信（submission）、送信キュー、Brevo への SMTP リレー（SASL 認証） |
+| IMAP / LMTP / 認証 | Dovecot | `dovecot-core`、`dovecot-imapd`、`dovecot-lmtpd` | IMAP（143 / 993）、Postfix からの LMTP 配送、Postfix への SMTP 認証の提供、仮想ユーザーのパスワード認証 |
+| Web メール | Roundcube | `roundcube-core`、`roundcube-sqlite3`、`dbconfig-sqlite3` | ブラウザからのメール閲覧・送信。データベースは SQLite |
+| Web サーバー | Apache HTTP Server + PHP | `apache2`、`libapache2-mod-php`、`php-cli` | Roundcube の HTTPS（443）公開。80 は HTTPS へのリダイレクト |
+| TLS 証明書 | 自己署名の CA（`python3-cryptography`、`community.crypto`） | `python3-cryptography` | `mail_tls_mode: selfsigned` のとき、サーバー上に CA とサーバー証明書を作成。`provided` なら用意した証明書を配置 |
+| 動作確認 | swaks、dig | `swaks`、`bind9-dnsutils` | SMTP の送信テスト、MX レコードの確認 |
+
+Playbook を実行するマシンには、Ansible、`community.crypto`・`community.general` コレクション、`passlib` が必要です（次の「事前準備」を参照）。送信専用の [mail_client ロール](playbook/roles/mail_client)では、`postfix`、`bsd-mailx`、`swaks`、`bind9-dnsutils` を導入します。
+
+<IMG WIDTH="900" SRC="image/mail-server-architecture.png">
+
+この図は [image/draw_architecture.py](image/draw_architecture.py) で生成しています。変更するときはスクリプトを編集し、`python3 82-mail-server/image/draw_architecture.py` で再作成してください（Pillow と日本語フォント `fonts-noto-cjk` が必要）。
+
+メールボックスは Maildir 形式で、Linux のアカウントを作らない仮想ユーザー（`vmail`）が所有します。
+
 ## 事前準備
 
 DNS に次のレコードが必要です。[79-BindDNS](../79-BindDNS/playbook/vars/zones.yaml) には、すでに定義されています。
