@@ -58,7 +58,7 @@ dig +short A mail.labo.local        # 192.168.1.12
 Playbook を実行するマシンには、Ansible、`community.crypto`・`community.general` コレクション、`passlib` が必要です。パスワードのハッシュ化に `passlib` を使います。
 
 ```bash
-ansible-galaxy collection install community.crypto community.general
+ansible-galaxy collection install community.crypto community.general ansible.posix
 sudo apt install python3-passlib       # または pip install passlib
 ```
 
@@ -75,7 +75,7 @@ mactl create -f mail-server.yaml
 ansible-playbook -i playbook/hosts.yaml playbook/install.yaml
 ```
 
-外向き SMTP は既定で Brevo のリレーを使います。Playbook は Vault で暗号化した SMTP key（`mail_relay_password`）を必要とするため、先に「[SMTP key を Ansible Vault で保存する](#smtp-key-を-ansible-vault-で保存する)」の手順で `secrets.yaml` を作成し、上記のコマンドに `--ask-vault-pass -e @secrets.yaml` を付けて実行してください。`mactl create` の自動実行は Vault のパスワードを渡せないため、SMTP key の検証で失敗します。その場合も仮想サーバーは作成済みなので、手動で実行してください。
+外向き SMTP は既定で Brevo のリレーを使います。Playbook は Vault で暗号化した SMTP key（`mail_relay_password`）を必要とするため、先に「[SMTP key を Ansible Vault で保存する](#smtp-key-を-ansible-vault-で保存する)」の手順で `secrets.yaml` を作成し、上記のコマンドに `--ask-vault-pass -e @secrets.yaml` を付けて実行してください。`mactl create` の自動実行は Vault のパスワードを渡せないため、SMTP key の検証で失敗します。そのため、Ansible playbook の部分は、コメントアウトしてあります。 エラーで失敗した場合は、仮想サーバーは作成済みなので、手動で実行してください。
 
 Playbook は、実行の最後に **DNS の MX レコードがこのサーバー（`mail_hostname`）を指していること**を確認します。指していない場合は失敗するため、DNS を修正して再実行してください。
 
@@ -91,6 +91,7 @@ Playbook は、実行の最後に **DNS の MX レコードがこのサーバー
 
 ### メールサーバー（mail_server）
 
+0. 追加ボリューム（`/dev/vdb`）を ext4 でフォーマット（未フォーマットの場合のみ）し、`/var/mail` にマウント。UUID で `/etc/fstab` に登録（`mail_spool_*` 変数。パッケージ導入より前に実行）
 1. Postfix、Dovecot（IMAP / LMTP）、動作確認用ツール（`swaks`、`dig`）をインストール
 2. メールボックス用のユーザー `vmail`（uid 5000）を作成。メールは `/var/mail/vhosts/<ドメイン>/<ユーザー>/Maildir` に保存
 3. TLS 証明書を用意（`mail_tls_mode`。後述）
@@ -429,5 +430,5 @@ sudo journalctl -t postfix/smtpd -t postfix/lmtp --since "30 minutes ago" --no-p
 - 外部のインターネットへの送信は、仮想サーバーの送信元 IP に対する逆引き（PTR）、SPF、DKIM などがないと、受信側に拒否または迷惑メール扱いされる場合があります。公開ドメインへの変換だけで到達性や到達率が保証されるものではありません。
 - `.local` は mDNS の予約名です。systemd-resolved や avahi を使うクライアントでは、DNS ではなく mDNS で解決されることがあります。MX レコードを参照できない場合は、[79-BindDNS](../79-BindDNS/README.md) の「ドメイン名」の注意を確認してください。
 - DNS のレコードを変更したら、[79-BindDNS](../79-BindDNS/README.md) の手順に従って DNS を更新し、メールサーバーの Playbook を再実行して MX レコードを確認してください。
-- メールボックスは `/var/mail/vhosts` に保存されます。サーバーのルートディスク上にあるため、大量のメールを保存する場合は、別ディスクをマウントしてください。バックアップも別途検討してください。
+- メールボックスは `/var/mail/vhosts` に保存されます。`mail-server.yaml` の `spec.storage` で追加したボリュームを、Playbook が `/var/mail` にマウントします。ディスクのデバイス名は `mail_spool_dev`（既定 `/dev/vdb`）で変更できます。既存のファイルシステムは再フォーマットされません。バックアップも別途検討してください。
 - Dovecot と Postfix の設定は、Playbook が管理しています。サーバー上で直接変更した内容は、次回の実行で上書きされます。

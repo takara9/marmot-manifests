@@ -12,12 +12,12 @@ spec:
     memory: 1024
     mmImage: ubuntu24.04
     auth:
-        url: https://github.com/takara9.keys
+        url: https://github.com/takara9.keys # SSH公開鍵の取得先は変更してください。
         users:
          - ubuntu
-    ansible:
-        playbook: playbook/install.yaml
-        inventory: playbook/hosts.yaml
+    #ansible:
+    #    playbook: playbook/install.yaml
+    #    inventory: playbook/hosts.yaml
     networkInterface:
         - networkname: host-bridge
           address: 192.168.1.12     # 内部DNSに登録済のIPアドレス mail.labo.local (MX レコードの宛先)
@@ -30,4 +30,12 @@ spec:
           routes:                   # デフォルトGW ルーターのアドレスを指定
             - to: default
               via: 192.168.1.1
+    storage:
+        - metadata:
+            name: /var/mail
+            comment: メールボックスの保存エリアとして利用
+          spec:
+            size: 10                # GB
+            type: lvm
+            kind: data
 

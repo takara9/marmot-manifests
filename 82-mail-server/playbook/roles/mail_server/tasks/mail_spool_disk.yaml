@@ -1,0 +1,48 @@
+# 追加ボリュームを ext4 でフォーマットし、mail_spool_mountpoint にマウントして /etc/fstab に登録する
+# ※ postfix / dovecot の導入より前に実行すること (導入後のメールデータを隠さないため)
+- name: Check mail spool disk exists
+  ansible.builtin.stat:
+    path: "{{ mail_spool_dev }}"
+  register: mail_spool_stat
+
+- name: Fail if mail spool disk is missing
+  ansible.builtin.assert:
+    that: mail_spool_stat.stat.exists and mail_spool_stat.stat.isblk
+    fail_msg: "{{ mail_spool_dev }} が見つからないか、ブロックデバイスではありません。mail-server.yaml の spec.storage を確認してください。"
+
+- name: Create filesystem (skip if already formatted)
+  community.general.filesystem:
+    fstype: "{{ mail_spool_fstype }}"
+    dev: "{{ mail_spool_dev }}"
+    opts: "-L {{ mail_spool_label }}"
+    force: false
+
+- name: Get filesystem UUID
+  ansible.builtin.command: "blkid -s UUID -o value {{ mail_spool_dev }}"
+  register: mail_spool_uuid
+  changed_when: false
+
+- name: Create mount point
+  ansible.builtin.file:
+    path: "{{ mail_spool_mountpoint }}"
+    state: directory
+    mode: "0755"
+
+- name: Mount mail spool disk and register in /etc/fstab
+  ansible.posix.mount:
+    path: "{{ mail_spool_mountpoint }}"
+    src: "UUID={{ mail_spool_uuid.stdout }}"
+    fstype: "{{ mail_spool_fstype }}"
+    opts: defaults,noatime
+    dump: "0"
+    passno: "2"
+    state: mounted
+
+# 新規ファイルシステムの root は root:root 0755 のため、/var/mail の標準の権限に合わせる
+- name: Set mail spool directory permissions
+  ansible.builtin.file:
+    path: "{{ mail_spool_mountpoint }}"
+    state: directory
+    owner: root
+    group: mail
+    mode: "2775"

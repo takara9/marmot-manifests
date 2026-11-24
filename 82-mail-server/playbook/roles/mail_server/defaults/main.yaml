@@ -42,6 +42,14 @@ mail_relay_port: 587
 mail_relay_username: ""
 mail_relay_password: ""
 
+# メールボックス用の追加ボリューム (mail-server.yaml の spec.storage で追加したディスク)
+# true で mkfs (未フォーマットの場合のみ) して mail_spool_mountpoint にマウントする
+mail_spool_disk_enabled: true
+mail_spool_dev: /dev/vdb
+mail_spool_mountpoint: /var/mail
+mail_spool_fstype: ext4
+mail_spool_label: mail-spool
+
 # メールボックス用のユーザー
 mail_vmail_user: vmail
 mail_vmail_uid: 5000

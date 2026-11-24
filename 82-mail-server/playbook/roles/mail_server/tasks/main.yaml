@@ -35,6 +35,10 @@
       SMTP リレーを有効にする場合は mail_relay_host / mail_relay_port /
       mail_relay_username と、Ansible Vault 等で渡す mail_relay_password が必要です。
 
+- name: Format and mount the mail spool disk
+  ansible.builtin.import_tasks: mail_spool_disk.yaml
+  when: mail_spool_disk_enabled
+
 # Postfix の設定は後で上書きするため、パッケージ導入時の質問は既定のまま回答する
 - name: Preseed postfix (non-interactive)
   ansible.builtin.debconf:
